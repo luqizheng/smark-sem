@@ -1,5 +1,8 @@
 # Runner 资源感知与同机并发调度（ADR-SEM-26）
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 - 状态：**Approved Architecture Decision**
 - 决策日期：2026-11-25
 - 适用范围：SEM V1 Runner 选择、同机并发准入、资源预留和资源压力处理
