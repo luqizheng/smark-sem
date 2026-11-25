@@ -1,5 +1,8 @@
 # Runner 监督模式、HIR 与跨 Runner 接管（runner-supervision-and-handoff）
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 > **Authority-boundary revision (2026-11-25):** HIR, E6, Task Barrier and all business intervention/approval semantics belong to AI-PM, not SEM. SEM-local supervision is infrastructure-only. Reconcile before implementation with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 
 > **Authority-boundary revision (2026-11-25):** HIR, E6, Task Barrier and all business intervention/approval semantics belong to AI-PM, not SEM. SEM-local supervision is infrastructure-only. Reconcile before implementation with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
