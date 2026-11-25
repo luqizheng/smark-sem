@@ -101,7 +101,7 @@ This section removes ambiguity from the *candidate* response profile. It is norm
 
 ### 8.2 Body-bearing response Signature-Input
 
-For every non-304 response class currently defined by the operation matrix (including structured 4xx/5xx errors), the response has a representation body and Content-Type. The candidate covered-component order is:
+For every authenticated, body-bearing non-304 response class currently defined by the operation matrix (including authenticated structured 4xx/5xx errors), the response has a representation body and Content-Type. Pre-authentication failures and malformed/unparseable requests may not have a trustworthy request context; their generic signed/unsigned error profile and correlation behavior remain a separate open contract and MUST NOT be forced into this request-derived component set. The candidate covered-component order is:
 
 1. `"@status"`
 2. `"content-digest";sf`
