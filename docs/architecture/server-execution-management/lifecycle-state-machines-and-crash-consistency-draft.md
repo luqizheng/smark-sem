@@ -278,13 +278,16 @@ On Supervisor startup:
 
 ### 6.1 Release during process start
 
-Runner serializes start and release commands per execution/binding under one durable local state machine:
+Runner serializes start and release commands per execution/binding through one durable single-writer command sequencer. The sequencer owns a stable `launch_id`, the OS launch broker call and the release fence.
 
-- If release fence commits before process creation, the later start is rejected.
-- If process creation wins first, Supervisor records the exact process identity and then applies stop to that exact process.
-- If the result is ambiguous, the Supervisor inspects the containment unit and enters `local_uncertain` if it cannot prove the outcome.
-- A stop ACK means only that the stop fence/command was durably accepted; it is not process exit.
-- SEM retains the reservation until positive exit/cleanup evidence.
+- **Start linearization point:** the OS/profile-specific launch broker atomically creates or adopts the process inside the pre-identified containment unit for this `launch_id`. The broker must make repeated calls for the same `launch_id` return the same containment/process outcome, never create a second process.
+- If release is sequenced before the launch broker crosses that linearization point, the Supervisor durably fences the binding and the broker must reject the launch.
+- If release is sequenced after the launch linearization point, the Supervisor resolves the exact containment identity and terminates that process tree.
+- If release arrives while the broker operation is in flight and its outcome is not yet known, the Supervisor records the release request but **must not ACK the stop fence as fully effective** until the broker resolves the launch as not-created or created/adopted-and-stoppable. The execution remains uncertain and reserved during this interval.
+- The Supervisor must not run an OS create call outside the sequencer/broker and then claim that a later journal fence prevented it.
+- If the broker or containment owner is unavailable, enter `local_uncertain`; do not report start_failed, released or safe-to-rebind.
+- A stop-fence ACK means later starts are fenced and every earlier/in-flight start has been accounted for. It is not process exit.
+- SEM retains the reservation until positive exit evidence and the applicable cleanup requirements are satisfied.
 
 ### 6.2 Natural process exit before release
 
