@@ -147,6 +147,21 @@ release_missing = json.loads(json.dumps(release_event))
 release_missing["payload"]["release_state"] = "process_exited"
 expect_invalid(platform_validator, release_missing, "process_exited release without evidence reference")
 
+release_requested_without_fence = json.loads(json.dumps(release_event))
+release_requested_without_fence["payload"]["release_state"] = "requested"
+release_requested_without_fence["payload"].pop("stop_fence_id", None)
+expect_valid(platform_validator, release_requested_without_fence, "requested release before stop fence exists")
+
+release_stale_without_fence = json.loads(json.dumps(release_event))
+release_stale_without_fence["payload"]["release_state"] = "stale_rejected"
+release_stale_without_fence["payload"].pop("stop_fence_id", None)
+expect_valid(platform_validator, release_stale_without_fence, "stale release rejected before stop fence exists")
+
+release_fenced_without_id = json.loads(json.dumps(release_event))
+release_fenced_without_id["payload"]["release_state"] = "stop_fenced"
+release_fenced_without_id["payload"].pop("stop_fence_id", None)
+expect_invalid(platform_validator, release_fenced_without_id, "stop_fenced release without stop_fence_id")
+
 
 # Cross-protocol process-exit and uncertainty invariants.
 runner_exit = next(item for item in data["runner_messages"] if item["message_type"] == "harness.process_exited")
