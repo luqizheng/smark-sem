@@ -170,7 +170,7 @@ Before the implementation can claim P0-04 closed, it must specify and prove one 
 
 ## 6. Required failure-injection acceptance cases
 
-Add these cases to D-05's acceptance matrix and implement them in the D-10 Linux integration harness before ratification:
+These sixteen cases have been added to the D-05 acceptance matrix as D05-79–D05-94. Implement them in the D-10 Linux integration harness before ratification:
 
 | ID | Injection point / condition | Required result |
 |---|---|---|
