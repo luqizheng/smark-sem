@@ -166,7 +166,7 @@ Directory comparison details:
 
 - Draft PR: https://github.com/luqizheng/smark-sem/pull/1
 - Branch: feat/sem-modular-monolith-skeleton
-- Head: 750ae13125e0ade5e077a1f1d4c23faaefc3e50a
+- Head: 74adeaad863642972cf825573804584414c510c6
 - Scope: Rust workspace, sem-server binary, sem-domain, sem-protocol, sem-application, sem-infrastructure, liveness-only HTTP endpoint and CI.
 - GitHub Actions: Format, Test and Clippy passed on the current PR head (including after syncing latest main).
 - PR remains Draft and unmerged. The skeleton is not a production-ready service.
