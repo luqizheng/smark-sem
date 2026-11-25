@@ -43,7 +43,7 @@
 | D04-H16 | SEM event delivered twice to AI-PM | AI-PM returns accepted/duplicate disposition and applies event once |
 | D04-H17 | Same event_id with changed canonical body | 409 conflict and security audit |
 | D04-H18 | SEM event attempts to set Task=completed | Reject/ignore as invalid contract; SEM has no such authority |
-| D04-H19 | SEM event sequence gap within journal_id | Persist no unsafe advancement; request/retry replay or reconcile |
+| D04-H19 | SEM event sequence gap within execution_id | Persist no unsafe advancement; request/retry replay or reconcile |
 | D04-H20 | HTTP deployment with valid request authentication | Accept only on approved private network; no claim of confidentiality |
 | D04-H21 | HTTP request has invalid/stale timestamp or replayed nonce | Reject and audit |
 | D04-H22 | HTTPS uses enterprise CA or explicitly pinned self-signed certificate | Accept only after full trust and hostname/identity validation |
