@@ -250,3 +250,6 @@ Latest deterministic response-vector validation: PR head `16cf8432c7dc8642370e76
 
 
 Latest signed ETag validation: PR head `1b81fb2cc5f92ef43ae09e46547587fd681359b4` passed CI runs #349/#350, all ten steps. The run includes GET snapshot 200 ETag signature verification and ETag-tamper rejection, plus conditional 304 ETag and If-None-Match negative cases.
+
+
+D04-H77 now makes the pre-authentication/malformed-request boundary explicit: where no trustworthy canonical request context exists, a generic error path must not echo attacker-controlled `request_id`, `message_id` or `event_id` as authenticated correlation. The separate generic response-signing/correlation policy remains open.
