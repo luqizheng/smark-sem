@@ -254,5 +254,5 @@ These upstream documents establish available interface semantics, not the behavi
 ### 13.7 Explicit limitations
 
 - V1 does not support Windows Job Objects, macOS launchd, cgroup v1, non-systemd Linux hosts, or a Runner container that cannot use a trusted host-side systemd broker.
-- The user has selected manual on-site intervention for permanent host loss. No managed-VM API or BMC/IPMI integration is required; visible alerting, durable quarantine and auditable operator disposition are required.
+- The user has selected manual on-site handling for permanent host loss. No managed-VM API or BMC/IPMI integration is required; V1 needs only a durable visible `unreachable` status, retained quarantine and a minimal audited manual resolution action if normal reconnect/reconciliation cannot resolve it.
 - The systemd/cgroup design is a selected V1 architecture candidate, not yet implementation-verified. A Linux integration spike and failure-injection evidence are required before D-03/D-05 can be ratified.
