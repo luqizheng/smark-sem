@@ -276,3 +276,16 @@ These are intentionally not guessed:
 - Final bilateral event endpoint, retry/backoff, retention and payload size limits.
 
 Do not resolve these by weakening the security invariants. No code, migration, runtime config, Phase 0 or merge is authorized by this draft.
+
+
+## 10. Current AI-PM source compatibility gate
+
+The AI-PM read-only source review (see [Harness identity and business fencing review §10](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/harness-identity-and-business-fencing-review.md)) found that the current `cpk_` device credential is a reusable device-wide secret. AI-PM stores only its hash, but successful authentication maps it to the device owner's HumanActor and existing project-membership authorization. Device enrollment currently records device metadata and `is_runner`, not a cryptographically enrolled Runner public key/certificate.
+
+Therefore:
+- Existing `cpk_` is not an acceptable delegated Harness grant and must not be passed to Harness as a shortcut.
+- Existing `devenv.device` enrollment cannot, by itself, prove Runner key possession or provide the independent key trust required by §2.2.
+- The delegated execution grant requires a distinct AI-PM identity/authorization design and exact application-service enforcement. Reuse of any existing device tables is a future schema/domain decision, not assumed here.
+- The Runner enrollment/attestation design must specify proof of private-key possession, owner/admin approval, Runner key rotation, revocation, recovery after host reinstall, duplicate device IDs, and how AI-PM independently validates the Runner key rather than trusting SEM-supplied key material.
+
+This source finding is a hard design gate. It is not permission to alter current device authentication or introduce migrations.
