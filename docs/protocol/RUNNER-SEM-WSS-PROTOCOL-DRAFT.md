@@ -102,6 +102,8 @@ Rules:
 | Runner → SEM | `runner.resources.report` | CPU, memory, disk/workspace-volume and capacity report |
 | Runner → SEM | `runner.admission.changed` | Accepting/draining/disabled transition |
 | SEM → Runner | `execution.deliver` | Opaque execution delivery |
+| SEM → Runner | `execution.credential_bootstrap` | Opaque short-lived bootstrap ticket delivery |
+| SEM → Runner | `runner.replay.snapshot` | Reconciliation snapshot after reconnect |
 | Runner → SEM | `execution.delivery_received` | Durable Supervisor receipt |
 | Runner → SEM | `harness.starting` / `harness.started` / `harness.start_failed` | Process launch observations |
 | Runner → SEM | `harness.process_exited` | Exact process exit observation |
@@ -111,6 +113,8 @@ Rules:
 | Either direction | `protocol.error` | Structured protocol failure |
 | SEM → Runner | `runner.session.superseded` | Close stale connection |
 | Runner → SEM | `runner.replay.request` | Request reconciliation after reconnect |
+
+The `runner.session.ack` frame belongs to the pre-application handshake schema and is not part of the post-handshake application envelope. The application-message schema has a dedicated strict payload definition for every post-handshake message type. Direction is normative as shown in this catalogue.
 
 Application heartbeat is not replaced by WebSocket ping/pong. Ping/pong is a transport keepalive and fast dead-peer hint only.
 
