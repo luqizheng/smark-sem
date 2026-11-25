@@ -252,7 +252,7 @@ These edits address the source-mapping defect and the previously missing normati
 - P0-03 is materially specified; remains open until the Linux launch broker proves the start/release linearization contract under failure injection.
 - P0-04: systemd manager + cgroup v2 are selected as the V1 process owner/evidence source; remains open until exact invocation matching, terminal unit retention, cgroup populated=0 observation and post-Supervisor-crash recovery are proven.
 - P1-01 is now addressed in the draft with SEM, Runner and AI-PM transition tables plus uncertainty-resolution edges; it remains subject to independent review for omitted/contradictory edges.
-- D-04 machine-readable stream/cursor schemas (P1-02/P1-07) remain required. The D-05 main acceptance matrix has since expanded to 70 cases (D05-61–70 cover Linux profile and process-owner behavior).
+- D-04 machine-readable stream/cursor schemas (P1-02/P1-07) remain required. The D-05 main acceptance matrix has since expanded to 70 cases (D05-61–74 cover Linux profile and process-owner behavior).
 
 **Updated disposition remains CHANGES REQUIRED.** The audit is a review record, not an approval. D-05 remains Draft / Review and is not ready for ratification or development.
 
@@ -260,7 +260,7 @@ These edits address the source-mapping defect and the previously missing normati
 
 The user approved Linux-only Runner hosts for V1. The D-03 draft now selects the architecture candidate of a host-managed systemd transient service per execution, backed by a dedicated cgroup v2 subtree. Runner Supervisor is a host-managed systemd service; Harness runs under a separate unprivileged Unix identity. Windows, cgroup v1, non-systemd Linux and Runner containers without a trusted host-side broker are out of scope.
 
-The D-05 draft now contains the Linux process-owner contract and D05-61 through D05-70, bringing its main acceptance matrix to 70 cases. The completion register and architecture index were updated.
+The D-05 draft now contains the Linux process-owner contract and D05-61 through D05-74, bringing its main acceptance matrix to 74 cases. It also specifies systemd 250+ candidate properties (Type=exec, ExitType=cgroup, RemainAfterExit=yes, CollectMode=inactive, Restart=no, KillMode=control-group), exact-unit/job lookup before retry, and durable launch tombstones after unit cleanup. The completion register and architecture index were updated.
 
 This is a design decision, not implementation evidence. The Linux profile is not ready for ratification until a focused integration design/test plan resolves at least:
 
@@ -269,7 +269,7 @@ This is a design decision, not implementation evidence. The Linux profile is not
 3. Exact cgroup v2 subtree ownership, write permissions, populated=0 observation, descendant escape prevention and cleanup semantics.
 4. How the Supervisor's durable journal and systemd's manager state reconcile after Supervisor crash, systemd restart, host reboot and disk-full/journal corruption.
 5. How a host-side broker is packaged and authenticated if Runner control-plane components are containerized.
-6. Failure-injection evidence for every start/release/exit boundary in D-03 §13.5 and D-05 D05-61–70.
+6. Failure-injection evidence for every start/release/exit boundary in D-03 §13.5 and D-05 D05-61–74.
 
 Permanent host loss is still unresolved: Linux-only does not imply a managed VM or BMC. Until the deployment's host-management profile is selected and tested, permanent host loss remains quarantine plus operator intervention.
 
