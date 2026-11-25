@@ -2,6 +2,8 @@
 
 > **Authority-boundary revision (2026-11-25):** Run/Lease/Barrier/Task state machines here describe AI-PM-owned business state, not SEM-local state. SEM must not implement or mirror them. SEM has a separate infrastructure Execution lifecycle; see [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 
+> **Authority-boundary revision (2026-11-25):** Run/Lease/Barrier/Task state machines here describe AI-PM-owned business state, not SEM-local state. SEM must not implement or mirror them. SEM has a separate infrastructure Execution lifecycle; see [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
+
 Status: target behavior, not a claim that all states exist in code.
 
 ## 1. Run / Attempt
