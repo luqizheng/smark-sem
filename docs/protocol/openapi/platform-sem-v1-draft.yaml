@@ -186,9 +186,10 @@ components:
   schemas:
     BaseEnvelope:
       type: object
-      required: [message_id, schema_version, message_type, occurred_at, payload]
+      required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
       properties:
         message_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid }
         schema_version: { const: 1 }
         message_type: { type: string }
         occurred_at: { type: string, format: date-time }
@@ -268,7 +269,7 @@ components:
       additionalProperties: false
     SemInfrastructureEventEnvelope:
       type: object
-      required: [event_id, event_type, schema_version, occurred_at, event_sequence, payload]
+      required: [event_id, event_type, schema_version, occurred_at, journal_id, event_sequence, payload]
       properties:
         event_id: { type: string, format: uuid }
         event_type:
@@ -276,6 +277,7 @@ components:
         schema_version: { const: 1 }
         occurred_at: { type: string, format: date-time }
         event_sequence: { type: integer, minimum: 1 }
+        journal_id: { type: string, format: uuid }
         correlation_id: { type: string, format: uuid }
         payload: { type: object, minProperties: 1 }
       additionalProperties: false
