@@ -334,3 +334,22 @@ Remaining blockers:
 | P1-02 event sequence scope | OPEN | **DRAFT-CLOSED; verify all state-changing message branches and replay cursors** |
 
 **Overall: CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT.** This re-review records real progress but does not close D-05's remaining P0 integration and D-03 dependencies.
+
+## 11. Re-review after D-03 V1 host-loss decision and D-05 Linux-profile alignment — 2026-11-25
+
+The user has explicitly confirmed the V1 permanent-host-loss operating model: the deployment is inside the company network; SEM only needs to make an unreachable Runner visible; an on-site person handles physical investigation. No cloud/VM power API, BMC/IPMI or remote power-off integration is required.
+
+D-03 now specifies visible durable alerting, `unreachable` Runner state, `infrastructure_uncertain` affected executions, retained quarantine/reservations, and an auditable on-site operator inspection/disposition. Alert acknowledgement, timeout, WSS disconnect, heartbeat expiry, MCP revocation and stop ACK do not release capacity. Ambiguous physical condition remains quarantined. No automatic permanent-host-loss failover is promised.
+
+The stale D-05 §3.3 generic OS-adapter alternatives have also been replaced with the already user-approved Linux-only systemd 250+/cgroup v2 profile. Windows Job Object and alternate Linux launch mechanisms are explicitly out of V1 scope. This closes the documentation contradiction identified in the previous review; it does not close the systemd integration proof.
+
+### Updated findings
+
+- **P0-02 stale generic OS profile text: CLOSED at Draft-contract level.** D-05 §3.3 now consistently selects the Linux systemd transient-unit/cgroup v2 profile. Exact D-Bus properties, StartTransientUnit job semantics, hostile-descendant containment and crash injection remain open.
+- **D-03 permanent-host-loss deployment choice: CLOSED at user-decision level.** V1 is visible alert + quarantine + manual on-site operator disposition. There is no open choice among managed VM/BMC/unmanaged profiles. The operator evidence and administrative workflow still require detailed design and acceptance tests.
+- **P0-03 release/start race: PARTIAL.** systemd job accepted/queued versus ExecStart/process-spawn linearization and cancellation/fencing proof remain open.
+- **P0-04 process exit after Supervisor crash: PARTIAL.** Exact systemd D-Bus evidence query, cgroup observation consistency, unit retention/GC and reboot reconciliation remain open.
+- **P0-01 remains closed only at Draft-contract level; AI-PM source recheck is required immediately before ratification.
+- **P1 event stream scope remains Draft-closed pending full branch-by-branch schema/cursor cross-check.
+
+**Overall disposition remains CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT.** The host-loss decision and stale OS-profile contradiction are resolved, but the Linux integration/failure-injection evidence and D-04 bilateral protocol closure are still missing.
