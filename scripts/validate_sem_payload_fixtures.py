@@ -146,6 +146,9 @@ release_event = next(item for item in data["sem_events"] if item["event_type"] =
 release_missing = json.loads(json.dumps(release_event))
 release_missing["payload"]["release_state"] = "process_exited"
 expect_invalid(platform_validator, release_missing, "process_exited release without evidence reference")
+released_missing = json.loads(json.dumps(release_event))
+released_missing["payload"]["release_state"] = "released"
+expect_invalid(platform_validator, released_missing, "released state without process-exit evidence reference")
 
 # Cross-protocol process-exit and uncertainty invariants.
 runner_exit = next(item for item in data["runner_messages"] if item["message_type"] == "harness.process_exited")
