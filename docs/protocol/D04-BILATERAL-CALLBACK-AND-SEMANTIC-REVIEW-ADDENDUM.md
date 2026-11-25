@@ -207,3 +207,22 @@ This closes the identified **documentation algorithm gaps**, not the database pr
 - P0-BI-02: SQL CHECK NULL issue corrected in Draft; DDL/source/migration proof remains open.
 - P0-BI-03: unique-conflict transaction algorithm now defines a recoverable READ COMMITTED path and four additional concurrency cases; actual PostgreSQL and bilateral execution remain open.
 - Overall D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
+
+
+## 10. Full-envelope replay identity and shared JCS fixture follow-up — 2026-11-25
+
+AI-PM PR #9 now carries a two-hash callback identity contract:
+- `payload_hash`: JCS SHA-256 of the payload object.
+- `event_envelope_hash`: JCS SHA-256 of the complete authenticated event envelope (`event_id`, `event_type`, `schema_version`, `occurred_at`, `execution_id`, `execution_event_sequence`, `payload`).
+
+The SEM repository added the shared vector `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` at commit `f9edbe42c596b29eb10eea2b0801049659d77cb8`. SEM Python and Node independently verify exact canonical bytes and both hashes, and prove that changing `event_type` or `occurred_at` changes the envelope hash while member reordering does not. CI runs #208 and #209 passed all ten validation steps.
+
+AI-PM PR #9 pins this fixture and adds INBOX-35, requiring the eventual Rust implementation to match it exactly. The vector is ASCII/integer-only and does not close full RFC 8785 Unicode/numeric edge coverage or production Rust parser behavior.
+
+## 11. PostgreSQL CHECK correction follow-up
+
+The latest AI-PM DDL review found that the SEM source CHECK needed explicit `IS NOT NULL` guards for both hashes: regex comparisons against NULL evaluate to UNKNOWN, and PostgreSQL CHECK accepts UNKNOWN. The candidate SQL was rewritten with explicit SEM/non-SEM branch grouping, both non-NULL hash guards and the existing `source IS NOT NULL` guard.
+
+AI-PM PR #9 adds INBOX-36..38 for NULL payload_hash, NULL event_envelope_hash and the complete SQL parse/three-valued-logic truth table. Its bilateral review addendum now records 38 acceptance cases. Latest observed AI-PM PR #9 head: `4eaaca0005f29547f07e6b4a9a7e438aac25e84b`.
+
+These are documentation and deterministic contract-test improvements only. The AI-PM DDL remains unratified pending actual PostgreSQL parse/replay, catalog inspection, two-connection concurrency and crash-atomicity evidence. No runtime implementation or migration has been added; no PR has been merged. D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
