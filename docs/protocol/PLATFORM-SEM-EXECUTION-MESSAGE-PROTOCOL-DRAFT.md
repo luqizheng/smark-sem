@@ -206,6 +206,28 @@ Harness business status changes must use AI-PM-owned, guarded MCP operations. Do
 
 The existing ai-pm source baseline has specialized transitions coupled to the old Runner Claim/Lease path: pm_report_progress currently combines business progress/stage with Lease renewal and advances Task to running on the first started stage; pm_submit_result advances Task to submitted; pm_get_run_context returns the fuller execution contract but requires the old claim token; pm_get_task_context is currently a narrower snapshot. The replacement Harness MCP contract must expose complete authorized Task/execution context without requiring Runner Claim, preserve typed business progress/result transitions, and separate all process heartbeat/resource liveness from MCP business operations.
 
+## 9.2 Delegated Harness identity and two fencing domains
+
+The current ai-pm MCP identity implementation is human-key based: a user API Key resolves to a human principal; the current cpk_ device credential resolves to the device owner's human principal; the MCP caller context requires HumanActor; service JWTs are rejected from business endpoints. The existing identity governance decision explicitly says V1 does not issue independent Agent credentials. This cannot, without redesign, prove that one Harness process is authorized for exactly one Task/Run attempt.
+
+The replacement must define a Delegated Execution Identity / grant. This is a proposed concept, not a frozen schema. It must be issued/authorized by AI-PM, scoped to one tenant/project/task/attempt and an allow-list of MCP business operations, short-lived and revocable. It must not impersonate the initiating human and must not authorize approval, formal acceptance, project administration, unrelated Task access or arbitrary Task status mutation. Audit must preserve the delegating human/Platform actor separately from the Harness executor and Runner/device identity.
+
+Do not put a reusable human API Key in the prompt or reuse SEM service JWT / Runner WSS credentials as MCP credentials. Prefer a one-time Runner-bound bootstrap exchange with AI-PM; if a bootstrap ticket traverses SEM, cryptographically bind it to the intended Runner so SEM and other Runners cannot redeem it. A local Runner credential broker may inject the short-lived MCP token into Harness requests. The exact exchange, token format, key binding and revocation design remain open.
+
+Two independent fencing domains are mandatory:
+- AI-PM authorization_generation fences every delegated Harness MCP operation for the business attempt.
+- SEM execution_epoch/binding_epoch fences delivery/release operations for the current Runner binding.
+
+Neither value substitutes for the other. A new business retry invalidates the prior AI-PM grant. A Runner rebind must fence the old Harness business grant before another Harness can mutate the Task. Revoking MCP access alone does not prove an old process cannot mutate Git remotes or external systems.
+
+If a Runner disconnects and process exit cannot be positively established, keep the execution infrastructure_uncertain, quarantine the old binding and do not launch a competing Harness for the same attempt. Reassignment requires positive process-exit evidence or a separately designed isolation/fencing procedure.
+
+## 9.3 Business submission is not Task completion
+
+The current AI-PM Task lifecycle distinguishes Running→Submitted (delivery manifest required), Submitted→Reviewing, and Reviewing→Completed (acceptance evidence required). The special Ready→Completed path is for manual tasks and requires a human principal and reason. Harness may submit delivery and report progress through typed MCP operations; it must not self-accept or use a generic arbitrary status setter. AI-PM decides final completion under its existing guarded review/acceptance rules.
+
+When an AI-PM business decision makes the execution no longer necessary, the business transition and Platform Outbox release intent should be committed atomically. SEM release remains an infrastructure lifecycle, independent of Task completion.
+
 ## 10. Failure and recovery semantics
 
 - SEM accepts request but cannot find a Runner: remain queued/rejected according to infrastructure policy; no business state is changed.
