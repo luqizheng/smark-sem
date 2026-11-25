@@ -1,5 +1,8 @@
 # Worker 角色拆分（worker-role-separation）
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document describes the superseded SEM V1 Platform Claim/Lease/Run/Task/HIR/Barrier control-plane model. Preserve it as historical design and audit evidence only. Do not implement its business orchestration, database ownership, state machines or API flows. The current review baseline is the [SEM authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [Platform–SEM execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 - 性质：架构设计（Phase 1 的设计依据），本阶段不实施。
 - 前提：Greenfield 政策允许直接重构装配代码，不留兼容开关以外的过渡层。
 

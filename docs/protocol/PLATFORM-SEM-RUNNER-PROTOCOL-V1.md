@@ -1,7 +1,8 @@
 # Platform–SEM and Runner–SEM Protocol Contract V1
 
 - Contract version: **1.0**
-- Status: **Normative architecture contract for implementation; wire-level schemas are specified here, but no implementation is claimed complete.**
+- Status: **SUPERSEDED — historical proposal; not normative and not implementation-authorizing.**
+- Superseded by: [SEM Authority Boundary and Execution Message Model](../architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). The prior Claim / Lease Renewal / business command ACK / Task-HIR-Barrier control path is incompatible with the user-confirmed transport-only business boundary. Retain this file only as migration/audit evidence until the replacement wire contract is completed.
 - Owners: Platform API/event producer in luqizheng/ai-pm; SEM API/WSS gateway in luqizheng/smark-sem; Runner Supervisor client in the Runner codebase.
 - Authority: Platform owns business execution authority. SEM owns Runner transport and execution-side observations.
 - Related baseline: SEM-02E–02J, service-protocol-security-and-persistence.md, CROSS-REPOSITORY-CODE-OWNERSHIP.md.

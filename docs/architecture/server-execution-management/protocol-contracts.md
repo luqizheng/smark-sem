@@ -1,5 +1,12 @@
 # SEM V1 Protocol Contracts
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
+> **Authority-boundary revision (2026-11-25):** This protocol is SUPERSEDED as an implementation contract by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Its SEM→Platform Claim/Lease/business-command proxy path and SEM-owned business workflow semantics are not normative.
+
+> **Authority-boundary revision (2026-11-25):** This protocol document is **SUPERSEDED as an implementation contract** by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Its SEM→Platform Claim/Lease/business-command proxy path and SEM-owned business workflow semantics are not normative.
+
 Status: normative design target. Exact route/function names must be reconciled with code before implementation.
 
 ## 1. Trust boundaries
