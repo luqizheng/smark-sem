@@ -185,3 +185,16 @@ The candidate contract now defines:
 OpenAPI now separates direction-specific signed errors, signed rate-limit errors and the restricted pre-authentication error envelope. D04-H78..H85 record the new cases. The AI-PM PR #9 bilateral addendum and Inbox design have been updated to the same callback rule.
 
 This closes the Draft-level ambiguity only. It does not close P0-01: deterministic signed-error vectors, OpenAPI validator CI on the updated branch, actual HTTP middleware ordering, nonce replay storage, reverse-proxy behavior and bilateral runtime interoperability remain unproven. Disposition remains **CHANGES REQUIRED**.
+
+
+## 5.7 Follow-up: signed 404 and pre-authentication error fixtures — 2026-11-25
+
+The Draft error boundary now has deterministic fixtures for both 404 response directions:
+- Platform→SEM authenticated GET unknown-execution 404, with signed `X-SEM-Request-Id`.
+- SEM→AI-PM authenticated callback unknown/wrong-scope 404, with signed `X-SEM-Event-Id`.
+
+The Python and Node validators independently recompute exact request/response Content-Digest values, reconstruct RFC 9421 response signature bases and verify Ed25519 signatures. Both validators also exercise request-context mutations (method, authority, path, request digest) and direction-specific correlation mutation.
+
+Unsigned pre-authentication 401 and early-413 fixtures were added. Python/Node assert no signature/correlation headers and a minimal body structurally excluding message_id, in_reply_to, request_id and event_id. Acceptance cases D04-H86..H88 record this coverage.
+
+This is deterministic fixture evidence only. It does not prove live authentication-before-JSON-parse ordering, callback database non-enumeration behavior, edge body-limit handling, nonce replay persistence or real HTTP server/client association. Signed 400/412/422/429/500 vectors remain open. P0-01 remains **OPEN / CHANGES REQUIRED**.
