@@ -53,7 +53,7 @@ components = [
     ('"@method"', http["method"]),
     ('"@authority"', http["authority"]),
     ('"@path"', http["path"]),
-    ('"content-digest"', http["content_digest"]),
+    ('"content-digest";sf', http["content_digest"]),
     ('"content-type"', http["content_type"]),
     ('"idempotency-key"', http["idempotency_key"]),
     ('"x-sem-message-id"', http["message_id"]),
@@ -94,13 +94,13 @@ for name in ("http_response", "http_304"):
     if name == "http_response":
         pairs = [
             ('"@status"', str(response["status"])),
-            ('"content-digest"', response["content_digest"]),
+            ('"content-digest";sf', response["content_digest"]),
             ('"x-sem-request-id"', response["request_id"]),
             ('"content-type"', response["content_type"]),
             ('"@method";req', request["method"]),
             ('"@authority";req', request["authority"]),
             ('"@path";req', request["path"]),
-            ('"content-digest";req', request["content_digest"]),
+            ('"content-digest";req;sf', request["content_digest"]),
         ]
     else:
         assert response["status"] == 304 and response_body == b"", "304 must be bodyless"
