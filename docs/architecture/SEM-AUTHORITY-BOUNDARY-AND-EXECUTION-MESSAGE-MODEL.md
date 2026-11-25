@@ -3,7 +3,7 @@
 - Status: **User-confirmed architecture direction; protocol replacement and implementation mapping in progress**.
 - Scope: normative ownership boundary for the independent SEM service and AI-PM Platform.
 - Repositories: `luqizheng/ai-pm` (business authority) and `luqizheng/smark-sem` (execution transport/runtime).
-- This document supersedes conflicting SEM-02E–02J assumptions and the previous Platform–SEM–Runner Protocol V1 wherever they assign Platform business-control semantics to SEM. Detailed wire schemas remain to be reconciled before implementation.
+- This document supersedes conflicting SEM-02E–02J assumptions and the previous Platform–SEM–Runner Protocol V1 wherever they assign Platform business-control semantics to SEM. Detailed wire schemas and the companion identity/lifecycle/fencing/delivery contract remain under review before implementation.
 
 ## 1. Core decision
 
@@ -12,7 +12,7 @@
 - AI-PM Platform is the sole authority for Project, Task, Run/business execution state, approvals, business commands, business results, and task completion.
 - SEM receives execution messages from AI-PM, routes the opaque prompt/body to an eligible Runner, coordinates infrastructure delivery/release messages, records Runner-reported observations, and reports infrastructure facts.
 - Runner starts or attaches to the configured AI Harness and delivers the prompt.
-- Harness obtains Task context and performs authorized business operations through AI-PM MCP using a per-execution delegated identity (exact credential exchange remains under review).
+- Harness obtains Task context and performs authorized business operations through AI-PM MCP using a per-execution delegated identity. The proposed two-stage Runner-bound bootstrap and grant contract are detailed in [Execution Identity, Lifecycle, Fencing and Delivery Contract](../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md); they remain review-pending.
 - Harness does not use SEM as a business-context provider or business-state writer.
 - AI-PM decides when the business task is complete and explicitly instructs SEM to release the associated execution resources.
 
@@ -130,3 +130,8 @@ AI-PM authorization_generation fences delegated Harness MCP business operations;
 9. Add contract tests for duplicate request, duplicate delivery, delayed release, process exit before business completion, business completion before process exit, Runner disconnect, SEM restart and MCP authorization denial.
 
 No implementation, migration, Phase 0 start or production-readiness claim is authorized by this document.
+
+
+## 10. Companion contract
+
+The detailed [Execution Identity, Lifecycle, Fencing and Delivery Contract](../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) specifies the proposed delegated grant, two-stage Runner-bound credential bootstrap, AI-PM Run / SEM Execution correlation, inbox/outbox idempotency, process evidence, dual fencing, uncertain Runner quarantine and remote Git evidence. It is a design draft and does not authorize implementation.
