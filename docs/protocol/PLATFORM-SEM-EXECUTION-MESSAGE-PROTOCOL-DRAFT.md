@@ -33,16 +33,16 @@ This is a deployment/transport choice, not two business protocols. Endpoint conf
 8. Every message is authenticated, versioned, idempotent and correlated. Stale release messages must not stop a newer execution. HTTP message IDs and idempotency keys are carried in both the envelope and headers where defined; the receiver rejects disagreement.
 
 
-## 1.1 HTTP service authentication and integrity candidate (P0 review)
+## 1.1 HTTP service authentication and integrity (approved cryptographic baseline)
 
-Because V1 permits private-network HTTP as well as HTTPS, TLS cannot be the sole request-authentication or integrity mechanism. The current recommended candidate is **asymmetric Ed25519 HTTP Message Signatures**, using the standardized HTTP Message Signatures and Content-Digest fields:
+Because V1 permits private-network HTTP as well as HTTPS, TLS cannot be the sole request-authentication or integrity mechanism. The approved V1 cryptographic baseline is **asymmetric Ed25519 HTTP Message Signatures**, using the standardized HTTP Message Signatures and Content-Digest fields:
 
 - HTTP Message Signatures: RFC 9421 — https://www.rfc-editor.org/rfc/rfc9421
 - Content-Digest: RFC 9530 — https://www.rfc-editor.org/rfc/rfc9530
 
 Each service direction has its own signing keypair: AI-PM signs Platform→SEM requests; SEM signs SEM→AI-PM callbacks and HTTP responses. The private key remains in the owning service. The peer pins/loads the public key under a configured key_id. These service keys are separate from Runner Ed25519 identity keys, TLS certificates and Harness delegated credentials.
 
-Candidate signature coverage for every request:
+Required signature coverage for every request:
 
 - `@method`, `@authority`, `@path`, `@query`;
 - `content-digest` and `content-type` (including the digest of an empty body for bodyless requests);
@@ -50,15 +50,15 @@ Candidate signature coverage for every request:
 - `idempotency-key` for mutating/idempotent operations;
 - signature parameters `created`, `expires`, `nonce`, `keyid` and `alg=ed25519`.
 
-Candidate wire headers follow RFC 9421 (`Signature-Input` and `Signature`) and RFC 9530 (`Content-Digest`). The receiver verifies the HTTP signature and body digest before parsing or persisting the request. It then atomically checks the nonce replay registry and message/idempotency record. Same key + same idempotency key + same canonical body returns the original disposition; same key with a different body is a conflict.
+Wire headers follow RFC 9421 (`Signature-Input` and `Signature`) and RFC 9530 (`Content-Digest`). The receiver verifies the HTTP signature and body digest before parsing or persisting the request. It then atomically checks the nonce replay registry and message/idempotency record. Same key + same idempotency key + same canonical body returns the original disposition; same key with a different body is a conflict.
 
-Candidate freshness policy for review: `created` may be at most 30 seconds in the future and no more than 60 seconds old; `expires` must not exceed `created + 60 seconds`; nonce is a cryptographically random value with at least 128 bits of entropy and is single-use per key_id. The receiver retains consumed nonces for at least 10 minutes and rejects duplicates. These are proposed initial bounds, not frozen operational values.
+Provisional freshness values (not yet normative): `created` may be at most 30 seconds in the future and no more than 60 seconds old; `expires` must not exceed `created + 60 seconds`; nonce is a cryptographically random value with at least 128 bits of entropy and is single-use per key_id. The receiver retains consumed nonces for at least 10 minutes and rejects duplicates. These are proposed initial bounds, not frozen operational values.
 
 Responses are also signed by the responding service. The response signature covers `@status`, `@authority`, `content-digest`, `content-type`, and an echoed `x-sem-request-id`/`x-sem-event-id` correlation header, plus created/expires/nonce/keyid/alg parameters. Clients verify the response signature before trusting a 202/200 acknowledgement. This protects response integrity/authenticity on HTTP; it does not provide confidentiality.
 
 Key lifecycle requirements: distinct key IDs per environment and direction; public-key distribution through trusted deployment configuration; overlapping old/new public keys during rotation; explicit revocation; no automatic fallback to unsigned requests; unknown, expired or revoked key IDs fail closed. The exact key storage mechanism belongs to D-09.
 
-**Decision requested for ratification:** accept Ed25519 + RFC 9421 + RFC 9530 as the HTTP request/response authentication and integrity profile, subject to finalizing header names and timestamp/nonce bounds in D-09. Until approved, the OpenAPI security scheme remains a placeholder and P0-01 stays open.
+**Cryptographic decision approved:** Ed25519 + RFC 9421 + RFC 9530 is the V1 HTTP request/response authentication and integrity baseline. Exact covered-component sets, header names, timestamp/nonce bounds, OpenAPI representation, key lifecycle operations and interoperable test vectors remain D-04/D-09 closure items. The algorithm-family decision is closed; P0-01 remains open for wire-level specification and validation.
 
 ## 2. Identifiers
 
