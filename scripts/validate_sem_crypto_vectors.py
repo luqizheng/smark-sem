@@ -214,5 +214,10 @@ assert hashlib.sha256(mutated_time_jcs.encode("utf-8")).hexdigest() != expected[
 
 reordered_envelope = dict(reversed(list(envelope.items())))
 assert json.dumps(reordered_envelope, ensure_ascii=False, sort_keys=True, separators=(",", ":")) == expected["event_envelope_jcs_utf8"], "member order changed callback canonical bytes"
+mutated_correlation = dict(envelope)
+mutated_correlation["correlation_id"] = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+mutated_correlation_jcs = json.dumps(mutated_correlation, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+assert hashlib.sha256(mutated_correlation_jcs.encode("utf-8")).hexdigest() != expected["event_envelope_hash_sha256"], "correlation_id mutation did not change full-envelope hash"
+
 print("callback-idempotency-ok: event_type/occurred_at mutations change envelope hash; member order does not")
 
