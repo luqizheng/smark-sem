@@ -15,7 +15,7 @@ $defs:
     required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       schema_version: { const: 1 }
       message_type: { type: string }
       occurred_at: { type: string, format: date-time }
@@ -83,7 +83,7 @@ $defs:
     type: object
     required: [event_id, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
-      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
@@ -286,7 +286,7 @@ $defs:
     required: [message_id, request_id, execution_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
       accepted_at: { type: string, format: date-time }
@@ -296,7 +296,7 @@ $defs:
     required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       release_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
@@ -306,7 +306,7 @@ $defs:
     type: object
     required: [event_id, execution_id, execution_event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
     properties:
-      event_id: { type: string, format: uuid }
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       execution_event_sequence: { type: integer, minimum: 1 }
       contiguous_through_sequence: { type: integer, minimum: 0 }
@@ -400,7 +400,7 @@ $defs:
     type: object
     required: [event_id, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
-      event_id: { type: string, format: uuid }
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
@@ -603,7 +603,7 @@ $defs:
     required: [message_id, request_id, execution_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
       accepted_at: { type: string, format: date-time }
@@ -613,7 +613,7 @@ $defs:
     required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       release_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
@@ -623,7 +623,7 @@ $defs:
     type: object
     required: [event_id, execution_id, execution_event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
     properties:
-      event_id: { type: string, format: uuid }
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       execution_event_sequence: { type: integer, minimum: 1 }
       contiguous_through_sequence: { type: integer, minimum: 0 }
@@ -852,7 +852,7 @@ $defs:
     required: [message_id, request_id, execution_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
       accepted_at: { type: string, format: date-time }
@@ -862,7 +862,7 @@ $defs:
     required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       release_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
@@ -872,7 +872,7 @@ $defs:
     type: object
     required: [event_id, execution_id, execution_event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
     properties:
-      event_id: { type: string, format: uuid }
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       execution_event_sequence: { type: integer, minimum: 1 }
       contiguous_through_sequence: { type: integer, minimum: 0 }
@@ -966,7 +966,7 @@ $defs:
     type: object
     required: [event_id, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
-      event_id: { type: string, format: uuid }
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
@@ -1169,7 +1169,7 @@ $defs:
     required: [message_id, request_id, execution_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
       accepted_at: { type: string, format: date-time }
@@ -1179,7 +1179,7 @@ $defs:
     required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
-      request_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       release_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
@@ -1189,7 +1189,7 @@ $defs:
     type: object
     required: [event_id, execution_id, execution_event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
     properties:
-      event_id: { type: string, format: uuid }
+      event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       execution_event_sequence: { type: integer, minimum: 1 }
       contiguous_through_sequence: { type: integer, minimum: 0 }
