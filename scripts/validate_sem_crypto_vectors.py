@@ -62,6 +62,15 @@ mutated_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").dige
 assert not verify(http_pub, http_sig, signature_base.replace(http["content_digest"], mutated_digest).encode("ascii")), "HTTP digest-header mutation unexpectedly verified"
 assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").digest()).decode("ascii") + ":", "Body mutation did not change digest"
 
+rfc = data["rfc9421_official_ed25519"]
+rfc_pub = b64d(rfc["public_key_base64"])
+rfc_sig = b64d(rfc["signature_base64"])
+assert verify(rfc_pub, rfc_sig, rfc["signature_base"].encode("ascii")), "Official RFC 9421 Ed25519 vector failed"
+rfc_seed = base64.urlsafe_b64decode(rfc["test_private_seed_base64url"] + "==")
+rfc_private = Ed25519PrivateKey.from_private_bytes(rfc_seed)
+assert rfc_private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) == rfc_pub
+assert rfc_private.sign(rfc["signature_base"].encode("ascii")) == rfc_sig
+
 wss = data["wss"]
 transcript = wss["transcript"]
 # This fixture intentionally uses only ASCII strings and an integer. For this
@@ -100,7 +109,8 @@ wss_private = Ed25519PrivateKey.from_private_bytes(wss_seed)
 assert wss_private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) == wss_pub
 assert wss_private.sign(message) == wss_sig
 
-print("crypto-vectors-ok: HTTP Content-Digest + RFC 9421 Ed25519 signature")
+print("crypto-vectors-ok: official RFC 9421 Appendix B.2.6 Ed25519 vector")
+print("crypto-vectors-ok: HTTP Content-Digest + profile-specific RFC 9421 Ed25519 signature")
 print("crypto-vectors-ok: WSS RFC 8785 JCS + domain-separated Ed25519 proof")
 print("negative-vectors-ok: HTTP method/authority/path/content-type/idempotency/digest mutations")
 print("negative-vectors-ok: WSS runner_id/audience/authority/challenge/protocol/domain-prefix mutations")
