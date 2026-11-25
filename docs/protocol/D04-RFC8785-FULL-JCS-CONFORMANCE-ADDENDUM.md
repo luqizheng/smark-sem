@@ -78,13 +78,13 @@ Updated disposition: **PARTIAL PROGRESS / P0-02 OPEN / CHANGES REQUIRED**. Remai
 
 ## 8. Shared Platform → AI-PM callback envelope vector (2026-11-25)
 
-A deterministic callback-envelope vector now lives at `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` (introduced at commit `f9edbe42c596b29eb10eea2b0801049659d77cb8`). It uses a valid `execution.infrastructure_uncertain` envelope and publishes:
+A deterministic callback-envelope vector now lives at `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` (introduced at commit `ad09195d44d557b5a5d174d6bdfdef687dcef4b5`). It uses a valid `execution.infrastructure_uncertain` envelope and publishes:
 
 - Exact payload JCS UTF-8 bytes and `payload_hash`.
 - Exact complete authenticated event-envelope JCS UTF-8 bytes and `event_envelope_hash`.
-- Stable UUIDs, timestamps and payload fields matching the Platform–SEM callback schema.
+- Stable UUIDs, timestamps and payload fields matching the Platform–SEM callback schema, including the optional top-level `correlation_id`.
 
-Both SEM Python and Node validators now independently verify the exact canonical bytes and SHA-256 values. They also prove that changing `event_type` or `occurred_at` changes the full-envelope hash while leaving the payload hash unchanged, and that reordering object members does not change canonical bytes. The Python verifier rejects duplicate members before materializing values; the Node verifier parses the fixture through the strict duplicate-rejecting parser.
+Both SEM Python and Node validators now independently verify the exact canonical bytes and SHA-256 values. They also prove that changing `event_type`, `occurred_at` or optional `correlation_id` changes the full-envelope hash while leaving the payload hash unchanged, and that reordering object members does not change canonical bytes. The Python verifier rejects duplicate members before materializing values; the Node verifier parses the fixture through the strict duplicate-rejecting parser.
 
 The fixture is deliberately ASCII-only with integer numbers. It proves agreement for the full callback envelope shape and the two-hash contract, but does not replace the broader Unicode, UTF-16 ordering and numeric boundary cases in §4. AI-PM's Rust implementation must consume this exact pinned fixture and match all bytes/hashes; the consumer-side acceptance requirement is recorded in AI-PM PR #9.
 
