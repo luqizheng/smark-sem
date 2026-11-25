@@ -80,6 +80,7 @@ A deterministic, TEST-ONLY vector set is maintained at [crypto-vectors-v1.json](
 - Platform→SEM HTTP request body, RFC 9530 SHA-256 Content-Digest, RFC 9421 signature base and Ed25519 signature.
 - Runner→SEM WSS transcript, RFC 8785 JCS bytes, domain-separation prefix and Ed25519 proof.
 - Negative mutations for HTTP method, authority, path, content type, idempotency key and digest; WSS runner identity, audience, authority, challenge, protocol version and missing domain prefix.
+- The official RFC 9421 Appendix B.2.6 Ed25519 vector is verified by both Python and Node; the fixed WSS JCS transcript/signature is independently serialized, verified and reproduced by Python and Node. Node's JCS check is intentionally limited to the fixture's ASCII strings/integer subset, not the complete RFC 8785 edge-case space.
 - Deterministic TEST-ONLY private seeds to permit exact reproduction. These seeds MUST NOT be used in any deployed environment.
 
 These vectors prove the selected algorithm primitives and the specific Draft serialization examples. They do not ratify the final HTTP covered-component profile, time bounds, nonce retention, full JCS edge-case behavior, key rotation policy or production implementation. Those remain open until cross-language fixtures and the full RFC 9421 verifier behavior are independently tested.
