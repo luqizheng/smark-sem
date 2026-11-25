@@ -160,6 +160,22 @@ runner_unknown_with_signal = json.loads(json.dumps(runner_exit))
 runner_unknown_with_signal["payload"]["exit_status"] = {"kind": "unknown", "signal": 9}
 expect_invalid(runner_validator, runner_unknown_with_signal, "Runner unknown exit status with numeric signal")
 
+runner_release = next(item for item in data["runner_messages"] if item["message_type"] == "execution.release_applied")
+for release_disposition in ("process_stopped", "already_exited"):
+    release_without_evidence = json.loads(json.dumps(runner_release))
+    release_without_evidence["payload"]["disposition"] = release_disposition
+    expect_invalid(runner_validator, release_without_evidence, f"Runner {release_disposition} without process-exit evidence")
+    release_with_evidence = json.loads(json.dumps(runner_release))
+    release_with_evidence["payload"]["disposition"] = release_disposition
+    release_with_evidence["payload"]["process_exit_evidence_id"] = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    expect_valid(runner_validator, release_with_evidence, f"Runner {release_disposition} with process-exit evidence")
+
+for release_disposition in ("stop_fenced", "stale_rejected", "local_uncertain"):
+    release_with_false_evidence = json.loads(json.dumps(runner_release))
+    release_with_false_evidence["payload"]["disposition"] = release_disposition
+    release_with_false_evidence["payload"]["process_exit_evidence_id"] = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    expect_invalid(runner_validator, release_with_false_evidence, f"Runner {release_disposition} carrying positive process-exit evidence")
+
 runner_missing_digest = json.loads(json.dumps(runner_exit))
 del runner_missing_digest["payload"]["evidence_digest"]
 expect_invalid(runner_validator, runner_missing_digest, "Runner process exit without evidence digest")
