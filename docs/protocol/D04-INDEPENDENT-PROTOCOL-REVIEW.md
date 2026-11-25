@@ -23,13 +23,17 @@
 
 The OpenAPI initially had a placeholder signature scheme. The narrative contract now proposes asymmetric Ed25519 HTTP Message Signatures (RFC 9421) plus Content-Digest (RFC 9530), with request/response signing, method/authority/path/query/body binding, key IDs, timestamp/expiry/nonce replay defense and key rotation. The algorithm-family decision is now approved in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md): Ed25519 + RFC 9421 + RFC 9530. The OpenAPI does not yet fully model covered components, signed response headers, key identifiers or test vectors. This remains a blocker for both HTTP and HTTPS; HTTPS is optional in V1 and therefore cannot be the sole integrity/authentication mechanism.
 
-Required closure: fully model the approved Ed25519 + RFC 9421 + RFC 9530 profile in OpenAPI; define exact covered components, key distribution/rotation/overlap/revocation and timestamp/nonce bounds; add positive/negative canonicalization and replay test vectors.
+A deterministic HTTP Ed25519/RFC 9421/RFC 9530 request vector and negative covered-component mutation checks now exist in [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json). The vector verifier reproduces the signature from a TEST-ONLY seed. This is a fixed Draft example, not a complete RFC 9421 implementation or a ratified operation-wide covered-component profile.
+
+Required closure: fully model signed responses and every HTTP operation in OpenAPI; freeze exact covered components and key distribution/rotation/overlap/revocation and timestamp/nonce bounds; add independent implementation vectors and replay-store tests.
 
 ### P0-02 — WSS authentication transcript baseline approved; exact transcript and vectors remain open
 
 A separate WSS handshake JSON Schema now defines challenge, proof-of-possession, session establishment, acknowledgement and supersession envelopes. The narrative proposes Ed25519 over a domain-separated RFC 8785 JCS transcript, with 32-byte server/client nonces and a single-use 30-second challenge. The algorithm/canonicalization family is approved in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md): Ed25519 over a domain-separated RFC 8785 JCS transcript. Exact transcript field schema, cross-language test vectors, TLS audience/authority binding, key-version overlap and full implementation semantics remain open.
 
-Required closure: freeze the exact Ed25519/JCS transcript fields; add positive/negative cross-language signature test vectors, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
+A deterministic Ed25519/JCS WSS transcript vector now exists with exact transcript bytes, domain separation and negative mutations of runner_id, audience, authority, challenge_id, protocol version and missing prefix. This is still one Draft transcript example; it does not prove independent cross-language JCS implementations or production challenge lifecycle.
+
+Required closure: freeze the exact Ed25519/JCS transcript fields; add at least two independent language implementations, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
 ### P0-03 — WSS message payloads have strict schemas; mechanical coverage remains unverified
 
@@ -69,13 +73,13 @@ Maximum HTTP body, WSS frame, prompt and bootstrap sizes; compression; heartbeat
 
 Required closure: D-08/D-09 choose bounded values and the schema/OpenAPI expose any negotiated or configured limits.
 
-### P1-04 — Reproducible schema-validation CI is now present; payload fixtures remain absent
+### P1-04 — Reproducible schema-validation and cryptographic-vector CI is now present; full protocol fixtures remain incomplete
 
-A dedicated GitHub Actions workflow now validates the OpenAPI 3.1 document and external references with Redocly, checks each JSON Schema against the Draft 2020-12 meta-schema, and mechanically verifies that all 19 post-handshake Runner message types and all five SEM event types have corresponding schema branches.
+A dedicated GitHub Actions workflow now validates the OpenAPI 3.1 document and external references with Redocly, checks each JSON Schema against the Draft 2020-12 meta-schema, mechanically verifies all 19 post-handshake Runner message types and five SEM event branches, and executes deterministic HTTP/WSS Ed25519 vector verification with negative mutation cases.
 
 The workflow completed successfully on commit `b25dcf79601e0c54bd53e48753ed88866a86e899` (run #2). This is schema/meta-schema and discriminator-coverage evidence only. It does not execute the 92 acceptance scenarios, validate positive/negative payload fixtures, verify cryptographic test vectors, or test the AI-PM callback receiver.
 
-Required closure: add positive/negative fixtures for every WSS and HTTP/event branch, run the fixture suite in CI, and record cross-repository contract test evidence.
+Required closure: add positive/negative fixtures for every WSS and HTTP/event payload branch; test full RFC 9421 parsing/covered-component canonicalization and replay storage; test JCS edge cases and independent cross-language WSS verification; add cross-repository receiver contract tests.
 ## 3. Cross-contract invariants that must remain
 
 1. Runner WSS transport message_sequence is per direction and connection generation.
