@@ -435,3 +435,14 @@ The user-confirmed V1 deployment model remains visible unreachable status + quar
 V1 does not require dual approval; the dedicated capability, on-site attestation, append-only audit and no-capacity-reuse rule are the selected minimum controls. This is a Draft contract, not implementation evidence. The Linux systemd integration test plan must test authorization, idempotency, audit durability, no-capacity-reuse and AI-PM authority separation.
 
 **Disposition: D-03 operator-action semantics clarified at Draft level; implementation and authorization tests remain open.**
+
+
+## 16. Linux integration test-plan challenge and acceptance-matrix integrity
+
+A dedicated [Linux systemd Integration and Failure-Injection Test Plan](./linux-systemd-integration-test-plan.md) now separates real-host OS validation from ordinary protocol CI. It defines the disposable systemd >=250 + unified cgroup v2 host profile, privilege boundaries, deterministic D-Bus/Journal/Release/exit/ACK injection points, required evidence artifacts, test suites and ratification gates.
+
+The D-05 acceptance matrix was mechanically checked against the source document: **102 unique IDs, D05-01 through D05-102, with no gaps or duplicates**. The test plan requires every ID to map to an executable test or an explicitly identified schema/unit/operational test; prose-only coverage is not accepted.
+
+A package-number collision was also corrected: the completion register uses **D-10 for implementation architecture and repository ownership**. The Linux systemd test plan is therefore an independent named test plan, not D-10. All active D-03/D-05 references now use the unnumbered test-plan title.
+
+**Disposition:** test design and traceability contract are present; no Linux runtime test has been executed. P0-02/P0-03/P0-04 remain open until real-host failure-injection artifacts exist.
