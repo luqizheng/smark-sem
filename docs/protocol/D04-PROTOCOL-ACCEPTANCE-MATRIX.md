@@ -214,6 +214,7 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | D04-H42 | Process observation is exited with both exit_code and exit_signal | Reject; exactly one exit-status discriminator is allowed |
 | D04-H43 | Process observation is exited without exact process identity or exit evidence | Reject; no process-exited fact is accepted |
 | D04-H44 | Release state is process_exited without process_exit_evidence_id | Reject; no release completion/capacity release |
+| D04-H49 | Release state is released without process_exit_evidence_id | Reject; SEM cannot report terminal release/capacity release without exact process-exit evidence |
 | D04-H45 | Evidence reference resolves to another execution/runner/boot/supervisor/binding/launch/containment | Semantic validation rejects or quarantines; cursor must not advance |
 | D04-H46 | Structurally valid event has stale binding_epoch | Reject/quarantine as stale; do not overwrite newer binding observation |
 | D04-H47 | exit_status_unknown has positive exact containment-empty evidence but no numeric status | Accept only as unknown process exit status; never infer exit code 0 or business success |
