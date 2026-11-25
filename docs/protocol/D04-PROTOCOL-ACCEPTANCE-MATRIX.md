@@ -52,6 +52,27 @@
 | D04-H24 | Production client attempts verify=false / insecure downgrade | Configuration/startup rejected |
 | D04-H25 | Transient 5xx/429 response | Bounded retry using the same request_id and message identity; honor Retry-After where present |
 
+
+## 2.1 Approved cryptographic profile acceptance cases
+
+The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These cases are required additions to the existing HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-H26 | Valid Ed25519 RFC 9421 request with matching RFC 9530 Content-Digest | Signature and digest verify before request parsing or persistence |
+| D04-H27 | Request body changes after signature creation | Digest/signature verification fails; no durable mutation |
+| D04-H28 | HTTP method, authority, path or query changes | Signature verification fails |
+| D04-H29 | Signature-Input has unknown/revoked keyid or unsupported algorithm | Fail closed; no unsigned fallback |
+| D04-H30 | Signature created/expires violates configured freshness policy | Reject and audit |
+| D04-H31 | Same nonce is replayed under the same keyid | Reject atomically; first accepted operation remains idempotent |
+| D04-H32 | Valid signed HTTP response is altered in transit | Platform rejects response and does not trust its acknowledgement |
+| D04-W35 | Valid Ed25519 signature over the exact domain-separated RFC 8785 JCS transcript | WSS authentication may proceed after TLS validation |
+| D04-W36 | Any signed transcript field changes, including endpoint authority or audience | Signature verification fails; no session |
+| D04-W37 | Same challenge_id is presented more than once | Replay rejected; no second session |
+| D04-W38 | Runner key is rotated with an explicitly configured overlap window | Only keys in the active/overlap set authenticate |
+| D04-W39 | Runner key is revoked | Authentication rejected even if the signature is otherwise valid |
+| D04-W40 | TLS hostname/chain/pin validation fails while Runner proof is valid | Connection rejected before application authentication |
+
 ## 3. Runner↔SEM WSS contract cases
 
 | ID | Scenario | Expected result |
