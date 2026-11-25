@@ -340,3 +340,22 @@ if (crypto.createHash("sha256").update(envelopeJcs, "utf8").digest("hex") !== ca
   throw new Error("Callback event_envelope_hash differs from shared fixture");
 }
 console.log("callback-jcs-ok: payload and complete authenticated envelope bytes + SHA-256");
+
+// A replay with the same payload but a changed authenticated envelope field
+// is not a duplicate. Object member order, however, is not semantically relevant.
+const mutatedEventType = { ...callbackEnvelope, event_type: "execution.delivery_status" };
+const mutatedEventTypeJcs = canonicalize(mutatedEventType);
+if (crypto.createHash("sha256").update(mutatedEventTypeJcs, "utf8").digest("hex") === callbackExpected.event_envelope_hash_sha256) {
+  throw new Error("Changing event_type did not change the complete-envelope hash");
+}
+const mutatedOccurredAt = { ...callbackEnvelope, occurred_at: "2026-11-25T10:15:32Z" };
+const mutatedOccurredAtJcs = canonicalize(mutatedOccurredAt);
+if (crypto.createHash("sha256").update(mutatedOccurredAtJcs, "utf8").digest("hex") === callbackExpected.event_envelope_hash_sha256) {
+  throw new Error("Changing occurred_at did not change the complete-envelope hash");
+}
+const reorderedEnvelope = Object.fromEntries(Object.entries(callbackEnvelope).reverse());
+if (canonicalize(reorderedEnvelope) !== callbackExpected.event_envelope_jcs_utf8) {
+  throw new Error("Reordering callback envelope members changed canonical bytes");
+}
+console.log("callback-idempotency-ok: event_type/occurred_at mutations change envelope hash; member order does not");
+
