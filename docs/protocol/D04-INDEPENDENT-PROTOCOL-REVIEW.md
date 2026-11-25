@@ -19,17 +19,17 @@
 
 ## 2. Findings
 
-### P0-01 — HTTP service authentication and request-integrity profile is not specified
+### P0-01 — HTTP service authentication and request-integrity profile is approved but not fully machine-specified
 
-The OpenAPI initially had a placeholder signature scheme. The narrative contract now proposes asymmetric Ed25519 HTTP Message Signatures (RFC 9421) plus Content-Digest (RFC 9530), with request/response signing, method/authority/path/query/body binding, key IDs, timestamp/expiry/nonce replay defense and key rotation. The proposal is not yet ratified and the OpenAPI does not yet fully model all signed headers/response signatures or include test vectors. This remains a blocker for both HTTP and HTTPS; HTTPS is optional in V1 and therefore cannot be the sole integrity/authentication mechanism.
+The OpenAPI initially had a placeholder signature scheme. The narrative contract now proposes asymmetric Ed25519 HTTP Message Signatures (RFC 9421) plus Content-Digest (RFC 9530), with request/response signing, method/authority/path/query/body binding, key IDs, timestamp/expiry/nonce replay defense and key rotation. The algorithm-family decision is now approved in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md): Ed25519 + RFC 9421 + RFC 9530. The OpenAPI does not yet fully model covered components, signed response headers, key identifiers or test vectors. This remains a blocker for both HTTP and HTTPS; HTTPS is optional in V1 and therefore cannot be the sole integrity/authentication mechanism.
 
-Required closure: ratify or revise the Ed25519 + RFC 9421 + RFC 9530 candidate; fully model request and response signature headers in OpenAPI; define key distribution/rotation/overlap/revocation and timestamp/nonce bounds; add positive/negative canonicalization and replay test vectors.
+Required closure: fully model the approved Ed25519 + RFC 9421 + RFC 9530 profile in OpenAPI; define exact covered components, key distribution/rotation/overlap/revocation and timestamp/nonce bounds; add positive/negative canonicalization and replay test vectors.
 
-### P0-02 — WSS authentication transcript is still prose-only
+### P0-02 — WSS authentication transcript baseline approved; exact transcript and vectors remain open
 
-A separate WSS handshake JSON Schema now defines challenge, proof-of-possession, session establishment, acknowledgement and supersession envelopes. The narrative proposes Ed25519 over a domain-separated RFC 8785 JCS transcript, with 32-byte server/client nonces and a single-use 30-second challenge. This remains a candidate: transcript test vectors, exact TLS audience/authority binding, key-version overlap and full implementation semantics are not ratified.
+A separate WSS handshake JSON Schema now defines challenge, proof-of-possession, session establishment, acknowledgement and supersession envelopes. The narrative proposes Ed25519 over a domain-separated RFC 8785 JCS transcript, with 32-byte server/client nonces and a single-use 30-second challenge. The algorithm/canonicalization family is approved in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md): Ed25519 over a domain-separated RFC 8785 JCS transcript. Exact transcript field schema, cross-language test vectors, TLS audience/authority binding, key-version overlap and full implementation semantics remain open.
 
-Required closure: ratify or revise the Ed25519/JCS transcript candidate; add positive/negative signature test vectors, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
+Required closure: freeze the exact Ed25519/JCS transcript fields; add positive/negative cross-language signature test vectors, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
 ### P0-03 — WSS schema does not yet define every message payload
 
