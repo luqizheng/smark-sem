@@ -163,3 +163,8 @@ Corrected the Draft response profile:
 Reference: [RFC 9421 §§2.2 and 2.4](https://www.rfc-editor.org/rfc/rfc9421.html).
 
 This corrects a concrete standards mismatch in the proposed profile. Exact serialized Signature-Input examples, verifier request-context association, canonical vectors, and runtime interoperability remain open. P0-01 remains **OPEN / CHANGES REQUIRED**.
+
+
+### CI evidence update for §5.4 — 2026-11-25
+
+The schema/validator correction described in §5.4 was validated by SEM Protocol Contract Validation run #127 on commit `0ac34a194779260ea241e7e7c5d6960f8c3d3d45`: **success**. The run completed OpenAPI validation, JSON Schema meta-schema/message coverage, cryptographic vectors, positive/negative payload fixtures, and independent Node JCS/Ed25519 checks. A subsequent documentation-only fixture-count refresh does not alter those executable files. This remains contract/fixture CI, not live WSS session-supersession interoperability.
