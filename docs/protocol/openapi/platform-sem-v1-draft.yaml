@@ -69,7 +69,35 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExecutionSnapshotEnvelope' }
-        '304': { description: Snapshot unchanged. }
+        '304':
+          description: >-
+            The selected representation is unchanged. This response has no
+            message content. ETag MUST echo the current validator for the
+            selected representation. The response is authenticated and signed
+            under the same SEM response-signature profile as a 200 response;
+            Content-Digest is computed over the empty message content. This
+            response remains Draft until D-04 signed-response profile ratification.
+          headers:
+            ETag:
+              required: true
+              description: Exact current entity tag for the unchanged representation.
+              schema: { type: string }
+            Content-Digest:
+              required: true
+              description: RFC 9530 digest of the empty response content.
+              schema: { type: string }
+            Signature-Input:
+              required: true
+              description: RFC 9421 response signature parameters; exact covered components remain D-04 ratification blocker.
+              schema: { type: string }
+            Signature:
+              required: true
+              description: RFC 9421 Ed25519 response signature.
+              schema: { type: string }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request message/correlation identity.
+              schema: { type: string, format: uuid }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { description: Execution identifier is unknown to SEM. }
         '500': { $ref: '#/components/responses/ServerError' }
