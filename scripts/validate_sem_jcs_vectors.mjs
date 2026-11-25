@@ -173,6 +173,14 @@ for (const name of ["http_response", "http_error_409", "http_snapshot_200", "htt
     }
   }
   if (name === "http_304") {
+    const wrong304EtagPairs = pairs.map(pair => [...pair]);
+    const etagIndex = wrong304EtagPairs.findIndex(pair => pair[0] === '"etag"');
+    wrong304EtagPairs[etagIndex][1] = '"tampered-snapshot-v5"';
+    const wrong304EtagBase = wrong304EtagPairs.map(([component, value]) => component + ": " + value).join("\\n")
+      + '\\n"@signature-params": ' + vector.signature_params;
+    if (crypto.verify(null, Buffer.from(wrong304EtagBase, "ascii"), responsePublicKey, responseSignature)) {
+      throw new Error("304 signature accepted a tampered ETag");
+    }
     const wrongValidatorPairs = pairs.map(pair => [...pair]);
     wrongValidatorPairs[8][1] = '"different-validator"';
     const wrongValidatorBase = wrongValidatorPairs.map(([component, value]) => component + ": " + value).join("\\n")
