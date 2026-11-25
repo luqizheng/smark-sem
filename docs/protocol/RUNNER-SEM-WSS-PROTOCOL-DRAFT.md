@@ -374,3 +374,16 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 The JSON Schema is a validation baseline, not a ratified wire contract. It intentionally leaves the handshake transcript, complete payload refinements for every message, timer values, frame limits and replay snapshot semantics open.
 
 Until these are resolved and accepted, this document remains Draft / Review. It is not an implementation authorization.
+
+
+## 9.1 Process exit status representation and Platform mapping
+
+The `harness.process_exited` payload represents the operating-system process termination result as a tagged union:
+
+- `{ "kind": "code", "code": <integer> }` when the Supervisor positively observes a numeric exit code;
+- `{ "kind": "signal", "signal": <positive integer> }` when the process was terminated by an operating-system signal;
+- `{ "kind": "unknown" }` only when the exact containment is proven empty but the numeric termination result was lost or cannot be recovered.
+
+The `unknown` variant MUST NOT include a code or signal. The signal variant MUST NOT be coerced into an exit code. SEM's Platform event producer maps code to `exit_evidence.exit_code`, signal to `exit_evidence.exit_signal`, and unknown to an evidence object with neither numeric field. The AI-PM receiver preserves the same distinction. None of these infrastructure facts implies Task success or failure; AI-PM decides the business Run outcome.
+
+A release/uncertainty path MUST retain the durable capacity reservation while process state is uncertain. The SEM infrastructure-uncertainty event therefore requires `reservation_retained: true`; the reservation can be released only after reconciliation establishes a safe terminal infrastructure disposition under the lifecycle policy.
