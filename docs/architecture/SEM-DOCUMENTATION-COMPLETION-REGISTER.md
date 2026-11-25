@@ -122,14 +122,9 @@ Specify canonical serialization, message_id, request_id, execution_id, delivery_
 
 ### D-05 — State machines and crash consistency
 
-Provide normative state tables with allowed transitions, actor, preconditions, durable write, emitted event, duplicate behavior and recovery for:
-- AI-PM business Run/attempt and authorization grant;
-- SEM execution/delivery/binding/release;
-- Runner Supervisor process lifecycle and local durable registry.
+Detailed proposal: [Lifecycle State Machines and Crash Consistency Draft](./server-execution-management/lifecycle-state-machines-and-crash-consistency-draft.md). It defines the AI-PM Run/attempt, SEM Execution and Runner Supervisor process lifecycles; durable-before-effect transitions; SEM/Runner restart reconciliation; delivery and release races; independent authorization-generation and binding-epoch fencing; event replay/gap handling; and 46 acceptance cases. It remains Draft / Review. The exact AI-PM Run vocabulary, Runner journal/fsync and OS process-containment recovery, event cursor schema, and D-04 machine-readable contracts remain open.
 
-Cover races: release during start, natural exit before release, disconnect during delivery, SEM restart, Runner reboot, delayed/out-of-order events, event sequence gaps, duplicate message with changed payload, and stale binding epoch.
-
-### D-05 — State machines and crash consistency\n\nDetailed proposal: [Lifecycle State Machines and Crash Consistency Draft](./server-execution-management/lifecycle-state-machines-and-crash-consistency-draft.md). It defines the AI-PM Run/attempt, SEM Execution and Runner Supervisor process lifecycles; durable-before-effect transitions; SEM/Runner restart reconciliation; delivery and release races; independent authorization-generation and binding-epoch fencing; event replay/gap handling; and 46 acceptance cases. It remains Draft / Review. The exact AI-PM Run vocabulary, Runner journal/fsync and OS process-containment recovery, event cursor schema, and D-04 machine-readable contracts remain open.\n\n### D-06 — Delegated MCP application-service contract
+### D-06 — Delegated MCP application-service contract
 
 Define every allowed MCP operation, request/response schema, exact resource scoping, required grant checks and audit event. Prove read and write paths both reject cross-task/project/tenant access. Keep formal review/approval and manual completion human-only. Preserve existing Task state machine semantics; do not let process exit or submission equal Task completion.
 
