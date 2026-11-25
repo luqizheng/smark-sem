@@ -96,6 +96,7 @@ Rules:
 | SEM → Runner | `runner.challenge` | Fresh authentication challenge |
 | Runner → SEM | `runner.auth.proof` | Proof of private-key possession |
 | SEM → Runner | `runner.session.established` | Bind connection generation and negotiated policy |
+| Runner → SEM | `runner.session.ack` | Acknowledge the negotiated session during the handshake |
 | Runner → SEM | `runner.heartbeat` | Application liveness and Supervisor status |
 | SEM → Runner | `runner.health_probe` | Optional correlated health check |
 | Runner → SEM | `runner.health_report` | Probe response |
