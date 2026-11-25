@@ -253,3 +253,6 @@ Latest signed ETag validation: PR head `1b81fb2cc5f92ef43ae09e46547587fd681359b4
 
 
 D04-H77 now makes the pre-authentication/malformed-request boundary explicit: where no trustworthy canonical request context exists, a generic error path must not echo attacker-controlled `request_id`, `message_id` or `event_id` as authenticated correlation. The separate generic response-signing/correlation policy remains open.
+
+
+Latest PR #3 head `1ae585302f284a0937958ff52b0ee44a12cb0693` passed CI runs #367 (push) and #368 (pull_request), all ten validation steps green. This includes signed snapshot ETag, callback ACK, 409 and 304 vectors; request-context and ETag tamper negatives; JCS Python/Node edge corpus; and the authenticated 404 / pre-auth correlation contract lint.
