@@ -186,6 +186,8 @@ The acceptance suite MUST publish literal byte-for-byte fixtures containing the 
 - A bodyless non-304 response, proving the empty response digest path.
 - A request-association negative vector where the response is replayed against a different method, authority, path, request digest, or conditional validator.
 
+The SEM→AI-PM callback 200 ACK case is now represented by `http_callback_ack` in `tests/protocol/fixtures/crypto-vectors-v1.json`. Python and Node independently recompute the request/response Content-Digest, reconstruct the RFC 9421 signature base, verify and reproduce the Ed25519 signature, and reject a mutated `X-SEM-Event-Id` that does not equal the authenticated `event_id`. D04-H68/H69 cover the positive and negative cases. This does not close the other fixture classes above or the third-implementation/live-stack requirement.
+
 Each positive fixture must be generated independently by at least two implementations and cross-verified by a third implementation or a separately implemented verifier. Python, Node and Rust are candidate languages; library names and versions must be pinned in the fixture manifest after actual compatibility tests, not assumed in advance. Negative vectors must mutate one component at a time and prove verification failure.
 
 ### 8.7 Freshness and replay are separate acceptance gates
