@@ -94,7 +94,7 @@ Rules:
 }
 ~~~
 
-Possible acceptance values: accepted, duplicate, rejected.
+Possible acceptance values: accepted and duplicate. Rejections use the structured HTTP error envelope and an appropriate status code.
 
 Acceptance means only that SEM durably accepted the infrastructure execution request. It does not mean a Runner was selected, the prompt was delivered, Harness started, or business work began. The binding_epoch is assigned only when a Runner binding is established and is reported in execution.binding_established; it is not part of the initial durable-acceptance response.
 
@@ -160,6 +160,7 @@ Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
   "correlation_id": "uuid",
   "payload": {
     "execution_id": "uuid",
+    "release_id": "uuid",
     "expected_binding_epoch": 1,
     "stop_policy": {
       "mode": "graceful_then_force",
@@ -322,10 +323,11 @@ This event is emitted only after SEM has selected a Runner and durably reserved 
 
 ~~~json
 {
-  "message_id": "uuid",
-  "message_type": "execution.binding_established",
+  "event_id": "uuid",
+  "event_type": "execution.binding_established",
   "schema_version": 1,
   "occurred_at": "RFC3339 UTC",
+  "journal_id": "uuid",
   "event_sequence": 1,
   "payload": {
     "execution_id": "uuid",
@@ -370,6 +372,7 @@ SEM routes this opaque ticket only to the exact current Runner binding and does 
   "message_id": "uuid",
   "message_type": "execution.delivery_received",
   "schema_version": 1,
+  "journal_id": "uuid",
   "event_sequence": 1,
   "occurred_at": "RFC3339 UTC",
   "payload": {
@@ -391,18 +394,22 @@ This receipt proves only that Runner Supervisor durably recorded the delivery op
   "message_id": "uuid",
   "message_type": "harness.started",
   "schema_version": 1,
+  "journal_id": "uuid",
   "event_sequence": 2,
   "occurred_at": "RFC3339 UTC",
   "payload": {
     "execution_id": "uuid",
     "binding_epoch": 1,
+    "launch_id": "uuid",
+    "containment_id": "opaque-containment-id",
     "runner_id": "uuid",
     "supervisor_instance_id": "uuid",
     "process_identity": {
       "os_boot_id": "opaque-boot-id",
       "pid": 1234,
       "process_start_identity": "opaque-os-start-token",
-      "process_group_or_container_id": "opaque-runtime-id"
+      "cgroup_path": "/sys/fs/cgroup/sem/...",
+      "systemd_invocation_id": "opaque-systemd-invocation-id"
     },
     "harness_profile": "codex"
   }
@@ -418,6 +425,7 @@ PID alone is not a stable process identity. The process start identity and OS bo
   "message_id": "uuid",
   "message_type": "harness.process_exited",
   "schema_version": 1,
+  "journal_id": "uuid",
   "event_sequence": 3,
   "occurred_at": "RFC3339 UTC",
   "payload": {
@@ -428,18 +436,20 @@ PID alone is not a stable process identity. The process start identity and OS bo
       "os_boot_id": "opaque-boot-id",
       "pid": 1234,
       "process_start_identity": "opaque-os-start-token",
-      "process_group_or_container_id": "opaque-runtime-id"
-    },
-    "exit_code": 0,
-    "exit_signal": null,
-    "observation_id": "uuid",
-    "evidence_kind": "supervisor_wait_reaped",
+      "launch_id": "uuid",
+    "containment_id": "opaque-containment-id",
+    "boot_id": "opaque-boot-id",
+    "systemd_invocation_id": "opaque-systemd-invocation-id",
+    "cgroup_path": "/sys/fs/cgroup/sem/...",
+    "cgroup_populated": 0,
+    "evidence_id": "uuid",
+    "exit_status": { "kind": "code", "code": 0 },
     "supervisor_instance_id": "uuid"
   }
 }
 ~~~
 
-The evidence_kind is accepted only when produced by the trusted Runner Supervisor implementation through the authenticated Runner channel. A Harness self-report is not process-exit evidence. The exit code is infrastructure evidence and never means Task completion.
+The systemd invocation and cgroup v2 evidence must be produced by the trusted host-side Runner Supervisor. A Harness self-report is not process-exit evidence. The exit status is infrastructure evidence and never means Task completion.
 
 ### 13.6 Runner → SEM: resource telemetry
 
