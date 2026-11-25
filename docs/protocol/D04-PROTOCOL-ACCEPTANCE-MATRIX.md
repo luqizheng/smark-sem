@@ -214,3 +214,37 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | D04-H45 | Evidence reference resolves to another execution/runner/boot/supervisor/binding/launch/containment | Semantic validation rejects or quarantines; cursor must not advance |
 | D04-H46 | Structurally valid event has stale binding_epoch | Reject/quarantine as stale; do not overwrite newer binding observation |
 | D04-H47 | exit_status_unknown has positive exact containment-empty evidence but no numeric status | Accept only as unknown process exit status; never infer exit code 0 or business success |
+
+
+## 4.2 AI-PM Inbox transaction and concurrency acceptance cases
+
+These cases complement the wire/schema cases above. They are normative test requirements for the bilateral callback adapter, not evidence that the adapter or database migration exists. The detailed transaction algorithm and SQL candidate are in the AI-PM PR #9 document [SEM Callback Inbox — Exact DDL and Concurrency Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/sem-callback-inbox-ddl-and-concurrency-design.md).
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-BI-01 | First event for execution sequence 1 | One Inbox row, one append-only Run observation, cursor 1; ACK only after commit |
+| D04-BI-02 | Same event_id, execution_id, sequence and JCS payload hash replayed | Duplicate ACK; no second Run observation |
+| D04-BI-03 | Same event_id with changed payload hash | 409 IDEMPOTENCY_CONFLICT; no additional writes |
+| D04-BI-04 | Same event_id with changed execution_id or execution_event_sequence | 409 IDEMPOTENCY_CONFLICT; no additional writes |
+| D04-BI-05 | Same execution sequence concurrently delivered under different event IDs | Exactly one commits; loser receives 409 EVENT_SEQUENCE_CONFLICT |
+| D04-BI-06 | Same event ID/body concurrently delivered | Exactly one durable application; other returns duplicate after winner commits |
+| D04-BI-07 | Sequence N+1 arrives before N | 409 EVENT_SEQUENCE_GAP with expected_sequence; no cursor advance |
+| D04-BI-08 | N commits but response is lost; exact N is replayed | Duplicate ACK; cursor remains N |
+| D04-BI-09 | Process crashes before transaction commit | Inbox, Run observation and cursor all roll back; no success ACK |
+| D04-BI-10 | Same event ID is submitted from another project/source | Existing global Inbox PK prevents second row; no cross-project data disclosure |
+| D04-BI-11 | Unknown execution, wrong tenant or wrong project | Non-enumerating 404; no writes |
+| D04-BI-12 | Execution ID resolves to review Run | Non-enumerating 404; no writes |
+| D04-BI-13 | Runner key version, boot ID, Supervisor ID or binding epoch is stale | Reject/quarantine; cursor unchanged |
+| D04-BI-14 | Process-exited event lacks exact process/exit evidence | Reject; cursor unchanged |
+| D04-BI-15 | Release process_exited lacks process-exit evidence reference | Reject; cursor unchanged |
+| D04-BI-16 | SEM service principal submits through dedicated service route | Accepted only as service identity; never HumanActor |
+| D04-BI-17 | SEM callback is persisted | No integration.job row with job_type=ai_analysis |
+| D04-BI-18 | Infrastructure event reports exit_code=0 | Infrastructure observation only; no Task/Run business-success mutation |
+| D04-BI-19 | N and N+1 arrive concurrently | Run-row serialization yields ordered observations and cursor N+1 |
+| D04-BI-20 | Failure after Inbox insert but before Run observation | Entire transaction rolls back |
+| D04-BI-21 | Failure after Run observation but before cursor advance | Entire transaction rolls back |
+| D04-BI-22 | Transient database failure and retry | Same event ID/body reused; no sequence skip |
+| D04-BI-23 | Non-SEM generic ingestion after migration | Existing project/source/idempotency semantics remain unchanged |
+| D04-BI-24 | Duplicate JSON member names or invalid JCS input | Reject before persistence or cursor movement |
+
+**Execution status:** specification only. Every case still requires a real PostgreSQL two-connection test where applicable, exact row-count/value assertions across Inbox + Run event + cursor, and bilateral CI execution. No test is marked passed by the presence of this matrix.
