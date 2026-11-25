@@ -3,7 +3,7 @@
 - Status: **DRAFT / ARCHITECTURE REVIEW — NOT IMPLEMENTATION-AUTHORIZING**
 - Owner: `smark-sem`
 - Consumer: `ai-pm`
-- Protocol baseline reviewed: SEM PR #3, commit `068d44f3742b1381d059f9435f26c34137c0cebb` (Draft, not ratified)
+- Protocol baseline reviewed: SEM PR #3, commit `1b81fb2cc5f92ef43ae09e46547587fd681359b4` (Draft, not ratified)
 - Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `2e19a7ed905a78d037de5ff172fc309256e68336` (Draft only, not runtime source)
 - Companion: [SEM SDK source compatibility audit](./sem-sdk-source-compatibility-audit.md)
 - Protocol source: [Platform–SEM execution message protocol](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
@@ -114,13 +114,17 @@ The SDK must not generate a new request_id after an ambiguous result. A retry by
 
 `get_execution` returns only SEM infrastructure state and associated infrastructure identifiers/observations defined by the canonical snapshot schema. It never returns an AI-PM Task status or business outcome.
 
+The GET request carries caller-generated `message_id` and `request_id` (the `Idempotency-Key`) just like other Platform→SEM operations. The signed response correlation header `X-SEM-Request-Id` MUST echo `request_id`, never `message_id`.
+
 The optional read condition represents the HTTP `If-None-Match` validator. The result must distinguish:
 - `Modified(snapshot, etag)` for HTTP 200;
-- `NotModified` for HTTP 304.
+- `NotModified { etag }` for HTTP 304.
 
-The current OpenAPI draft defines an ETag response header for 200 but does not explicitly define it for 304. Before freezing the Rust return type, D-04 must decide whether 304 echoes ETag (recommended) and add the corresponding OpenAPI header and signed-response coverage. Until then the SDK must not promise an ETag value on the 304 branch.
+The current OpenAPI draft requires an ETag response header on both 200 and 304. The 200 snapshot response signature covers the exact ETag after `X-SEM-Request-Id` and before `Content-Type`. The 304 response signature covers the exact ETag and the originating `If-None-Match` request header. Both responses are also bound to the exact originating method, authority, path and request Content-Digest.
 
-A 404 means the execution identifier is unknown to SEM; it must not be silently translated into an empty/queued execution.
+The SDK MUST verify the complete response signature and request-context association before exposing the snapshot or ETag. It MUST NOT cache an ETag or use it in a subsequent `If-None-Match` request before verification. ETag values are opaque and must be preserved exactly; do not normalize or reconstruct them.
+
+A 404 means the execution identifier is unknown to SEM; it must not be silently translated into an empty/queued execution. The current OpenAPI draft defines a signed structured 404 response for an authenticated request context; pre-authentication error correlation remains a separate D-04 open issue.
 
 ### 3.3 Release request
 
