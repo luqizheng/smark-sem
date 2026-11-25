@@ -28,14 +28,15 @@ D-05 closes the failure window in which SEM has accepted and sent a delivery, bu
 
 | Field | Issuer / authority | Purpose |
 |---|---|---|
-| `task_id`, `run_id`, `attempt_id` | AI-PM | Business identity; never interpreted by SEM |
+| `task_id`, `run_id`, `attempt_no` | AI-PM | Business identity; run_id identifies the Run/attempt and attempt_no is its task-local ordinal; never interpreted by SEM |
 | `authorization_generation` | AI-PM | Reject stale delegated Harness MCP authority |
 | `execution_id` | AI-PM creates; SEM records | Opaque cross-system correlation and infrastructure execution identity |
 | `request_id`, `message_id` | Sending system | Stable request/outbox idempotency |
 | `delivery_id`, `release_id` | SEM | Stable infrastructure command identity |
 | `binding_epoch` | SEM | Monotonic fence for one Runner binding of an execution |
 | `runner_id`, key version, `connection_id` | SEM enrollment/session | Authenticated infrastructure endpoint/session |
-| `supervisor_instance_id`, `boot_id` | Runner | Supervisor incarnation and OS boot boundary |
+| `supervisor_instance_id`, `boot_id`, `journal_id` | Runner | Supervisor incarnation, OS boot boundary and durable event-stream identity |
+| `launch_id`, `containment_id` | Runner launch broker / OS profile | Stable idempotent launch operation and pre-created process containment boundary |
 | `process_identity` | Runner OS/Supervisor | Exact process identity (PID plus start identity and containment identity; PID alone is insufficient) |
 | `event_id`, `event_sequence` | Runner or SEM event producer | Durable event deduplication and per-execution ordering |
 
@@ -200,6 +201,101 @@ Rules:
 - “No longer executing on this host” is distinct from “external side effects rolled back”. The former may release process capacity after required cleanup; the latter is never inferred.
 - If the selected host profile cannot provide this proof, retain quarantine and require operator intervention under D-03.
 
+### 3.4 Normative transition tables and recovery edges
+
+The tables in this section define the allowed state edges. They are normative design requirements for review, not evidence that the selected OS adapters or runtime code already implement them. An event not listed as an allowed edge is rejected as a state mutation and retained for audit/reconciliation. A duplicate means the same stable command/event identity and identical canonical payload; same identity with changed payload is a conflict.
+
+#### 3.4.1 SEM Execution transitions
+
+| From | To | Initiator / evidence | Preconditions and durable commit | Duplicate, stale or recovery behavior |
+|---|---|---|---|---|
+| (new) | accepted | Platform request | Authenticated Platform; supported schema; idempotency key and payload digest committed with Inbox and Execution | Same key/digest returns original; same key/different digest conflicts |
+| accepted | queued | SEM scheduler | Queue intent committed; no capacity reservation implied | Idempotent scheduler replay |
+| queued | reserved | SEM admission controller | Fresh authenticated session, fresh app heartbeat, healthy Supervisor, same-boot telemetry, accepting=true, no drain/quarantine, capacity and fairness checks; reservation committed atomically | Existing reservation reused; expired reservation is not silently reused |
+| reserved | queued | SEM admission controller | Reservation safely released and no delivery/binding side effect occurred | Re-evaluate admission; preserve execution identity |
+| reserved | bound | SEM dispatcher | Reservation valid; unique active binding constraint; new binding epoch and delivery ID committed | Same binding request returns original epoch/ID |
+| bound | delivering | SEM WSS sender | Current connection/session generation; durable send intent and immutable envelope committed before write | Resend only same delivery ID after reconciliation |
+| delivering | delivery_received | Runner durable receipt ACK | Authenticated current session; exact runner, delivery, execution, epoch and payload digest; Runner journal commit proven | Duplicate receipt no-op; old session/epoch rejected |
+| delivering | delivery_failed | Runner explicit terminal rejection | Protocol-level rejection proves no durable receipt and no launch intent exists | Timeout/disconnect is not sufficient; terminal for this delivery |
+| delivery_received | starting | Runner start-intent event | Authenticated event from current binding; event stream cursor valid; Runner durable start intent/launch ID reported | Duplicate event no-op; event gap buffered |
+| starting | running | Runner process-started event | Exact process identity and containment identity; launch broker evidence; event durably committed | Duplicate event no-op; stale epoch rejected |
+| delivery_received | start_failed | Runner no-create proof | Launch broker proves no process was created for launch ID and no in-flight create exists | Missing PID/journal record is insufficient |
+| starting | start_failed | Runner no-create proof | Same as above, including resolved in-flight broker operation and durable stop fence if release raced | If ambiguous, remain uncertain |
+| Any nonterminal state except released | release_requested | AI-PM release command | Authenticated Platform request; expected execution and binding fence; release Inbox and intent committed | Same release ID returns original; stale epoch rejected or reconcile-only |
+| release_requested | stopping | Runner stop-fence ACK | ACK proves later starts fenced and every earlier/in-flight start accounted for; it does not prove exit | Duplicate ACK no-op; retain reservation |
+| release_requested | released | SEM + Runner evidence | No process was ever created and launch broker confirms no in-flight create; cleanup requirements satisfied | Requires positive no-create proof; otherwise remain pending/uncertain |
+| stopping | released | Runner exit + cleanup evidence | Exact containment positively empty/cannot accept descendants; cleanup requirements complete | Duplicate exit/cleanup evidence no-op |
+| stopping | cleanup_failed | Cleanup subsystem | Process exit may be proven, but required cleanup failed or remains uncertain | Keep cleanup/quarantine accounting; do not claim full release |
+| cleanup_failed | released | Cleanup retry/operator action | Required cleanup subsequently proven complete; process exit remains positively proven | Idempotent completion |
+| Any nonterminal state | infrastructure_uncertain | SEM reconciliation controller | Conflicting, missing, ambiguous or unavailable evidence; preserve last known state in history | Never infer failure/release; keep reservation/quarantine |
+| infrastructure_uncertain | Last proven nonterminal state | Reconciliation | Authoritative evidence resolves ambiguity without changing binding identity; commit evidence and transition history | Only if no contradictory evidence exists |
+| infrastructure_uncertain | delivery_received / starting / running | Runner journal replay | Exact durable receipt/start/process evidence reconciles against same delivery and binding epoch | Apply only in event order; stale epoch is audit-only |
+| infrastructure_uncertain | delivery_failed / start_failed | Runner launch/receipt authority | Positive proof of no receipt/no process and no in-flight create; no late effect possible | Never use timeout, disconnect or absence of PID |
+| infrastructure_uncertain | release_requested / stopping / released | Release reconciliation | Release command and exact process/containment evidence resolved; follow normal release prerequisites | No direct jump to released without positive exit/no-create and cleanup proof |
+
+Additional SEM invariants:
+
+- released, delivery_failed and start_failed are terminal for the corresponding binding/delivery identity. A later business attempt uses a new execution identity; a transport retry preserves the old identity.
+- A release command can be accepted from any nonterminal SEM state, but it cannot skip the Runner launch-broker resolution or process-exit evidence needed for safe release.
+- infrastructure_uncertain is a reconciliation state, not permission to allocate a replacement Runner. The previous known state and all outstanding reservations remain queryable.
+- A newer binding epoch is not created while the old process may still exist, unless D-03 provides independent, verifiable isolation/fencing evidence that explicitly permits it.
+- Event arrival order does not override event-stream sequence, binding epoch or the evidence authority.
+
+#### 3.4.2 Runner Supervisor transitions
+
+| From | To | Initiator / evidence | Preconditions and durable commit | Duplicate, stale or recovery behavior |
+|---|---|---|---|---|
+| (new) | delivery_recorded | SEM delivery | Authenticated current session; exact Runner and binding epoch; payload digest verified; delivery and dedupe record committed before receipt ACK | Same delivery/digest returns original receipt; changed digest conflicts |
+| delivery_recorded | start_intent | Supervisor sequencer | No stop fence; unique launch ID and containment identity allocated and journaled before OS create | Duplicate start reuses same launch ID and asks broker to adopt/query |
+| start_intent | process_created_unconfirmed | OS launch broker | Broker proves process created/adopted within exact containment identity; process handle/identity returned | Crash recovery queries same launch ID; never issues a second create |
+| process_created_unconfirmed | running | Supervisor | Exact process identity and started event durably journaled; containment membership verified | Replay same event ID/sequence; repeated observation no-op |
+| delivery_recorded | stop_fenced | SEM release command | Sequencer persists release ID and binding fence; proves no start broker call is in flight | Duplicate release returns same ACK; later start rejected |
+| start_intent | stop_fenced | SEM release command | Broker confirms create did not cross linearization point and cannot complete later; durable fence committed | If broker operation unresolved, remain uncertain and do not ACK effective stop fence |
+| process_created_unconfirmed | termination_requested | SEM release command | Exact containment adopted; stop fence committed before termination intent | Duplicate stop idempotent; never lose process identity |
+| running | termination_requested | SEM release command / policy | Stop fence committed; exact containment identity verified; termination intent persisted before OS signal | Duplicate termination returns same operation |
+| termination_requested | exited | OS wait/reap or durable process owner | Exact process/containment positively exited; exit evidence journaled before event send | Duplicate evidence no-op; contradictory evidence quarantined |
+| running | exited | Natural process exit | Same positive exit proof, without requiring a prior release | Later release still applies stop fence and cleanup idempotently |
+| exited | cleanup_pending | Supervisor cleanup/reporting | Exit proof durable; cleanup or event delivery remains outstanding | Retain process/delivery tombstone; retry cleanup/reporting |
+| cleanup_pending | cleaned | Cleanup subsystem | Required local cleanup and durable report obligations complete | Keep dedupe tombstone for configured retention |
+| Any nonterminal state | local_uncertain | Supervisor recovery | Journal corruption, launch broker ambiguity, missing containment proof, contradictory process evidence or host uncertainty | Quarantine; block duplicate start and release ACK |
+| local_uncertain | Prior proven state | Reconciliation | Durable journal + authoritative containment owner resolves exact launch/process state | Adopt same process/launch; never allocate a new launch ID |
+| local_uncertain | exited | Durable process owner | Exact containment identity is authoritatively empty and cannot accept descendants; exit status may be unknown | Persist evidence source; PID absence alone is rejected |
+| local_uncertain | stop_fenced | Launch broker + sequencer | Proves no process exists and no create is in flight/can complete; release fence committed | Only then ACK no-late-start |
+| exited | cleanup_pending | Supervisor | Cleanup remains; exit fact immutable | No return to running |
+| cleaned | — | — | Terminal for local delivery lifecycle; tombstone retained | Any duplicate delivery returns terminal record, never restarts |
+
+Runner Supervisor invariants:
+
+- stop_fenced is a durable command fence, not process exit. When a process exists, the state must proceed through termination and positive exit evidence.
+- If the create operation is in flight or its outcome is ambiguous, the Supervisor must retain local_uncertain; it cannot claim the stop fence fully effective.
+- exited is immutable for a particular process identity. A subsequent process requires a new execution/delivery identity and valid authorization.
+- A process may be positively exited with exit_status=unknown if the durable process owner proves containment termination but the numeric exit status was lost.
+- cleaned is not a business success signal and does not alter AI-PM Run/Task state.
+
+#### 3.4.3 AI-PM business lifecycle interaction (no SEM-owned transitions)
+
+AI-PM remains the sole authority for TaskStatus, RunKind, RunStatus, RunOutcome and delegated authorization. SEM and Runner events are inputs to AI-PM application services, not direct state writes.
+
+| Input received by AI-PM | AI-PM-side precondition / guard | Allowed business effect | Forbidden shortcut |
+|---|---|---|---|
+| SEM execution accepted / reserved / bound | Correlated to exact run_id, attempt_no, execution_id; authenticated SEM event | Persist infrastructure observation; no mandatory Task/Run transition | Do not set Run Running merely because SEM reserved/bound |
+| Runner process started (via SEM) | Current Run/attempt and authorization/lease fences valid | Application service may record execution observation and apply existing Run transition policy | Do not infer Task completion or Run success |
+| Runner process exited (via SEM) | Exact execution and attempt correlated; evidence validated | Application service evaluates RunOutcome/RunStatus under current RunKind transition guard | Do not map exit code 0 directly to Succeeded |
+| Harness delivery submitted through MCP | Current delegated grant and exact attempt; required delivery manifest valid | AI-PM submission service may transition Task Running → Submitted | Do not auto-review or auto-accept |
+| Human review/acceptance | Authenticated human principal; acceptance evidence complete | Existing AI-PM review guards may transition Submitted → Reviewing → Completed | Harness/SEM cannot impersonate human principal |
+| Business retry requested | AI-PM retry policy permits; old attempt terminal or explicitly isolated under policy | Create new Run/attempt (run_id, incremented attempt_no) and new execution_id/authorization generation | Do not reuse old execution ID or treat transport retry as business retry |
+| Release requested | AI-PM decides infrastructure no longer needed; durable Outbox in same transaction as business authorization/release decision | Emit stable release intent; Task/Run status changes only if separate business guard allows | SEM release cannot itself set Task Completed/Run Succeeded |
+
+### 3.5 Uncertainty and terminal-state rules
+
+1. Uncertainty is entered when an effect may have occurred but its authoritative evidence is unavailable. It is not a synonym for failure.
+2. An uncertain SEM execution or Runner process may leave uncertainty only through a transition in §3.4 backed by the named authority's durable evidence. Timeouts, elapsed SLOs, WSS state and PID absence are never resolution evidence.
+3. A duplicate command with the same identity and same canonical payload returns the original durable outcome. Reuse with a changed payload is a conflict and must not mutate state.
+4. A late event can advance state only if its event ID, event-stream sequence, execution identity, binding epoch, launch identity and process/containment identity all validate. Otherwise retain it for audit/reconciliation.
+5. No transition may reopen a terminal delivery, binding or process identity. A new business attempt creates new AI-PM Run identity and new execution identity.
+6. Capacity release is based on positive process-exit/no-create evidence and resource-specific cleanup policy. Workspace cleanup failure may retain disk/quota accounting while process slots are released only if the containment owner proves the process tree is gone.
+7. A release request accepted before process creation must fence all later starts. A release request during an unresolved create remains pending; no effective stop-fence ACK is sent until the launch broker proves no-create or created-and-stoppable.
+8. SEM may retain the previous known state alongside infrastructure_uncertain; implementation must not destroy that state history when entering or leaving uncertainty.
 ## 4. Transition transaction contract
 
 Every transition below is local to the authority named in the first column. Cross-system side effects are emitted through a durable outbox/journal after the local commit.
