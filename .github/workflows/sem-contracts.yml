@@ -7,6 +7,7 @@ on:
       - "scripts/validate_sem_contracts.py"
       - "scripts/validate_sem_crypto_vectors.py"
       - "scripts/validate_sem_payload_fixtures.py"
+      - "scripts/validate_sem_jcs_vectors.mjs"
       - "tests/protocol/**"
       - ".github/workflows/sem-contracts.yml"
   push:
@@ -43,3 +44,5 @@ jobs:
         run: python scripts/validate_sem_crypto_vectors.py
       - name: Validate positive and negative payload fixtures
         run: python scripts/validate_sem_payload_fixtures.py
+      - name: Verify independent Node JCS and Ed25519 vectors
+        run: node scripts/validate_sem_jcs_vectors.mjs
