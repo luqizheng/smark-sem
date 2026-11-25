@@ -31,7 +31,8 @@ These are the current user-confirmed constraints and must not be reopened casual
 - SEM owns its execution/delivery/release ledger, Runner connectivity/registration metadata, resource telemetry/reservations and binding_epoch.
 - Runner Supervisor owns local Harness process start/stop, process identity and positive process-exit evidence.
 - AI-PM and SEM use independent databases; SEM has no AI-PM DB access.
-- AI-PM→SEM is versioned HTTPS with durable Outbox/Inbox; Runner↔SEM is authenticated WSS.
+- AI-PM→SEM uses the smark-sem-owned, versioned Rust SDK over the versioned HTTP/HTTPS API; AI-PM owns durable Outbox/Inbox and retry scheduling. Runner↔SEM is authenticated WSS.
+- SEM→AI-PM infrastructure events use an AI-PM-owned callback endpoint; smark-sem owns event schemas/fixtures, while AI-PM owns callback ingress, Inbox transaction and ACK-after-commit.
 - No cross-database transaction; delivery is at-least-once, idempotent and reconciled.
 - Runner default supervision is unattended; supervised mode is explicit.
 - Runner CPU/memory/workspace-volume telemetry informs SEM admission/concurrency.
@@ -48,6 +49,7 @@ These are the current user-confirmed constraints and must not be reopened casual
 | Runner identity/enrollment | device enrollment, key possession, attestation, rotation, revocation, recovery | **P0 open** |
 | Delegated Harness identity | grant schema, bootstrap exchange, token scope, audit, revocation | Draft exists; **P0 open** |
 | Platform–SEM wire protocol | OpenAPI/JSON Schema, all endpoints/events/ACK/error shapes, versioning | Draft examples exist; **P0 open** |
+| SEM SDK and consumer integration | SEM-owned Rust SDK, AI-PM consumption, transport/auth, retries, errors, semver and bilateral CI | Draft exists; API/release details open |
 | Runner–SEM wire protocol | WSS handshake, message schemas, sequencing, reconnect, backpressure | Superseded V1 exists; replacement incomplete |
 | Lifecycle/state machines | AI-PM Run, SEM Execution, Runner Process, delivery/release and transitions | Draft exists; needs formal state tables |
 | Process fencing/recovery | disconnect, host loss, process proof, rebind, termination/isolation | Draft exists; **P0 open** |
@@ -179,6 +181,21 @@ Define ordered milestones only after D-01–D-10 are closed. For every milestone
 
 See the AI-PM [Harness identity and business fencing review](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/harness-identity-and-business-fencing-review.md).
 
+## D-12 — SEM SDK provider and consumer contract
+
+The user-confirmed provider/consumer direction is: **smark-sem provides and owns the supported SDK; AI-PM consumes it.** The design is recorded in [SEM SDK and Consumer Integration Contract](./sem-sdk-and-consumer-integration-contract-draft.md).
+
+Required closure:
+- Freeze the Rust crate name, workspace placement and distribution/release channel.
+- Audit async runtime and HTTP dependency compatibility with AI-PM before selecting the implementation stack.
+- Freeze typed client methods for execution submission, query/reconciliation and release.
+- Freeze structured error categories, idempotency behavior, timeout uncertainty and bounded retry primitives.
+- Define SDK/API major-version compatibility, support window, deprecation and release notes.
+- Decide whether shared protocol models and callback-verification primitives belong in the SDK crate or a companion crate.
+- Add SEM schema/fixture validation and AI-PM pinned-SDK bilateral compile/contract CI.
+
+The SDK must not own AI-PM Outbox, database, business retry decisions, Task state or callback transaction. The callback receiver and Inbox remain AI-PM-owned. This is a Draft contract; no SDK code is authorized.
+
 ## 7. Document status vocabulary
 
 - **Normative / Frozen:** approved by user; implement exactly.
@@ -202,6 +219,7 @@ No item becomes Normative / Frozen solely because it is written in a draft or li
 - [ ] D-09 Deployment, security and operations approved.
 - [ ] D-10 Implementation architecture and repository ownership approved.
 - [ ] D-11 Milestones and acceptance evidence approved.
+- [ ] D-12 SEM SDK provider/consumer API, versioning, release and bilateral CI approved.
 - [ ] AI-PM and SEM document sets cross-reviewed with no contradictions.
 - [ ] User explicitly authorizes implementation.
 
