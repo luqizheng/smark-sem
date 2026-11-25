@@ -572,3 +572,85 @@ A duplicate delivery with the same event_id and identical canonical body returns
 The event schema requires `runner_key_version`, `boot_id` and `supervisor_instance_id` on delivery, process, release and uncertainty observations. The receiver must compare these fields to the currently known binding for the execution; schema validity alone is not authorization to apply an observation.
 
 For `harness.process_observed` with `observation=exited`, the payload must contain exact process identity and exit evidence with exactly one of `exit_code` or `exit_signal`. For `exit_status_unknown`, evidence may prove the containment is empty while the numeric status remains unknown. A `execution.release_status` event may report `requested`, `release_uncertain` or `stale_rejected` before a Runner stop fence is durably known; those states do not require `stop_fence_id`. Once the fence is committed, `stop_fenced`, `termination_requested`, `process_exited`, `released` and `cleanup_failed` MUST carry the exact `stop_fence_id` referencing the immutable Runner journal record. `process_exited` MUST additionally include `process_exit_evidence_id` referring to the exact accepted process-exit evidence. These references must resolve to the same execution, runner key version, boot, supervisor instance, binding epoch, launch and containment identity in the SEM durable ledger.
+
+
+## 7.1 Proposed unbound release and dispatch-fence contract (P0-07)
+
+The existing bound-release request is insufficient for an accepted execution that has not yet received a Runner binding. Do not invent binding_epoch=0, a Runner identity, a stop_fence_id or process-exit evidence.
+
+### Request shape proposal
+
+~~~json
+{
+  "execution_id": "uuid",
+  "release_id": "uuid",
+  "expected_binding": { "state": "unbound" },
+  "stop_policy": {
+    "mode": "graceful_then_force",
+    "grace_period_seconds": 30
+  }
+}
+~~~
+
+The bound form is:
+
+~~~json
+{
+  "execution_id": "uuid",
+  "release_id": "uuid",
+  "expected_binding": { "state": "bound", "binding_epoch": 7 },
+  "stop_policy": {
+    "mode": "graceful_then_force",
+    "grace_period_seconds": 30
+  }
+}
+~~~
+
+The schema must use a strict oneOf: unbound forbids binding_epoch; bound requires integer binding_epoch >= 1. No optional/ambiguous combination is accepted.
+
+### Linearization and outcomes
+
+Dispatch and release MUST use one SEM-owned per-execution command sequencer/transactional state row and the same serialization boundary:
+
+1. SEM accepts the execution and creates its dispatch-eligible state.
+2. A Runner binding transaction and an unbound-release transaction contend on the same execution state lock / sequencer.
+3. If unbound release wins, SEM atomically changes dispatch state to released_unbound and persists an immutable dispatch-fence record before returning success. Every later dispatch/bind attempt must fail closed against that fence. SEM emits a new Platform event execution.unbound_release_applied with execution_id, event_id/sequence, release_id, dispatch_fence_id and applied_at. It contains no Runner, binding_epoch, stop_fence_id or process-exit evidence.
+4. If dispatch wins, SEM returns authenticated 409 BINDING_ALREADY_ESTABLISHED with the actual binding_epoch and exact binding identity. It emits no unbound-release event. AI-PM reconciles and submits the normal bound release using that epoch.
+5. If the result is ambiguous, SEM returns/retains an uncertain result and does not claim either outcome. AI-PM retries the exact release_id/request body; SEM reconciles the sequencer's durable row and returns the same terminal disposition.
+6. Duplicate release_id + identical canonical body returns the original outcome. Same release_id with changed expected_binding/stop policy is IDEMPOTENCY_CONFLICT.
+7. A release-wins tombstone is permanent for that execution_id. No later Runner assignment, requeue, or higher binding_epoch may resurrect it. A genuinely new AI-PM attempt uses a new execution_id.
+
+The dispatch-fence record is SEM durable state, not Runner stop-fence evidence. Its existence proves only that SEM will not dispatch this execution; it does not prove any Harness process exited.
+
+### Event shape proposal
+
+~~~json
+{
+  "event_id": "uuid",
+  "event_type": "execution.unbound_release_applied",
+  "schema_version": 1,
+  "occurred_at": "RFC3339 UTC",
+  "execution_id": "uuid",
+  "execution_event_sequence": 13,
+  "payload": {
+    "release_id": "uuid",
+    "dispatch_fence_id": "uuid",
+    "disposition": "released_unbound",
+    "applied_at": "RFC3339 UTC"
+  }
+}
+~~~
+
+This is a sixth SEM→AI-PM event type, intentionally distinct from execution.release_status. It cannot accidentally imply Runner stop or process exit. Add a dedicated strict JSON Schema branch, OpenAPI response/event definitions, signed callback fixture, and D04 acceptance cases before ratification. The existing five-event schema is not silently extended by this prose.
+
+### Required D04 cases
+
+- D04-H94: unbound release wins; persist dispatch fence and emit released_unbound event with no Runner/process fields.
+- D04-H95: dispatch wins; return BINDING_ALREADY_ESTABLISHED with actual epoch/identity; no unbound event.
+- D04-H96: release wins, then delayed dispatch/retry/requeue arrives; reject permanently.
+- D04-H97: ambiguous response after durable release fence; exact retry returns same event/disposition.
+- D04-H98: same release_id with changed expected_binding or stop policy; IDEMPOTENCY_CONFLICT.
+- D04-H99: duplicate unbound-release event callback; AI-PM ACKs exact duplicate without changing projection.
+- D04-H100: a new AI-PM attempt with a new execution_id is independent; old tombstone cannot block it.
+
+P0-07 remains OPEN until the tagged request, new event schema, SEM dispatch sequencer implementation and failure-injection tests all exist. This section is a proposed contract, not an assertion that current V1 schema/runtime supports it.
