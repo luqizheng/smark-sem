@@ -241,6 +241,22 @@ Before implementation, define the remote execution evidence contract. At minimum
 
 The remote evidence mode must be explicit execution metadata, not inferred from a legacy lease_owner string or credential prefix. SEM transports any opaque evidence reference without interpreting Git or Task semantics.
 
+
+
+## 9.5 Task, AI-PM Run and SEM Execution are three lifecycles
+
+Do not collapse these into one status:
+
+| Lifecycle | Owner | Example facts/states |
+|---|---|---|
+| Task | AI-PM | running → submitted → reviewing → completed; may also be blocked/cancelled/failed under guarded business rules |
+| Run / business attempt | AI-PM | one authorized attempt, its lease/authorization generation, delivery association and Platform-decided outcome |
+| SEM Execution | SEM infrastructure | queued → assigned → delivering/starting → running → releasing → released, or failed/uncertain |
+
+Harness MCP may cause guarded Task transitions such as first start (running) and validated delivery submission (submitted). It does not set completed. Review/acceptance decides Task completion under AI-PM rules. Runner process start/exit is reported as infrastructure evidence through SEM; AI-PM correlates that evidence to its Run and decides the Run outcome. A process exit code alone is not a business success or Task completion.
+
+SEM release is triggered when AI-PM decides that the corresponding Run/attempt no longer needs a runtime. This can happen after delivery submission while the Task is still submitted/reviewing, after cancellation, or while waiting for a human decision. Therefore release must not be coupled only to Task=completed. The Platform Outbox event should identify the exact AI-PM attempt and opaque SEM execution, while SEM sees no Task status semantics.
+
 ## 10. Failure and recovery semantics
 
 - SEM accepts request but cannot find a Runner: remain queued/rejected according to infrastructure policy; no business state is changed.
