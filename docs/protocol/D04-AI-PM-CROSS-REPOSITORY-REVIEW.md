@@ -84,3 +84,12 @@ This proposal is Draft and requires bilateral review against the canonical SEM D
 **P0-05 remains OPEN.** The OpenAPI callback route is not source-aligned with current AI-PM because it does not yet exist. The strict SEM event payload schemas are now drafted in `platform-sem-v1.schema.yaml`, but this does not close receiver ownership, Inbox transaction, ACK cursor or retry semantics.
 
 Required next work is a bilateral AI-PM/SEM design review. The first decision is whether to add a SEM-specific Inbox or safely extend the existing generic Inbox through a dedicated port that suppresses the `ai_analysis` side effect and adds per-execution sequence/cursor semantics. Do not implement the callback, change AI-PM migrations, or claim end-to-end event delivery until both repositories have approved the contract and the user authorizes implementation.
+
+
+## 5. Callback ACK sequence-field cross-check — 2026-11-25
+
+The bilateral review compared the AI-PM callback/Inbox proposal against the canonical Platform–SEM event envelope and acknowledgement schema. The SEM contract uses execution_event_sequence for the per-execution SEM→AI-PM event stream; event_sequence is reserved for the Runner journal stream, while message_sequence is WSS-connection scoped.
+
+The AI-PM PR #9 callback design had one stale response-field alias in §5.2 step 7 (`event_sequence`). It has been corrected on the AI-PM review branch to `execution_event_sequence`, with an explicit prohibition on the ambiguous alias. This is a documentation alignment only; no AI-PM route, Inbox, database or runtime behavior exists yet.
+
+P0-05 remains OPEN. The callback route, service authentication, shared-Inbox application port, transaction/cursor behavior, exact response schema, retry semantics and bilateral runtime tests still require ratification and separate implementation authorization.
