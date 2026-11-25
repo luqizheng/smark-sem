@@ -4,10 +4,10 @@
 - Audit date: 2026-11-25 (latest provenance refresh)
 - Current review snapshot:
   - `smark-sem` PR #1 workspace candidate: `23224d6d7f3d541677f6e48fa14d61cdd0165d9a`
-  - `smark-sem` PR #3 protocol candidate: `d3e5d4eefacf91aee533ed51be7d16baf9bffe03`
-  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `5fb1f41c3baa53ed18c3367c8e5b65995c20bc1a`
+  - `smark-sem` PR #3 protocol candidate: `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362`
+  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `a51edf41b853e281e7b5214287692f6fea5b930c`
   - `ai-pm` source baseline: `master` (manifest, lockfile and app manifests identified by blob SHA in §§9–11)
-  - `ai-pm` PR #9 design-doc head: `61ff5faddff751fa0a0df8e01a73bf18ba791e33` (Draft docs only)
+  - `ai-pm` PR #9 design-doc head: `ecfc6eaaa7a76fe52282946615f1182d629fdd4a` (Draft docs only)
 - Method: GitHub source/manifest inspection only. No local compilation, combined dependency resolution, TLS handshake/pinning, registry publish, or runtime test was performed.
 - Historical first-pass revisions are retained in §9; they are not the current reviewed heads.
 
@@ -261,3 +261,16 @@ The branch heads were refreshed after the D-04 authenticated/pre-authentication 
 The D-04 response error policy is now represented in OpenAPI and the SDK proposal recognizes unsigned pre-authentication responses as unverified rather than trusted protocol outcomes. The AI-PM callback Inbox design now has 44 acceptance cases and deterministic event/sequence conflict precedence. These changes do not alter the SDK placement recommendation.
 
 No integrated SEM PR #1 + PR #4 workspace exists yet. No dependency graph resolution, combined build, certificate/public-key pin test, Kellnr publish/read test or AI-PM consumer compile has been run. The SDK dependency and distribution recommendations remain source-compatible candidates only.
+
+
+## 14. Protocol and consumer-contract evidence refresh — 2026-11-25
+
+Latest reviewed heads before this audit refresh:
+- SEM PR #3: `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362`; Protocol Contract Validation run #411 passed all ten validation steps, including the new signed Platform GET/callback 404 vectors and unsigned pre-auth 401/413 fixture checks.
+- SEM PR #4: `a51edf41b853e281e7b5214287692f6fea5b930c`; documentation-only SDK proposal, no SDK implementation or CI run.
+- AI-PM PR #9: `ecfc6eaaa7a76fe52282946615f1182d629fdd4a`; documentation-only callback Inbox design with 44 acceptance cases, no migration/runtime code or observed CI run.
+- SEM PR #1 workspace candidate remains `23224d6d7f3d541677f6e48fa14d61cdd0165d9a`; it is not integrated with PR #4.
+
+The SDK proposal now recognizes the D-04 error boundary: authenticated application responses must be signed and context-bound; unsigned pre-authentication 401/early-413 responses are unverified and carry no protocol IDs. The API traceability matrix includes the new signed 404 and pre-authentication fixture cases.
+
+No source compatibility conclusion changes. There is still no integrated SEM+SDK workspace build, CA/pin proof, SEM CI registry publish/read test or AI-PM pinned-SDK compile. All SDK dependency, crate-name and distribution choices remain Draft.
