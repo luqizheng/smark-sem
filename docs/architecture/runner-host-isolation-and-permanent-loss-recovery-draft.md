@@ -73,20 +73,15 @@ When SEM can no longer observe a Runner host, it cannot infer that the Harness p
 
 1. Mark the Runner as `unreachable` and each affected execution as `infrastructure_uncertain`.
 2. Retain the existing binding identity and capacity reservation in quarantine. Do not expire or silently release it.
-3. Raise a visible operational alert containing the Runner/host identity, affected execution IDs, last heartbeat, last authenticated event sequence, last durable ACK, boot ID and last-known process/containment identity.
-4. Keep the alert and quarantine visible until an on-site operator has investigated and recorded a disposition.
-5. An on-site operator physically inspects the host and determines whether it is powered off, disconnected, still running, or recoverable. The operator then uses a controlled SEM administrative workflow to record the observation, evidence, operator identity and timestamp.
-6. If the host/process is still alive or its state remains ambiguous, quarantine remains. If the operator positively verifies the host is powered off or otherwise physically isolated, SEM may record an explicit host-isolation evidence record and proceed with the separately authorized release/recovery workflow.
+3. Show a durable `unreachable` status in the SEM operator-facing status surface, including Runner/host identity, affected execution IDs, last heartbeat, last authenticated event sequence, last durable ACK, boot ID and last-known process/containment identity. V1 does not require email/SMS/IM alert integrations or a separate incident-management system.
+4. Keep the unreachable status and quarantine visible until the host reconnects and reconciliation succeeds, or an authorized operator resolves the incident after the offline handling is complete.
+5. The on-site handling itself is an offline operational procedure; SEM does not orchestrate physical inspection or remote power control. If the host cannot simply reconnect and reconcile, an authorized operator may use a minimal administrative resolution action to record the disposition, operator identity and timestamp.
+6. If the host/process is still alive or its state remains ambiguous, quarantine remains. If the operator has physically handled the host and positively established it cannot continue running the old execution, the operator may record that disposition and authorize the controlled quarantine release/recovery workflow.
 7. AI-PM independently decides whether to create a new business attempt or authorize a replacement execution. Any replacement uses a new execution identity and binding; stale authorization generations and binding epochs remain fenced.
 
-The operator's action is a human operational attestation, not an automated process-exit observation. The audit record MUST distinguish:
-- host observed unreachable by SEM;
-- operator physically inspected the host;
-- operator's observed host condition and method;
-- whether isolation was positively established;
-- who authorized any subsequent capacity release or replacement.
+The operator's action is a manual administrative disposition, not an automated process-exit observation. The minimum audit record is the affected Runner/execution, operator identity, disposition, timestamp and any short reason. V1 does not require an evidence-upload subsystem or a detailed incident-management workflow.
 
-A ticket/alert acknowledgement, elapsed timeout, phone confirmation without an auditable operator record, WSS disconnect, heartbeat expiry, MCP grant revocation or stop-command ACK is not host-isolation evidence.
+A status acknowledgement, elapsed timeout, WSS disconnect, heartbeat expiry, MCP grant revocation or stop-command ACK is not process-exit evidence and cannot by itself release capacity.
 
 V1 does not promise automatic failover for a permanently unreachable host. It deliberately trades availability for safety: quarantine remains until on-site handling establishes an auditable disposition. External Git/API side effects are never represented as rolled back merely because a host was powered off.
 
@@ -134,8 +129,7 @@ The operational contract must provide:
 - Runner identity, host identity, boot ID, execution_id, binding_epoch and process containment ID;
 - last heartbeat, last event sequence and last durable ACK;
 - current unreachable/quarantine status and last-known host/process evidence;
-- on-site inspection procedure, authorized operator identity, observed physical condition, evidence attachment/reference and timestamp;
-- explicit administrative action and authorization required before any quarantine release or replacement execution;
+- authorized operator identity, manual disposition, timestamp and short reason if manual quarantine resolution is required;
 - who is authorized to record the on-site inspection and approve the subsequent administrative disposition;
 - quarantine age alerts and escalation policy;
 - evidence retention and audit requirements;
@@ -154,9 +148,9 @@ The operational contract must provide:
 9. Stop-command ACK without terminal runtime observation is not accepted as process exit.
 10. Permanent host loss raises a visible alert and retains the execution and reservation in quarantine.
 11. Alert acknowledgement or timeout alone cannot release quarantine.
-12. On-site operator inspection is recorded with identity, method, observation, evidence and timestamp.
+12. Manual quarantine resolution, if required, is recorded with operator identity, disposition and timestamp.
 13. Ambiguous physical condition keeps quarantine; no replacement execution is dispatched.
-14. Positively verified physical host isolation can be used only through the controlled, audited release workflow.
+14. Manual quarantine release is allowed only after the offline handling has established that the old execution cannot continue; the administrative disposition is audited.
 15. Duplicate/out-of-order process events are idempotently reconciled.
 16. External Git/API side effects are not represented as rolled back by host isolation.
 17. Capacity is released only after process/host fence and cleanup policy succeed.
@@ -171,7 +165,7 @@ The user has confirmed that the Runner environment is inside the company network
 - quarantine and capacity reservation remain until an auditable on-site inspection and controlled disposition;
 - no timeout-based automatic failover or release.
 
-This is a resolved V1 deployment decision, not an open choice among host-management profiles. Exact alert delivery channel and administrative UI placement remain operational design details; the minimum requirement is a durable, visible alert and an auditable operator disposition.
+This is a resolved V1 deployment decision, not an open choice among host-management profiles. The minimum product requirement is a durable, visible unreachable status in the operator-facing SEM status surface and an auditable manual resolution action only when quarantine must be cleared without normal Runner reconnect/reconciliation. No separate alert-delivery integration is required in V1.
 
 ## 12. Status
 
