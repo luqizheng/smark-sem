@@ -56,7 +56,7 @@
 
 ## 2.1 Approved cryptographic profile acceptance cases
 
-The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cases extend the previous 67-case matrix to 80 cases. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
+The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases below extend it to 97 cases. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
 
 | ID | Scenario | Expected result |
 |---|---|---|
@@ -112,6 +112,24 @@ The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decisio
 | D04-W28 | Runner event replay after reconnect | Preserve original event_id, journal_id and event_sequence; deduplicate idempotently |
 | D04-W29 | Prompt or delegated bootstrap bytes appear in protocol.error/log output | Test fails; secret/body redaction required |
 | D04-W30 | Runner is draining or quarantined | No new delivery; existing execution supervision continues |
+
+
+## 3.1 Strict payload and cross-repository callback cases
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-W41 | Each post-handshake WSS message_type is matched to exactly one strict payload branch and one direction | Contract validator fails on missing/duplicate/unlisted branches |
+| D04-W42 | Any WSS state-changing payload contains an undeclared field | Schema validation rejects it |
+| D04-W43 | harness.started lacks exact process identity or systemd invocation ID | Reject; no started observation is accepted |
+| D04-W44 | harness.process_exited lacks cgroup populated=0 and exact invocation/evidence identity | Reject; execution remains uncertain |
+| D04-W45 | execution.release_applied reports stop_fenced only | SEM must not infer process exit or release capacity unless separate exit evidence is present |
+| D04-H33 | Each SEM event_type maps to exactly one strict payload schema | Contract validator fails on missing/duplicate event branch |
+| D04-H34 | SEM infrastructure event contains TaskStatus, approval or acceptance decision fields | Reject as authority-boundary violation |
+| D04-H35 | Duplicate event_id with identical canonical body reaches AI-PM Inbox | One durable event observation; duplicate ACK |
+| D04-H36 | Same event_id with different body reaches AI-PM Inbox | 409 conflict; no second application |
+| D04-H37 | execution_event_sequence has a gap for execution_id | Do not advance cursor; request replay/reconciliation |
+| D04-H38 | AI-PM generic /api/v1/events endpoint receives SEM infrastructure event | Reject or remain outside SEM contract; it is not the SEM Inbox |
+| D04-H39 | SEM callback ACK is returned before AI-PM Inbox+observation transaction commits | Test fails; ACK must follow durable commit |
 
 ## 4. Cross-protocol consistency cases
 
