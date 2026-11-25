@@ -336,6 +336,27 @@ AI-PM remains the sole authority for TaskStatus, RunKind, RunStatus, RunOutcome 
 6. Capacity release is based on positive process-exit/no-create evidence and resource-specific cleanup policy. Workspace cleanup failure may retain disk/quota accounting while process slots are released only if the containment owner proves the process tree is gone.
 7. A release request accepted before process creation must fence all later starts. A release request during an unresolved create remains pending; no effective stop-fence ACK is sent until the launch broker proves no-create or created-and-stoppable.
 8. SEM may retain the previous known state alongside infrastructure_uncertain; implementation must not destroy that state history when entering or leaving uncertainty.
+
+### 3.6 V1 Linux process-owner contract
+
+User decision (2026-11-25): V1 Runner hosts are Linux-only. Windows and other operating systems are out of scope for V1.
+
+The selected V1 architecture candidate is a host systemd manager owning one transient service unit and dedicated cgroup v2 subtree per execution binding. The Runner Supervisor is a host-managed systemd service and invokes the manager through its system D-Bus API. A Runner container without a trusted host-side broker is unsupported. Harness processes run under a distinct unprivileged Unix identity, receive no cgroup delegation or manager access, and cannot move themselves/descendants out of their execution cgroup.
+
+Normative requirements:
+
+- Host admission requires Linux unified cgroup v2, systemd as PID 1, reachable system D-Bus manager, and the required cgroup/systemd security controls. Unsupported hosts are never dispatch-ready.
+- Each binding has a stable launch_id, containment_id and systemd unit identity derived from runner_id + execution_id + binding_epoch. The exact encoding is a D-10 implementation detail; identities must be collision-resistant and immutable.
+- The Supervisor commits start_intent and the stable unit identity before calling systemd. A retry queries/adopts the same unit and invocation; it never creates a second independent unit for the same launch_id.
+- The systemd manager owns the process across Supervisor restart; the Supervisor journal owns command idempotency and event durability. Both are required for recovery.
+- Configure no automatic restart, KillMode=control-group, no cgroup delegation, and no Harness access to host Docker/systemd control sockets. The final systemd property set and minimum supported systemd version require a D-10 contract and Linux integration tests.
+- Release/start is serialized through the durable Supervisor sequencer. While a systemd start job is unresolved, state remains local_uncertain and no effective stop-fence ACK is sent. Recovery queries the exact stable unit and outstanding jobs.
+- Positive exit requires matching systemd invocation identity, terminal inactive state with no restart pending, and exact cgroup v2 populated=0 evidence; the Supervisor journals that evidence before sending it to SEM. Stop-job ACK and PID absence are insufficient.
+- Terminal unit/process evidence must remain queryable until the Supervisor journal and SEM reconciliation both durably acknowledge it. Garbage collection cannot erase the only evidence for an uncertain launch.
+- Host boot_id changes require old-boot launch-registry reconciliation. A boot boundary can prove old kernel processes cannot continue, but ambiguous host identity/boot lineage still remains quarantined.
+
+This is an architecture selection for V1, not an implementation proof. The exact systemd D-Bus call semantics, unit property set, garbage-collection behavior, cgroup population observation and restart/boot failure handling must pass the D-03 Linux integration and failure-injection suite before ratification. Permanent host loss remains governed by D-03 Profiles A/B/C; Linux-only does not imply a managed power-control plane.
+
 ## 4. Transition transaction contract
 
 Every transition below is local to the authority named in the first column. Cross-system side effects are emitted through a durable outbox/journal after the local commit.
@@ -523,7 +544,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 - Local journal must be access-controlled and tamper-evident to the extent supported by the host profile. Host compromise is handled by D-03 trust and isolation policy, not by assuming the journal is infallible.
 - Clock timestamps are diagnostic; ordering and fencing use stable IDs, epochs and sequence numbers, not wall-clock ordering alone.
 
-## 10. Acceptance matrix (60 cases)
+## 10. Acceptance matrix (70 cases)
 
 | ID | Scenario | Required result |
 |---|---|---|
@@ -587,6 +608,16 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-58 | AI-PM receives a legal Task edge without its required evidence (E1/E2, waiting, failure, supersession or manual completion) | Application/domain guard rejects the transition and leaves Task status unchanged |
 | D05-59 | Delivery and Review Run transitions are mixed, or a terminal Run is mutated | Run transition guard rejects the edge; lease reacquisition remains a separate Delivery/Claimed operation |
 | D05-60 | SEM or Runner attempts a direct business-state transition based on infrastructure evidence | No business mutation; only AI-PM application service may evaluate RunOutcome/RunStatus/TaskStatus |
+| D05-61 | Runner host lacks cgroup v2, systemd PID 1 or required host broker | Host is unsupported and never dispatch-ready |
+| D05-62 | Supervisor crashes after systemd accepted StartTransientUnit but before reply | Recovery queries the same stable unit/job and adopts it; no second launch |
+| D05-63 | Same launch_id is retried with a different unit identity or payload | Conflict; no process creation |
+| D05-64 | Harness attempts to access systemd/Docker control socket or move itself out of its cgroup | Access denied; containment integrity alert; execution quarantined if integrity cannot be proven |
+| D05-65 | systemd stop job is acknowledged while cgroup v2 still reports populated=1 | No process-exited event and no capacity release |
+| D05-66 | systemd reports unit inactive but invocation identity does not match the recorded launch | Evidence rejected; remain uncertain |
+| D05-67 | cgroup reports populated=0 but systemd has a pending restart/job for the same unit | No exit proof; remain uncertain |
+| D05-68 | terminal systemd unit is garbage-collected before SEM reconciliation completes | Test must fail; retention contract must preserve recoverable terminal evidence |
+| D05-69 | Runner Supervisor runs inside a container without host systemd broker | Runner is unsupported and cannot become dispatch-ready |
+| D05-70 | Host boot_id changes and old process registry cannot be correlated to host identity | Old execution remains quarantined; no automatic reassignment |
 
 ## 11. Open decisions required before ratification
 
