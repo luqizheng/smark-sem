@@ -143,3 +143,8 @@ Added D04-H91/H92/H93 to make the unbound-release race explicit: cancel-before-d
 ### 6.7 P0-07 proposed resolution: tagged unbound release with a SEM dispatch tombstone
 
 The bilateral proposal is now documented in Platform protocol §7.1 and AI-PM exact DDL/concurrency design §12. It uses expected_binding={state:unbound} versus {state:bound,binding_epoch:N}, one SEM per-execution sequencer shared by dispatch and release, and a distinct execution.unbound_release_applied event with dispatch_fence_id but no Runner/process fields. Dispatch-wins returns BINDING_ALREADY_ESTABLISHED and requires normal bound release; release-wins permanently prevents late assignment. D04-H94..H100 define the race/replay cases. This is a proposed sixth event; the existing five-event JSON Schema has not been changed and P0-07 remains open pending schema/OpenAPI/fixture and runtime proof.
+
+
+### 6.8 Canonical AI-PM projection and lock order
+
+AI-PM has consolidated P0-06 and P0-07 consumer state into one proposed per-attempt delivery.task_run_sem_execution projection. It carries dispatch_state plus a nullable current binding tuple; released_unbound has no Runner identity/epoch and carries only SEM dispatch_fence_id. The earlier task_run_sem_binding table name is superseded and must not become a second table. The exact DDL design §13 freezes callback lock order: Run → execution projection → Inbox → Run observation → cursor CAS, all in one transaction. This avoids dual projections and keeps the unbound tombstone in the same current-state record. The complete SQL CHECK matrix and live PostgreSQL tests remain open.
