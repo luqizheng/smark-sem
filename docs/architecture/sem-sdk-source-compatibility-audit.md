@@ -4,10 +4,10 @@
 - Audit date: 2026-11-25 (latest provenance refresh)
 - Current review snapshot:
   - `smark-sem` PR #1 workspace candidate: `23224d6d7f3d541677f6e48fa14d61cdd0165d9a`
-  - `smark-sem` PR #3 protocol candidate: `068d44f3742b1381d059f9435f26c34137c0cebb`
-  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `600d0c5ce8944e79a55cd4139fe3f2a21aaa06cf`
+  - `smark-sem` PR #3 protocol candidate: `d3e5d4eefacf91aee533ed51be7d16baf9bffe03`
+  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `5fb1f41c3baa53ed18c3367c8e5b65995c20bc1a`
   - `ai-pm` source baseline: `master` (manifest, lockfile and app manifests identified by blob SHA in §§9–11)
-  - `ai-pm` PR #9 design-doc head: `2e19a7ed905a78d037de5ff172fc309256e68336` (Draft docs only)
+  - `ai-pm` PR #9 design-doc head: `61ff5faddff751fa0a0df8e01a73bf18ba791e33` (Draft docs only)
 - Method: GitHub source/manifest inspection only. No local compilation, combined dependency resolution, TLS handshake/pinning, registry publish, or runtime test was performed.
 - Historical first-pass revisions are retained in §9; they are not the current reviewed heads.
 
@@ -244,3 +244,20 @@ Target workspace shape:
 No integrated PR #1 + SDK workspace has been resolved or compiled. No TLS enterprise-CA, explicit certificate/public-key pin, hostname, expiry, rotation or fail-closed tests have run. No SEM registry publish/read permission has been tested. No AI-PM consumer compile against a published immutable SDK has run. The dependency recommendation is therefore **source-compatible candidate only**, not implementation authorization.
 
 **Disposition remains Draft / Changes Required.** D-04 signed HTTP contract and 304 semantics, SDK API ratification, TLS pin proof, registry distribution proof and bilateral CI remain blockers.
+
+## 13. Latest cross-repository review snapshot — 2026-11-25
+
+The branch heads were refreshed after the D-04 authenticated/pre-authentication response-policy and AI-PM Inbox conflict-precedence updates:
+
+| Evidence class | Exact revision | Status / scope |
+|---|---|---|
+| SEM PR #1 workspace candidate | `23224d6d7f3d541677f6e48fa14d61cdd0165d9a` | Draft workspace; no SDK crate or outbound HTTP client |
+| SEM PR #3 protocol contract | `d3e5d4eefacf91aee533ed51be7d16baf9bffe03` | Draft D-04 schemas/OpenAPI/fixtures; CI #394 passed; no live middleware proof |
+| SEM PR #4 SDK contract branch before this update | `5fb1f41c3baa53ed18c3367c8e5b65995c20bc1a` | Draft documentation only; no SDK code |
+| AI-PM PR #9 callback Inbox contract | `61ff5faddff751fa0a0df8e01a73bf18ba791e33` | Draft documentation only; no route, migration, Rust JCS dependency or runtime receiver |
+| AI-PM master root Cargo manifest | `9213f75ff75dba9abdf307de719524d28a75f239` | Tokio 1 and reqwest 0.12/native-tls workspace declarations |
+| AI-PM master Cargo.lock | `5cf4796f81113c89a506ba67903d0ddd47806731` | Tokio 1.54.1, reqwest 0.12.28, native-tls 0.2.18 |
+
+The D-04 response error policy is now represented in OpenAPI and the SDK proposal recognizes unsigned pre-authentication responses as unverified rather than trusted protocol outcomes. The AI-PM callback Inbox design now has 44 acceptance cases and deterministic event/sequence conflict precedence. These changes do not alter the SDK placement recommendation.
+
+No integrated SEM PR #1 + PR #4 workspace exists yet. No dependency graph resolution, combined build, certificate/public-key pin test, Kellnr publish/read test or AI-PM consumer compile has been run. The SDK dependency and distribution recommendations remain source-compatible candidates only.
