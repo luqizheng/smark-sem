@@ -74,3 +74,18 @@ CI run #157 on commit `8b3eec5aa5711edee98b9da7dc1102c7c094040d` completed succe
 CI run #197 on commit `1367ecc3eb4d78b1484ad1b279df6ae55b251d12` completed all validation steps successfully. It includes Node UTF-16/number/duplicate-member vectors, Python duplicate-member rejection, RFC 9421 `sf` Content-Digest canonicalization, and Python/Node signed 202/304 response verification.
 
 Updated disposition: **PARTIAL PROGRESS / P0-02 OPEN / CHANGES REQUIRED**. Remaining gates include a second independent implementation for the same Unicode and numeric fixtures, production parser integration and no-session-side-effect proof for duplicate members, reference-byte fixtures, transcript semantic checks, and challenge replay/expiry tests with no-side-effect assertions.
+
+
+## 8. Shared Platform → AI-PM callback envelope vector (2026-11-25)
+
+A deterministic callback-envelope vector now lives at `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` (introduced at commit `f9edbe42c596b29eb10eea2b0801049659d77cb8`). It uses a valid `execution.infrastructure_uncertain` envelope and publishes:
+
+- Exact payload JCS UTF-8 bytes and `payload_hash`.
+- Exact complete authenticated event-envelope JCS UTF-8 bytes and `event_envelope_hash`.
+- Stable UUIDs, timestamps and payload fields matching the Platform–SEM callback schema.
+
+Both SEM Python and Node validators now independently verify the exact canonical bytes and SHA-256 values. They also prove that changing `event_type` or `occurred_at` changes the full-envelope hash while leaving the payload hash unchanged, and that reordering object members does not change canonical bytes. The Python verifier rejects duplicate members before materializing values; the Node verifier parses the fixture through the strict duplicate-rejecting parser.
+
+The fixture is deliberately ASCII-only with integer numbers. It proves agreement for the full callback envelope shape and the two-hash contract, but does not replace the broader Unicode, UTF-16 ordering and numeric boundary cases in §4. AI-PM's Rust implementation must consume this exact pinned fixture and match all bytes/hashes; the consumer-side acceptance requirement is recorded in AI-PM PR #9.
+
+This remains protocol test evidence, not a production parser, database migration, or live bilateral callback test.
