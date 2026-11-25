@@ -117,6 +117,8 @@ The **release fence** linearizes when the sequencer durably commits the release 
 
 A CancelJob response, JobRemoved result, StopUnit response, WSS ACK, or stop-fence journal record alone is never sufficient to claim process exit or no-late-start.
 
+The Runner wire mapping is explicit: emit `execution.release_applied.disposition=stop_fenced` only after the release fence is durable **and** the no-start branch above is positively reconciled (no accepted invocation, no pending start/restart job, exact containment absent/empty). The `stop_fence_id` references that immutable local journal record. If a Harness invocation existed, do not report `stop_fenced`; emit `process_stopped` or `already_exited` only after the positive exit evidence in §5 is committed. If neither no-start nor process-exit proof is available, emit/retain `local_uncertain` and keep reservation/quarantine.
+
 ## 5. Positive process-exit evidence contract
 
 ### 5.1 Required identity binding
