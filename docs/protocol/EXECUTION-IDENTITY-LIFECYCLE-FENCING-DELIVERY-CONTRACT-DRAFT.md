@@ -62,7 +62,7 @@ The preferred design is a two-stage exchange. The exact token encoding and crypt
 
 1. **Request and reserve.** AI-PM creates a new execution_id and persists its business attempt plus an Outbox execution.requested message. It sends the opaque prompt and infrastructure-only Runner requirements to SEM. No human API key, reusable MCP bearer token or business authorization secret is included.
 2. **Bind.** SEM selects an eligible Runner, reserves capacity, increments the SEM binding epoch and emits execution.binding_established containing execution_id, binding_epoch, runner_id and the registered Runner public-key thumbprint / authenticated identity evidence.
-3. **Authorize.** AI-PM verifies the binding event against its configured trust in SEM and the registered Runner identity. AI-PM creates the narrowly scoped delegated grant for the exact attempt and generation, then sends an opaque one-time bootstrap ticket to SEM for transport to that exact Runner binding.
+3. **Authorize.** AI-PM verifies the binding event using its authenticated trust in SEM and independently validates the Runner key against an enrollment record or certificate authority that AI-PM trusts. A Runner public-key thumbprint supplied only by SEM is not sufficient if the security requirement is that SEM itself must not be able to redeem the ticket: otherwise a compromised SEM could substitute its own key. AI-PM creates the narrowly scoped delegated grant for the exact attempt and generation, then sends an opaque one-time bootstrap ticket to SEM for transport to that exact Runner binding.
 4. **Redeem.** Runner Supervisor's local credential broker redeems the ticket directly with AI-PM over an authenticated channel. The ticket is one-time, short-lived, execution-bound, binding-epoch-bound and cryptographically bound to the Runner key. SEM can relay it but cannot redeem it or read the resulting MCP credential.
 5. **Inject.** The local broker injects the short-lived MCP credential into the Harness MCP connection without placing it in the prompt, command-line arguments, workspace files or ordinary logs. Prefer a local broker/proxy so the token is not exposed to unrelated Harness processes.
 6. **Use and revoke.** AI-PM checks the grant on every MCP call. Revocation/expiry/attempt replacement denies subsequent calls. Runner Supervisor separately stops or isolates the process when required.
@@ -267,7 +267,7 @@ When AI-PM decides a Run attempt no longer needs a runtime, it commits the busin
 ## 9. Decisions still open
 
 These are intentionally not guessed:
-- Exact Runner registration trust chain and how AI-PM trusts the Runner key thumbprint in a SEM binding event.
+- Exact Runner registration trust chain and independent AI-PM validation of the Runner key/certificate; SEM must not be the sole source of the key binding.
 - Exact bootstrap ticket/token format, signing/encryption algorithms, key rotation and credential-broker IPC.
 - Whether binding_epoch alone is sufficient or a separate delivery/process generation is needed for restart semantics.
 - Exact resource reservation model and stale telemetry thresholds.
