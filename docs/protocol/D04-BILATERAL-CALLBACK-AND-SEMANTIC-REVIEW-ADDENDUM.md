@@ -117,3 +117,25 @@ These are not reasons to change the approved algorithm families; they are reason
 - No claim that the successful schema/vector workflow is end-to-end interoperability proof.
 
 **Final disposition: D-04 remains CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION.**
+
+
+## 7. Follow-up contract hardening — 2026-11-25
+
+The SEM Draft has now applied the following contract-level corrections:
+
+- Event acknowledgement uses `execution_event_sequence`, matching the event envelope and AI-PM cursor; the ambiguous legacy `event_sequence` property is rejected by a positive/negative ACK fixture.
+- Runner key version is named `runner_key_version` consistently and is required alongside `boot_id` and `supervisor_instance_id` on delivery, process, release and uncertainty observations.
+- Process observation `exited` requires exact process identity and exit evidence with exactly one of `exit_code` or `exit_signal`.
+- Release state `process_exited` requires `process_exit_evidence_id`.
+- Added D04-H40..H47 acceptance scenarios and executable schema-fixture mutations for ambiguous ACK field, both exit discriminators, missing exit evidence and missing release evidence reference.
+- The AI-PM PR #9 addendum now carries the same proposed ACK field and identity/evidence expectations.
+
+The first CI run against an intermediate commit exposed a missing `supervisor_instance_id` property in the uncertainty payload schema. That defect was corrected in commit `6aaf3949bbd2960d5e800f6934b2aa79127aa483`. The latest HEAD's CI result has not yet been observed; do not treat the correction as validated until the workflow passes.
+
+### Updated disposition of findings
+
+- P0-BI-01: **SEM-side schema/protocol alignment applied; bilateral closure remains pending AI-PM adoption and CI/interoperability proof.**
+- P0-BI-04: **schema-level required identity fields and selected cross-field constraints added; full cross-event evidence-reference and current-binding semantic validation remain open.**
+- P0-BI-02 and P0-BI-03: **open** — exact AI-PM DDL, PostgreSQL atomicity/concurrency and cross-repository transaction fixtures remain unimplemented/unproven.
+
+No runtime code, database migration or route was changed. No PR was merged or ratified.
