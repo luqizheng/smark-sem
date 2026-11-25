@@ -139,16 +139,16 @@ Before SDK implementation is approved, define executable tests for:
 3. Signed GET snapshot 200 verifies ETag as a covered response component; tampered ETag rejects.
 4. Conditional 304 verifies both response ETag and request `If-None-Match`; tampered ETag or validator rejects.
 5. Response signature verification binds the exact originating method, authority, path and request Content-Digest; replay against another request context rejects.
-3. Enterprise CA and explicitly pinned self-signed certificate validation succeed.
-4. Invalid CA, pin mismatch, hostname mismatch and expired certificate fail closed.
-5. Request signing, digest and replay protection match D-04 vectors and final production contract.
-6. Same idempotency key/body returns the same SEM operation; changed body conflicts.
-7. Timeout after server commit can be safely reconciled with the same key/body.
-8. Retry policy retries transient errors only and preserves idempotency identity.
-9. Stale binding_epoch release is rejected and surfaced as a typed non-retryable result.
-10. SDK does not access AI-PM DB/Outbox or mutate AI-PM business state.
-11. SEM callback events match the same canonical fixtures consumed by AI-PM.
-12. A pinned SDK version compiles and passes contract tests in the AI-PM repository.
+6. Enterprise CA and explicitly pinned self-signed certificate validation succeed.
+7. Invalid CA, pin mismatch, hostname mismatch and expired certificate fail closed.
+8. Request signing, digest and replay protection match D-04 vectors and final production contract.
+9. Same idempotency key/body returns the same SEM operation; changed body conflicts.
+10. Timeout after server commit can be safely reconciled with the same key/body.
+11. Retry policy retries transient errors only and preserves idempotency identity.
+12. Stale binding_epoch release is rejected and surfaced as a typed non-retryable result.
+13. SDK does not access AI-PM DB/Outbox or mutate AI-PM business state.
+14. SEM callback events match the same canonical fixtures consumed by AI-PM.
+15. A pinned SDK version compiles and passes contract tests in the AI-PM repository.
 
 ## 10. Open decisions
 
