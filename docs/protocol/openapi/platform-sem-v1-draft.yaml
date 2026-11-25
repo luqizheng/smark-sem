@@ -131,7 +131,19 @@ paths:
               description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
               schema: { type: string, format: uuid }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { description: Execution identifier is unknown to SEM. }
+        '404':
+          description: Signed structured error; execution identifier is unknown to SEM.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' }
         '500': { $ref: '#/components/responses/ServerError' }
   /internal/sem/v1/executions/{execution_id}/release:
     post:
