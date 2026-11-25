@@ -327,8 +327,8 @@ This event is emitted only after SEM has selected a Runner and durably reserved 
   "event_type": "execution.binding_established",
   "schema_version": 1,
   "occurred_at": "RFC3339 UTC",
-  "journal_id": "uuid",
-  "event_sequence": 1,
+  "execution_id": "uuid",
+  "execution_event_sequence": 1,
   "payload": {
     "execution_id": "uuid",
     "binding_epoch": 1,
@@ -499,5 +499,5 @@ If AI-PM does not know the current binding_epoch, it must first query/reconcile 
 - Every sender supplies a unique message_id; every logical operation also has its stable request_id, delivery_id or release_id.
 - Runner observations carry a monotonically increasing event_sequence within the execution/binding stream. SEM persists the last accepted sequence and deduplicates message_id.
 - A duplicate message with the same identity and canonical payload returns the original acknowledgement. Reuse with a different payload is a conflict.
-- A sequence gap, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
-- SEM→AI-PM events are at-least-once. Each durable SEM event carries `journal_id` and `event_sequence` scoped to the Runner event stream (`runner_id + journal_id`); AI-PM deduplicates by `event_id` and stores the stream cursor. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
+- A gap in `execution_event_sequence` within one execution, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
+- SEM→AI-PM events are at-least-once. Each durable SEM→AI-PM event carries `execution_id` and `execution_event_sequence`, monotonic within that execution's SEM event stream. AI-PM deduplicates by `event_id` and stores the per-execution cursor. This is distinct from Runner→SEM `journal_id + event_sequence`, which is scoped by `runner_id + journal_id` and survives WSS reconnect. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
