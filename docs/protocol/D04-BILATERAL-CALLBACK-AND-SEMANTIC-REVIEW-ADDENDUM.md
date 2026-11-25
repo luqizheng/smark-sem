@@ -250,3 +250,6 @@ D04-H68/H69 cover the valid callback ACK and mismatched event-correlation cases.
 The SEM response fixture now also includes `http_error_409`, a Platform→SEM signed `IDEMPOTENCY_CONFLICT` response. Python and Node verify the exact structured error body, request/response digests, RFC 9421 signature base and Ed25519 signature. Both reject a mutated `X-SEM-Request-Id` that substitutes `message_id` for `request_id`. D04-H70/H71 cover the positive and negative cases.
 
 Together with `http_callback_ack`, this provides deterministic fixtures for Platform→SEM 202, Platform→SEM signed 409, SEM→AI-PM callback 200 ACK and Platform→SEM 304. The bodyless non-304 fixture is no longer a current V1 requirement because no current operation defines that response class. Signed errors beyond 409, third-implementation cross-checks and live HTTP/replay-store tests remain open.
+
+
+CI evidence update: latest PR head `a81b83edf908cd9cec6a981cbec70024f89e5d0a` passed SEM Protocol Contract Validation runs #287 and #288, including the new callback ACK 200 and Platform→SEM 409 signature vectors.
