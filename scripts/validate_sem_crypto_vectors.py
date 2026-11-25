@@ -80,7 +80,7 @@ assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").dige
 
 
 # Deterministic response-signature vectors bind the exact associated request.
-for name in ("http_response", "http_304", "http_callback_ack"):
+for name in ("http_response", "http_error_409", "http_304", "http_callback_ack"):
     vector = data[name]
     request = vector["request"]
     response = vector["response"]
@@ -103,7 +103,10 @@ for name in ("http_response", "http_304", "http_callback_ack"):
             ('"@path";req', request["path"]),
             ('"content-digest";req;sf', request["content_digest"]),
         ]
-    elif name == "http_response":
+    elif name in ("http_response", "http_error_409"):
+        if name == "http_error_409":
+            error_body = json.loads(response["body"])
+            assert response["status"] == 409 and error_body["error"]["code"] == "IDEMPOTENCY_CONFLICT", "signed 409 fixture must be a structured idempotency conflict"
         assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
         assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
         pairs = [
