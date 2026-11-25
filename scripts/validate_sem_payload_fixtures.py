@@ -88,6 +88,6 @@ for item in data["sem_events"]:
     empty_payload["payload"] = {}
     expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
 
-print(f"ack-fixtures-ok: {len(data.get("event_acknowledgements", []))} SEM event acknowledgements")
+print(f"ack-fixtures-ok: {len(data.get('event_acknowledgements', []))} SEM event acknowledgements")
 print(f"payload-fixtures-ok: {len(runner_types)} Runner messages, {len(data['platform_requests'])} Platform requests, {len(event_types)} SEM events")
 print(f"negative-fixtures-ok: unknown top-level, unknown payload and missing required payload fields for every branch")
