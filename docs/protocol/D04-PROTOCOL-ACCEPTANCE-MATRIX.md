@@ -274,6 +274,7 @@ See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-R
 | D04-H72 | Replay a valid signed response against a different method, authority, path, request Content-Digest or (304) If-None-Match | Python and Node independently reject every mutated request-context signature base; response cannot be detached from its originating request |
 | D04-H73 | GET snapshot 200 response includes ETag and a valid signature covering the exact ETag value | Python and Node verify response digest/signature and request context; ETag is a covered component |
 | D04-H74 | GET snapshot 200 response ETag is modified while all other response fields remain unchanged | Signature verification fails; client rejects the altered cache validator |
+| D04-H75 | Conditional 304 response ETag is modified while request `If-None-Match` and all other response fields remain unchanged | Signature verification fails; client rejects the altered cache validator |
 
 These cases do not close P0-01 until they are represented in executable independent vectors and live request/response/replay integration tests.
 
