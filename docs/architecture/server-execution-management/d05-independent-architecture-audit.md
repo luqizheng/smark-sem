@@ -230,3 +230,24 @@ Add at least these cases to the D-05 matrix:
 | Readiness | **CHANGES REQUIRED** |
 
 **Final disposition: D-05 remains Draft / Review. Do not ratify, merge or start implementation until P0-01 through P0-04 are closed and independently re-reviewed.**
+
+
+## 9. Follow-up revision status (2026-11-25)
+
+After this audit was committed, the D-05 draft was revised on the same review branch:
+
+- `b109c62`: §3.1 now maps the exact AI-PM TaskStatus, RunKind, RunStatus, RunOutcome, `run_id`, `attempt_no` and `lease_generation` source model; delegated `authorization_generation` is explicitly separate.
+- `db59053`: §3.3 now requires a pre-created stable launch/containment identity, an idempotent launch broker or equivalent OS primitive, named Linux/Windows profile decisions, and durable process-owner evidence for post-restart exit proof.
+- `a04cc16`: §6.1 now defines a single-writer launch/release sequencer and the required start linearization behavior; stop-fence ACK is withheld while an in-flight create remains unresolved.
+- `d527203`: event sequence recommendation now uses a durable Runner event stream keyed by `runner_id + journal_id`, with execution and binding identity carried per event.
+- `d7cc817`: acceptance cases D05-47 through D05-56 were added; the matrix now has 56 cases.
+
+These edits address the textual/source-mapping defects and strengthen the normative requirements, but they do **not** close all P0 findings:
+
+- P0-01 is corrected in the draft but requires independent re-review against the pinned AI-PM source commit.
+- P0-02 remains open until V1's supported OS/profile and concrete launch broker/containment primitive are selected and its crash behavior is testable.
+- P0-03 is materially specified but remains open until the chosen broker implementation proves the linearization contract under failure injection.
+- P0-04 remains open until the durable process owner and authoritative post-Supervisor-crash exit query are selected for each supported profile.
+- Complete allowed-transition/reconciliation tables (P1-01) and D-04 machine-readable stream/cursor schemas (P1-02/P1-07) remain required.
+
+**Updated disposition remains CHANGES REQUIRED.** The audit is a review record, not an approval. D-05 remains Draft / Review and is not ready for ratification or development.
