@@ -180,13 +180,15 @@ This association is a runtime API contract: implementations need a request-conte
 The acceptance suite MUST publish literal byte-for-byte fixtures containing the complete request, response, Signature-Input, Signature, and expected signature-base bytes. At minimum, publish separate fixtures for:
 
 - Platform→SEM 202 with JSON body and X-SEM-Request-Id.
-- Platform→SEM signed 409 structured error.
+- Platform→SEM signed 409 structured error (now represented by `http_error_409`).
 - SEM→AI-PM callback 200 ACK with X-SEM-Event-Id.
 - Platform→SEM 304 with empty response content, ETag and If-None-Match.
-- A bodyless non-304 response, proving the empty response digest path.
+- A bodyless non-304 response only if a future V1 operation adds such a status; the current operation matrix has no bodyless non-304 success class, and this candidate profile excludes one until its exact component set is specified.
 - A request-association negative vector where the response is replayed against a different method, authority, path, request digest, or conditional validator.
 
 The SEM→AI-PM callback 200 ACK case is now represented by `http_callback_ack` in `tests/protocol/fixtures/crypto-vectors-v1.json`. Python and Node independently recompute the request/response Content-Digest, reconstruct the RFC 9421 signature base, verify and reproduce the Ed25519 signature, and reject a mutated `X-SEM-Event-Id` that does not equal the authenticated `event_id`. D04-H68/H69 cover the positive and negative cases. This does not close the other fixture classes above or the third-implementation/live-stack requirement.
+
+The Platform→SEM signed 409 `IDEMPOTENCY_CONFLICT` case is now represented by `http_error_409` in the same fixture file. Python and Node verify the structured error body, exact request/response digests and signature, and reject a mutated `X-SEM-Request-Id` that substitutes `message_id` for `request_id`. D04-H70/H71 cover this positive and negative pair. The required 202, 409, callback ACK 200 and 304 deterministic response fixtures now exist; signed error classes beyond this 409, a third implementation and live HTTP-stack/replay-store tests remain open.
 
 Each positive fixture must be generated independently by at least two implementations and cross-verified by a third implementation or a separately implemented verifier. Python, Node and Rust are candidate languages; library names and versions must be pinned in the fixture manifest after actual compatibility tests, not assumed in advance. Negative vectors must mutate one component at a time and prove verification failure.
 
