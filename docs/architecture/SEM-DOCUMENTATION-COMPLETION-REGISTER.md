@@ -94,7 +94,7 @@ Explicitly prohibit reuse of human JWT/API keys, SEM service JWT, Runner WSS cre
 
 ### D-03 — Permanent Runner loss and process isolation
 
-A safety proposal is recorded in [Runner Host Isolation and Permanent-Loss Recovery Draft](./runner-host-isolation-and-permanent-loss-recovery-draft.md). User decision (2026-11-25): V1 Runner OS is Linux-only. The selected V1 architecture candidate is a host-managed systemd transient service per execution on cgroup v2, with Supervisor as a host systemd service and Harness in a distinct unprivileged identity. Windows/non-systemd/cgroup-v1 hosts and Runner containers without a trusted host-side broker are unsupported. This closes the V1 OS-scope choice, but systemd D-Bus idempotency, unit retention/GC, cgroup exit evidence and crash behavior still require Linux integration/failure-injection proof. Permanent host-loss profiles (managed VM, BMC/IPMI, unmanaged host) remain undecided; safe behavior remains quarantine plus operator intervention.
+A safety proposal is recorded in [Runner Host Isolation and Permanent-Loss Recovery Draft](./runner-host-isolation-and-permanent-loss-recovery-draft.md). User decision (2026-11-25): V1 Runner OS is Linux-only. The selected V1 architecture candidate is a host-managed systemd transient service per execution on cgroup v2, with Supervisor as a host systemd service and Harness in a distinct unprivileged identity. Windows/non-systemd/cgroup-v1 hosts and Runner containers without a trusted host-side broker are unsupported. This closes the V1 OS-scope choice, but systemd D-Bus idempotency, unit retention/GC, cgroup exit evidence and crash behavior still require Linux integration/failure-injection proof. Permanent host loss is now a user-confirmed V1 operating decision: visible alert + quarantine + auditable on-site operator intervention; no cloud/VM power API or BMC/IPMI integration. The operator evidence/administrative workflow and Linux failure-injection proof remain to be completed.
 
 Specify what constitutes independently verifiable host fencing:
 - cloud/VM power-off or revoke compute lease;
@@ -190,7 +190,7 @@ No item becomes Normative / Frozen solely because it is written in a draft or li
 
 - [ ] D-01 Runner identity trust chain approved.
 - [ ] D-02 Delegated grant/bootstrap approved.
-- [ ] D-03 Permanent Runner loss/process isolation approved.
+- [ ] D-03 V1 permanent-host-loss operating mode (visible alert + quarantine + on-site operator disposition) user-confirmed; detailed evidence/admin workflow and process-isolation proof remain open.
 - [ ] D-04 Both wire protocols fully machine-readable, independently validated, cross-repository compatible and approved (initial Draft artifacts exist; not complete).
 - [ ] D-05 All lifecycle/state machines and crash races closed (detailed draft exists; open decisions and cross-contract ratification remain).
 - [ ] D-06 MCP operation/resource authorization contract approved.
