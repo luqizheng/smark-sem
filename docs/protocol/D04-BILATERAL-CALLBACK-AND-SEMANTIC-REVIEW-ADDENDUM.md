@@ -185,3 +185,25 @@ This closes the **design specification gap**, not the implementation-proof gap. 
 - P0-BI-04: schema-level identity fields exist; exact current-binding and evidence-reference semantic validation remains open.
 
 No runtime code, route, migration, database schema, or deployment was changed. No PR was merged or ratified. D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
+
+
+## 9. AI-PM PR #9 follow-up re-review — 2026-11-25
+
+The SEM reviewer directly revised the AI-PM PR #9 documentation branch after re-reading the latest DDL proposal. Current AI-PM PR #9 head at this update is `fb3317474c7326759a51eda19a9bfd0e0011d66b`.
+
+Applied documentation corrections:
+
+- `task_run_event` CHECK now explicitly requires `dedupe_tag IS NOT NULL` before checking its length; PostgreSQL CHECK's three-valued logic can otherwise allow NULL.
+- Inbox source/sequence CHECK explicitly requires `source IS NOT NULL` so NULL cannot make the entire CHECK expression UNKNOWN and pass.
+- The callback transaction is specified at READ COMMITTED. Higher-isolation serialization/snapshot conflicts retry the whole transaction with the exact same event identity/body.
+- Inbox insertion uses `INSERT ... ON CONFLICT DO NOTHING RETURNING id`, followed by fresh-statement lookups of both global event_id and (execution_id, execution_event_sequence). The design no longer suggests issuing SELECT inside a transaction aborted by an ordinary unique violation.
+- Duplicate is returned only when both uniqueness lookups resolve to the same row and execution ID, sequence and JCS hash match. Conflicting winners, changed tuple/body, same sequence/different event ID, or an unlocatable conflict fail closed without ACK.
+- Added INBOX-25..28 for cross-Run global event-ID races, same-sequence competition, conflict-winner lookup and invariant-failure rollback.
+
+This closes the identified **documentation algorithm gaps**, not the database proof. The candidate DDL remains unratified and no migration, route or runtime code was changed. The latest AI-PM commit has no observed PR workflow run. Required next evidence remains live PostgreSQL migration replay, source/catalog verification, two-connection concurrency tests, and bilateral callback/ACK tests.
+
+### Updated bilateral disposition
+
+- P0-BI-02: SQL CHECK NULL issue corrected in Draft; DDL/source/migration proof remains open.
+- P0-BI-03: unique-conflict transaction algorithm now defines a recoverable READ COMMITTED path and four additional concurrency cases; actual PostgreSQL and bilateral execution remain open.
+- Overall D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
