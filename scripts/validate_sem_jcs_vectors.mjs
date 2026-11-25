@@ -51,7 +51,7 @@ if (!reproduced.equals(signature)) {
 
 // Cross-check the body-bearing response and conditional 304 vectors using
 // Node's independent Ed25519 implementation and exact request context.
-for (const name of ["http_response", "http_304", "http_callback_ack"]) {
+for (const name of ["http_response", "http_error_409", "http_304", "http_callback_ack"]) {
   const vector = fixture[name];
   const request = vector.request;
   const response = vector.response;
@@ -77,7 +77,13 @@ for (const name of ["http_response", "http_304", "http_callback_ack"]) {
       ['"@path";req', request.path],
       ['"content-digest";req;sf', request.content_digest],
     ];
-  } else if (name === "http_response") {
+  } else if (name === "http_response" || name === "http_error_409") {
+    if (name === "http_error_409") {
+      const errorBody = parseStrictJson(response.body);
+      if (response.status !== 409 || errorBody.error?.code !== "IDEMPOTENCY_CONFLICT") {
+        throw new Error("Signed 409 fixture must be a structured idempotency conflict");
+      }
+    }
     if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
     if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
     pairs = [
