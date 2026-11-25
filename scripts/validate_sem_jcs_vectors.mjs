@@ -229,6 +229,31 @@ for (const name of ["http_response", "http_error_409", "http_error_404", "http_s
 
 console.log("node-http-response-ok: signed 202, callback ACK 200 and conditional 304 bind their exact request contexts");
 
+
+for (const response of fixture.pre_authentication_error_responses) {
+  if (![401, 413].includes(response.status)) throw new Error("Unexpected pre-authentication response status");
+  if (!Array.isArray(response.headers) || response.headers.length !== 0) {
+    throw new Error("Pre-authentication response must have no protocol signature/correlation headers");
+  }
+  const envelope = parseStrictJson(response.body);
+  if (Object.keys(envelope).sort().join(",") !== "error") {
+    throw new Error("Pre-authentication body must contain only the generic error");
+  }
+  const error = envelope.error;
+  if (Object.keys(error).sort().join(",") !== "class,code,detail,retryable" || error.retryable !== false) {
+    throw new Error("Pre-authentication error has extra fields or retryable=true");
+  }
+  if (response.status === 401 && (error.class !== "auth" || error.code !== "AUTHENTICATION_FAILED")) {
+    throw new Error("401 pre-authentication fixture has wrong error classification");
+  }
+  if (response.status === 413 && (error.class !== "protocol" || error.code !== "PAYLOAD_TOO_LARGE")) {
+    throw new Error("413 pre-authentication fixture has wrong error classification");
+  }
+  for (const forbidden of ["message_id", "in_reply_to", "request_id", "event_id"]) {
+    if (Object.hasOwn(envelope, forbidden)) throw new Error("Pre-authentication error leaked " + forbidden);
+  }
+}
+
 const rfc = fixture.rfc9421_official_ed25519;
 const rfcPublicRaw = Buffer.from(rfc.public_key_base64, "base64");
 const rfcPublicKey = crypto.createPublicKey({
