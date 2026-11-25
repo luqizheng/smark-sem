@@ -285,3 +285,42 @@ D04-H77 separately requires that pre-authentication or malformed-request errors 
 
 
 Latest PR #3 head `1ae585302f284a0937958ff52b0ee44a12cb0693` passed CI runs #367/#368, including OpenAPI 404 and pre-auth correlation safety acceptance updates.
+
+
+## 18. Exact authenticated vs pre-authentication HTTP error response policy (2026-11-25)
+
+The prior D-04 draft distinguished authenticated GET 404 from pre-authentication failures but did not define one response policy for all operation/error classes. This left clients unable to know whether a 4xx/5xx response must carry a response signature, and risked echoing attacker-controlled identifiers.
+
+### 18.1 Authentication boundary and processing order
+
+The API server MUST process a request in this order:
+
+1. Enforce HTTP framing and the configured maximum body-byte limit. A request rejected before the complete body is available for digest verification has no authenticated request context.
+2. For an in-limit request, compute the digest over the exact received message-content bytes and verify the RFC 9421 request signature, key status, timestamp/expiry, nonce freshness/replay and required signed components. Do not parse JSON into an application object before signature verification.
+3. Only after successful request authentication, parse strict JSON, reject duplicate decoded member names, validate the JSON Schema and operation semantics, and resolve the authenticated idempotency identity.
+4. Only after those checks may the request enter application/database processing.
+
+A syntactically valid HTTP request with malformed JSON can therefore still be authenticated over its exact raw bytes and receive an authenticated signed 400. Invalid/missing signature, unknown/revoked key, stale timestamp, nonce replay, missing/malformed signed components, or an early body-size rejection is pre-authentication.
+
+### 18.2 Response classes
+
+**Authenticated application responses.** Every response generated after request authentication succeeds MUST be signed, including success, duplicate, 304, 400, 404, 409, 412, 422, 429 and 500 responses. It MUST carry exactly one direction-specific correlation header:
+
+- Platform → SEM: `X-SEM-Request-Id` equals the authenticated `Idempotency-Key` header. For a valid request this is the envelope `request_id`; the header, not a body field, is the correlation source.
+- SEM → AI-PM callback: `X-SEM-Event-Id` equals the authenticated `Idempotency-Key` header. For a valid event this is the envelope `event_id`; if the body event_id is absent or mismatched, reject it and correlate the signed error only to the authenticated header value.
+
+The response signature MUST bind the exact originating request context using the ratified response component set, including method, authority, path and request Content-Digest. The 304 profile additionally binds the request If-None-Match and response ETag. Signed response bodies use ProtocolErrorEnvelope for errors; optional body message_id/in_reply_to fields are not used as transport correlation and MUST NOT be populated from unvalidated body fields.
+
+Application-level 429 is evaluated only after request authentication and MUST be signed with a mandatory Retry-After header. A network-edge/WAF rate-limit response generated before the API authentication boundary is outside this API contract and MUST NOT include protocol correlation identifiers.
+
+**Pre-authentication failures.** A response generated before a trustworthy authenticated request context exists MUST NOT contain Content-Digest/Signature-Input/Signature or X-SEM-Request-Id/X-SEM-Event-Id protocol response headers. Its body MUST be the minimal PreAuthenticationErrorEnvelope and MUST NOT contain message_id, in_reply_to, request_id or event_id. This class covers 401 authentication/freshness/replay failures and an early 413 body-size rejection. The response detail is fixed, generic and MUST NOT echo request bytes, key identifiers, signature parameters or attacker-supplied IDs.
+
+HTTP framing/parser failures rejected before the API handler are outside the application protocol and MUST likewise not echo protocol identifiers.
+
+If the server has authenticated a request but cannot produce the required response signature because its signing facility is unavailable, it MUST fail closed by terminating the response/connection; it MUST NOT downgrade to an unsigned response carrying authenticated correlation. The caller retries with the same idempotency identity and reconciles the outcome.
+
+### 18.3 OpenAPI alignment
+
+The OpenAPI draft now distinguishes reusable `SignedPlatformError`, `SignedCallbackError`, `SignedPlatformRateLimitError`, `SignedCallbackRateLimitError` and `PreAuthenticationError` response components. Authenticated error responses require the correct signature headers and direction-specific correlation. Pre-authentication responses have no such headers and use a schema that structurally excludes request/event identifiers. 429 is post-authentication and requires Retry-After; 413 is an early pre-authentication rejection.
+
+This is a candidate protocol rule, not a ratified bilateral implementation. Deterministic signed 400/404/412/422/429/500 vectors, pre-auth unsigned negative fixtures, OpenAPI CI, and live HTTP middleware tests remain required.
