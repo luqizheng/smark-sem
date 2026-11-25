@@ -3,7 +3,7 @@
 - Status: **DRAFT / ARCHITECTURE REVIEW — NOT IMPLEMENTATION-AUTHORIZING**
 - Owner: `smark-sem`
 - Consumer: `ai-pm`
-- Protocol baseline reviewed: SEM PR #3, commit `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362` (Draft, not ratified; CI #411 passed; includes D04-H78..H88 and signed 404 fixtures)
+- Protocol baseline reviewed: SEM PR #5 head `813a0657c05c9a15c4d05103c3cd5b468fc487fb` (Draft, not ratified; contract CI #502 passed; includes the current D-04 WSS evidence and ACK contract). Platform HTTP/OpenAPI operations used by this SDK remain unchanged from the PR #3 signed-response baseline.
 - Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `ecfc6eaaa7a76fe52282946615f1182d629fdd4a` (Draft only, not runtime source)
 - Companion: [SEM SDK source compatibility audit](./sem-sdk-source-compatibility-audit.md)
 - Protocol source: [Platform–SEM execution message protocol](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
@@ -326,3 +326,10 @@ The SDK contract must preserve this distinction: authenticated 404 is a trusted 
 The current D-04 branch has signed 404 response vectors for both Platform GET and SEM callback directions and unsigned pre-authentication 401/early-413 fixtures. CI run #411 passed the OpenAPI, schema, crypto-vector, payload-fixture and independent Node JCS/Ed25519 checks. The SDK traceability table and error taxonomy now reflect these cases.
 
 This is still fixture/contract evidence only. The SDK remains unimplemented; live HTTP request-context association, durable nonce replay, response signer behavior, TLS pinning, integrated workspace build, Kellnr publication and AI-PM consumer compilation remain open.
+
+
+## 16. GET request identity cross-audit — 2026-11-25
+
+A signature-level review found that the original illustrative get_execution method accepted only execution_id and an optional read condition, while the D-04 GET operation requires caller-generated message_id and request_id for request signing, replay protection and response correlation. The public API now takes GetExecutionRequest containing execution_id, message_id, request_id and the optional conditional-read value. The SDK maps these to X-SEM-Message-Id, Idempotency-Key and If-None-Match, and verifies X-SEM-Request-Id against the exact request_id.
+
+This is a public API proposal correction only. It does not close D-04 HTTP signing/replay, response verification, TLS pinning, integrated workspace resolution, Kellnr publication or bilateral consumer compilation.
