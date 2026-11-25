@@ -419,3 +419,19 @@ The Runner–SEM WSS protocol §9.2 now freezes the V1 model:
 
 
 The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format and supported evidence schema version. They do not prove runtime digest calculation, event replay persistence or retention; latest CI and later D-10 failure-injection evidence are required.
+
+
+## 15. D-03 manual host-loss disposition challenge
+
+The user-confirmed V1 deployment model remains visible unreachable status + quarantine + on-site handling; no cloud/BMC power control or separate alert-delivery integration. The D-03 draft now makes the minimum administrative action concrete:
+
+- dedicated SEM capability `runner.quarantine.resolve`; no project-user, ordinary Runner operator or AI-PM agent authority;
+- action only against an unreachable/quarantined host when normal authenticated reconnect/reconciliation is unavailable;
+- explicit `inspection_inconclusive` (quarantine unchanged) or `host_physically_isolated` disposition;
+- exact affected execution/binding/launch/containment identities, authenticated operator, capability at action time, timestamps, non-empty reason and append-only resolution_id;
+- physical isolation closes only the old execution reservations; it does not make the old host capacity schedulable. A rebuilt/re-enrolled host must receive a fresh trusted identity and telemetry;
+- manual disposition is never represented as process-exited evidence and never makes an AI-PM business decision.
+
+V1 does not require dual approval; the dedicated capability, on-site attestation, append-only audit and no-capacity-reuse rule are the selected minimum controls. This is a Draft contract, not implementation evidence. D-10 must test authorization, idempotency, audit durability, no-capacity-reuse and AI-PM authority separation.
+
+**Disposition: D-03 operator-action semantics clarified at Draft level; implementation and authorization tests remain open.**
