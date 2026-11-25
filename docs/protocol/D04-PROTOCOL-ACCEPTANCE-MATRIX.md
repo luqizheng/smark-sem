@@ -345,3 +345,6 @@ These cases define response-authentication classes only. They do not close D-04 
 
 | D04-H89 | execution.release_status reports requested, release_uncertain or stale_rejected before a stop fence exists and omits stop_fence_id | Accept; no fence may be fabricated before Runner durably records it |
 | D04-H90 | execution.release_status reports stop_fenced/termination_requested/process_exited/released/cleanup_failed without stop_fence_id | Reject; every post-fence state must reference the exact immutable stop-fence journal record |
+| D04-H91 | AI-PM requests release with expected binding `unbound` while SEM execution is queued and no Runner binding exists | Required future behavior: atomically fence dispatch and return a distinct unbound-release disposition; no Runner stop fence or process-exit evidence is fabricated |
+| D04-H92 | Unbound release races with Runner dispatch and dispatch linearizes first | Reject/reconcile with the actual bound epoch; require normal fenced release, never report released_unbound |
+| D04-H93 | Unbound release linearizes before dispatch, followed by delayed/late dispatch attempt | Reject all later assignment for that execution; durable unbound-release event remains replayable and idempotent |
