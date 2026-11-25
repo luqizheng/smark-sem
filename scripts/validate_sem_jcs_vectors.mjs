@@ -51,7 +51,7 @@ if (!reproduced.equals(signature)) {
 
 // Cross-check the body-bearing response and conditional 304 vectors using
 // Node's independent Ed25519 implementation and exact request context.
-for (const name of ["http_response", "http_304"]) {
+for (const name of ["http_response", "http_304", "http_callback_ack"]) {
   const vector = fixture[name];
   const request = vector.request;
   const response = vector.response;
@@ -61,10 +61,25 @@ for (const name of ["http_response", "http_304"]) {
   const responseBody = Buffer.from(response.body, "utf8");
   const responseDigest = "sha-256=:" + crypto.createHash("sha256").update(responseBody).digest("base64") + ":";
   if (responseDigest !== response.content_digest) throw new Error(name + " Content-Digest mismatch");
-  if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
-  if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
   let pairs;
-  if (name === "http_response") {
+  if (name === "http_callback_ack") {
+    if (response.event_id !== request.event_id || response.event_id !== request.idempotency_key) {
+      throw new Error("Callback ACK correlation must equal authenticated event_id");
+    }
+    if (response.event_id === request.message_id) throw new Error("Callback event_id must remain distinct from transport message_id");
+    pairs = [
+      ['"@status"', String(response.status)],
+      ['"content-digest";sf', response.content_digest],
+      ['"x-sem-event-id"', response.event_id],
+      ['"content-type"', response.content_type],
+      ['"@method";req', request.method],
+      ['"@authority";req', request.authority],
+      ['"@path";req', request.path],
+      ['"content-digest";req;sf', request.content_digest],
+    ];
+  } else if (name === "http_response") {
+    if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
+    if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
     pairs = [
       ['"@status"', String(response.status)],
       ['"content-digest";sf', response.content_digest],
@@ -76,6 +91,8 @@ for (const name of ["http_response", "http_304"]) {
       ['"content-digest";req;sf', request.content_digest],
     ];
   } else {
+    if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
+    if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
     const emptyDigest = "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:";
     if (response.status !== 304 || responseBody.length !== 0 || response.content_digest !== emptyDigest) {
       throw new Error("304 must have empty content and the SHA-256 empty-content digest");
@@ -115,7 +132,8 @@ for (const name of ["http_response", "http_304"]) {
     throw new Error(name + " response signature reproduction failed");
   }
 }
-console.log("node-http-response-ok: signed 202 and conditional 304 bind their exact request contexts");
+
+console.log("node-http-response-ok: signed 202, callback ACK 200 and conditional 304 bind their exact request contexts");
 
 const rfc = fixture.rfc9421_official_ed25519;
 const rfcPublicRaw = Buffer.from(rfc.public_key_base64, "base64");
