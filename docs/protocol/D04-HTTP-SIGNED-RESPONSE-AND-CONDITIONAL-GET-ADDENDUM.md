@@ -18,7 +18,7 @@ For every HTTP response sent by SEM or AI-PM:
 
 1. Signature-Input and Signature carry an RFC 9421 Ed25519 signature.
 2. Content-Digest is an RFC 9530 digest over the exact response message content bytes. For a response with no content (including 304), compute the digest over the empty byte sequence.
-3. The signature base binds @status, @authority, content-digest, and the operation-specific correlation component below. content-type is covered only when present; a verifier must not synthesize it when absent.
+3. The signature base binds response-derived `@status`, `content-digest`, and the operation-specific response correlation header. It also binds the originating request context using RFC 9421 request-targeted component identifiers `@method;req`, `@authority;req`, `@path;req`, and `content-digest;req`. A bare `@authority` is NOT valid as a response-derived component: RFC 9421 defines `@authority` for a request target, and a response signature must use the `req` parameter to obtain it from the associated request. `content-type` is covered only when present on the response; a verifier must not synthesize it when absent.
 4. created, expires, nonce, keyid, and alg are mandatory signature parameters. Exact freshness bounds, nonce retention, and key rotation/overlap remain open D-04/D-09 decisions.
 5. Correlation is mandatory and direction-specific:
    - Platform→SEM request receives a SEM response echoing X-SEM-Request-Id equal to the authenticated request's message_id.
@@ -48,6 +48,7 @@ The OpenAPI draft now proposes the following behavior for getExecutionInfrastruc
 - Content-Digest is required and is calculated over zero response-content bytes.
 - Signature-Input and Signature are required and use the same signed-response profile as 200.
 - X-SEM-Request-Id is required and echoes the authenticated request identity.
+- The response signature covers the request's `If-None-Match` using `if-none-match;req`, and the response's `ETag` as a response field, in addition to the common response/request component set above.
 - The client must verify the response before returning NotModified; an unsigned or mismatched 304 is an authentication error, not a cache hit.
 - A 304 must not carry an execution snapshot body. A body-present 304 is rejected as a protocol violation.
 - The ETag is an opaque validator; it is not an authorization token or execution identity.
@@ -74,7 +75,7 @@ Add these cases to the D-04 executable suite:
 
 ## 6. Open decisions blocking ratification
 
-- Exact operation-specific RFC 9421 covered-component list and canonical signature-base examples.
+- Exact operation-specific RFC 9421 covered-component list and canonical signature-base examples, including `;req` component identifiers and the associated-request context available to the verifier.
 - Whether response nonce replay state is scoped by peer key, local verifier, operation, and/or request identity; retention and concurrency semantics.
 - Exact freshness/skew bounds and how clients handle clock disagreement.
 - Key discovery/trust configuration, key version overlap, revocation propagation and emergency rotation.
