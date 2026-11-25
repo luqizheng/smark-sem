@@ -225,7 +225,7 @@ $defs:
           payload: { $ref: '#/$defs/ReleaseStatusPayload' }
   ReleaseStatusPayload:
     type: object
-    required: [release_id, binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, release_state, stop_fence_id, observed_at]
+    required: [release_id, binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, release_state, observed_at]
     properties:
       release_id: { type: string, format: uuid }
       binding_epoch: { type: integer, minimum: 1 }
@@ -239,6 +239,11 @@ $defs:
       observed_at: { type: string, format: date-time }
       failure_code: { type: string, maxLength: 64 }
     allOf:
+      - if:
+          properties:
+            release_state: { enum: [stop_fenced, termination_requested, process_exited, released, cleanup_failed] }
+          required: [release_state]
+        then: { required: [stop_fence_id] }
       - if: { properties: { release_state: { const: process_exited } }, required: [release_state] }
         then: { required: [process_exit_evidence_id] }
     additionalProperties: false
