@@ -208,6 +208,9 @@ The existing ai-pm source baseline has specialized transitions coupled to the ol
 
 ## 9.2 Delegated Harness identity and two fencing domains
 
+The current AI-PM MCP transport permission gate is not sufficient for this model: PM_MCP_TASK_UPDATE is currently unassigned in the permission map, while pm_report_progress and pm_submit_result mutate business execution/Task state but are not mapped to a dedicated task-update permission. pm_get_task_context currently authorizes project membership and accepts a Task reference; it is not bound to one execution attempt. The new delegated grant must be enforced at the AI-PM application-service boundary for each exact Task/Run/execution attempt and each operation. Formal review/approval endpoints retain their human-principal gate and must reject delegated Harness identities.
+
+
 The current ai-pm MCP identity implementation is human-key based: a user API Key resolves to a human principal; the current cpk_ device credential resolves to the device owner's human principal; the MCP caller context requires HumanActor; service JWTs are rejected from business endpoints. The existing identity governance decision explicitly says V1 does not issue independent Agent credentials. This cannot, without redesign, prove that one Harness process is authorized for exactly one Task/Run attempt.
 
 The replacement must define a Delegated Execution Identity / grant. This is a proposed concept, not a frozen schema. It must be issued/authorized by AI-PM, scoped to one tenant/project/task/attempt and an allow-list of MCP business operations, short-lived and revocable. It must not impersonate the initiating human and must not authorize approval, formal acceptance, project administration, unrelated Task access or arbitrary Task status mutation. Audit must preserve the delegating human/Platform actor separately from the Harness executor and Runner/device identity.
