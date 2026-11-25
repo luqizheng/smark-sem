@@ -52,7 +52,11 @@ These documents are the active design-review set. They are still drafts and must
 1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — Linux-only V1 process containment using host systemd + cgroup v2, independent host fencing and quarantine.
 1.6. [Delegated Harness Grant and Credential Broker Draft](../delegated-harness-grant-and-credential-broker-draft.md) — exact attempt grant, one-time bootstrap, short-lived MCP token and local broker.
 1.5. [Runner Enrollment and Cryptographic Identity Draft](../runner-enrollment-and-cryptographic-identity-draft.md) — Runner proof of possession, AI-PM trust record and WSS identity.
-2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.\n2.1. [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md) — WSS authentication, heartbeat, resource telemetry, delivery ACK, reconnect/replay and dispatch readiness.
+2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.
+2.1. [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md) — WSS authentication, heartbeat, resource telemetry, delivery ACK, reconnect/replay and dispatch readiness.
+2.2. [Platform–SEM OpenAPI 3.1 Draft](../../protocol/openapi/platform-sem-v1-draft.yaml) — initial HTTP endpoint contract.
+2.3. [Platform–SEM JSON Schema](../../protocol/json-schema/platform-sem-v1.schema.yaml) and [Runner–SEM WSS JSON Schema](../../protocol/json-schema/runner-sem-v1.schema.yaml) — initial message validation baselines.
+2.4. [D-04 Protocol Acceptance Matrix](../../protocol/D04-PROTOCOL-ACCEPTANCE-MATRIX.md) — bilateral positive, negative, replay and failure-path acceptance cases.
 3. [Lifecycle State Machines and Crash Consistency Draft](./lifecycle-state-machines-and-crash-consistency-draft.md) — D-05 source-aligned Task/Run mapping, normative SEM/Runner transition tables, uncertainty recovery, crash consistency and 74-case acceptance matrix and Linux systemd 250+ / cgroup v2 process-owner profile with durable unit-retention and launch-tombstone rules.
 3.1. [D-05 Independent Architecture Audit](./d05-independent-architecture-audit.md) — source compatibility and adversarial review of process creation, release/start races, exit evidence and recovery; disposition: Changes Required.\n4. [Execution Identity, Lifecycle, Fencing and Delivery Contract Draft](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) — delegated Harness identity, three lifecycles, process fencing and Git evidence.
 5. [Consistency Review](./consistency-review.md) — source-audit findings and cross-document invariants.
@@ -63,7 +67,7 @@ These documents are the active design-review set. They are still drafts and must
 
 - Runner enrollment and key trust: independently verifiable Runner identity, key rotation, revocation and recovery.
 - Delegated Harness credential bootstrap: ticket format, redemption endpoint, credential broker IPC, token storage, expiry and revocation.
-- Complete wire contract: canonical OpenAPI/JSON Schema, all request/event/ack/error envelopes, version negotiation and compatibility.
+- Complete wire contract: canonical OpenAPI/JSON Schema, all request/event/ack/error envelopes, version negotiation and compatibility. Initial Draft schemas exist; D-04 remains open pending complete payloads, security/canonicalization decisions, validation and cross-repository contract fixtures.
 - Lifecycle and recovery: durable state machines, duplicate/out-of-order messages, process start/exit, uncertain Runner quarantine, release/start races and host isolation.
 - Resource admission: telemetry freshness, reservations, concurrency model, disk pressure and starvation/fairness policy.
 - Git delivery: execution-scoped ref, credential provisioning, verification, cleanup and trust boundaries.
