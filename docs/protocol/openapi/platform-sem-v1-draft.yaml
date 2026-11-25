@@ -111,6 +111,9 @@ paths:
         '500': { $ref: '#/components/responses/ServerError' }
   /internal/ai-pm/v1/sem-events:
     post:
+      servers:
+        - url: https://ai-pm.internal.example
+          description: AI-PM callback ingress; HTTP is allowed only on the approved private network.
       tags: [SEM Events]
       operationId: receiveSemInfrastructureEvent
       summary: Receive one SEM infrastructure event in AI-PM
