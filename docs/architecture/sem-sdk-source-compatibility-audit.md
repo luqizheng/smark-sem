@@ -191,3 +191,56 @@ The consumer dependency claims were rechecked against the current `ai-pm/master`
 - AI-PM `.cargo/config.toml` blob `2060af9d3c1e958f26b06b4cb136ee7c2594b119` configures sparse internal registry `kellnr` at `192.168.2.12:16444`; this endpoint is private infrastructure and is documented here only as source evidence, not a public dependency URL or proof SEM CI can access it.
 
 This narrows the earlier statement: `ai-pm-runner` consumes reqwest; `ai-pm-worker` consumes Tokio for worker scheduling and is not shown to consume reqwest directly. These manifest observations do not establish that an SDK dependency has been integrated or compiled.
+
+## 12. Current workspace manifest recheck — 2026-11-25
+
+This addendum rechecks the actual manifests rather than relying only on the earlier summary.
+
+### 12.1 SEM PR #1 workspace candidate
+
+Inspected `smark-sem` branch `feat/sem-modular-monolith-skeleton` at the current workspace candidate:
+
+- Root `Cargo.toml`: Rust 2021, `rust-version = "1.85"`, workspace members are `apps/sem-server`, `crates/sem-domain`, `crates/sem-protocol`, `crates/sem-application`, and `crates/sem-infrastructure`.
+- Workspace dependencies include Tokio 1 (features: macros, rt-multi-thread, net, signal), Axum 0.8, Serde, UUID, Chrono, async-trait and thiserror.
+- `sem-protocol` currently depends only on Chrono, Serde and UUID.
+- `sem-infrastructure` depends on Axum/Tokio/Tracing/Serde and the SEM application/domain/protocol crates.
+- No reqwest/HTTP client dependency and no SDK crate exist in this workspace candidate.
+
+The inspected branch is a separate Draft PR #1 candidate; PR #4 is based on a different documentation branch. The proposed SDK crate placement must be integrated into the actual PR #1 workspace before any build or release claim can be made.
+
+### 12.2 AI-PM current consumer manifest
+
+Rechecked `ai-pm/master`:
+
+- Root workspace centralizes Tokio 1 with `full` features and reqwest 0.12 with `default-features = false`, `json` and `native-tls`.
+- `apps/ai-pm-runner/Cargo.toml` consumes both Tokio and reqwest.
+- `apps/ai-pm-worker/Cargo.toml` consumes Tokio; it does not declare reqwest directly.
+- The current lockfile resolves Tokio 1.54.1, reqwest 0.12.28 and native-tls 0.2.18.
+- `.cargo/config.toml` configures the private sparse Kellnr registry used by existing internal crates. This proves AI-PM's current build environment is configured to consume private registry packages, but does not prove SEM CI/release has registry credentials or publish permission.
+
+### 12.3 Updated recommendation
+
+Target workspace shape:
+
+    smark-sem workspace
+      crates/sem-protocol     canonical transport-neutral wire models
+      crates/sem-sdk          supported outbound Rust SDK
+      crates/sem-domain
+      crates/sem-application
+      crates/sem-infrastructure
+      apps/sem-server
+
+- In-workspace package name candidate: `sem-sdk`; published package name candidate: `smark-sem-sdk`. These are proposed names, not ratified names.
+- `sem-sdk` depends on `sem-protocol`, Tokio 1, reqwest 0.12/native-tls and narrowly scoped signing/verification dependencies as later approved.
+- `sem-sdk` must not depend on SEM server/infrastructure/database crates, nor on AI-PM crates.
+- SDK methods are async and use the caller's Tokio runtime; the SDK must not create or own a runtime.
+- AI-PM's application port remains the stable boundary; its infrastructure adapter consumes the published SDK. The Outbox worker retains durable retry scheduling and reconciliation.
+- Do not add reqwest to `sem-protocol`; transport-neutral types must remain usable without an HTTP stack.
+- Do not create a companion protocol-types crate while `sem-protocol` is already the canonical owner.
+- Do not select Kellnr distribution until SEM CI has a credentialed, least-privilege publish/read proof. A pinned immutable Git tag is a temporary fallback only if registry access cannot be established; never depend on a floating branch.
+
+### 12.4 What is still not proven
+
+No integrated PR #1 + SDK workspace has been resolved or compiled. No TLS enterprise-CA, explicit certificate/public-key pin, hostname, expiry, rotation or fail-closed tests have run. No SEM registry publish/read permission has been tested. No AI-PM consumer compile against a published immutable SDK has run. The dependency recommendation is therefore **source-compatible candidate only**, not implementation authorization.
+
+**Disposition remains Draft / Changes Required.** D-04 signed HTTP contract and 304 semantics, SDK API ratification, TLS pin proof, registry distribution proof and bilateral CI remain blockers.
