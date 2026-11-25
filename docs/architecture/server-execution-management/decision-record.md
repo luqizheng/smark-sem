@@ -1,5 +1,7 @@
 # 架构决策记录、已关闭问题与验证门槛（decision-record）
 
+> **Authority-boundary revision (2026-11-25):** ADR entries that route Platform business Claim/Lease/command/Task authority through SEM are superseded pending re-decision under [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Independent service authentication, Runner connectivity, resource telemetry, unattended default, no workspace backup, single origin and RabbitMQ non-authority remain independently reviewable.
+
 - 性质：Server Execution Management Architecture V1 的正式决策登记。
 - 规则：每条决策 = 结论 + 依据 + 何时可重启/推翻。
 
