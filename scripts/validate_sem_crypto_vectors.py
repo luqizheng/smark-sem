@@ -62,6 +62,52 @@ mutated_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").dige
 assert not verify(http_pub, http_sig, signature_base.replace(http["content_digest"], mutated_digest).encode("ascii")), "HTTP digest-header mutation unexpectedly verified"
 assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").digest()).decode("ascii") + ":", "Body mutation did not change digest"
 
+
+# Deterministic response-signature vectors bind the exact associated request.
+for name in ("http_response", "http_304"):
+    vector = data[name]
+    request = vector["request"]
+    response = vector["response"]
+    response_body = response["body"].encode("utf-8")
+    expected_response_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(response_body).digest()).decode("ascii") + ":"
+    assert expected_response_digest == response["content_digest"], name + " response Content-Digest mismatch"
+    assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
+    if name == "http_response":
+        pairs = [
+            ('"@status"', str(response["status"])),
+            ('"content-digest"', response["content_digest"]),
+            ('"x-sem-request-id"', response["request_id"]),
+            ('"content-type"', response["content_type"]),
+            ('"@method";req', request["method"]),
+            ('"@authority";req', request["authority"]),
+            ('"@path";req', request["path"]),
+            ('"content-digest";req', request["content_digest"]),
+        ]
+    else:
+        assert response["status"] == 304 and response_body == b"", "304 must be bodyless"
+        assert response["content_digest"] == "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:", "304 empty digest mismatch"
+        pairs = [
+            ('"@status"', str(response["status"])),
+            ('"content-digest"', response["content_digest"]),
+            ('"x-sem-request-id"', response["request_id"]),
+            ('"etag"', response["etag"]),
+            ('"@method";req', request["method"]),
+            ('"@authority";req', request["authority"]),
+            ('"@path";req', request["path"]),
+            ('"content-digest";req', request["content_digest"]),
+            ('"if-none-match";req', request["if_none_match"]),
+        ]
+    response_base = "\n".join(f"{component}: {value}" for component, value in pairs)
+    response_base += f'\n"@signature-params": {vector["signature_params"]}'
+    assert response_base == vector["signature_base"], name + " RFC 9421 signature-base mismatch"
+    response_pub = b64d(vector["public_key_base64"])
+    response_sig = b64d(vector["signature_base64"])
+    assert verify(response_pub, response_sig, response_base.encode("ascii")), name + " Ed25519 response signature failed"
+    response_seed = base64.b64decode(vector["test_private_seed_base64"])
+    response_private = Ed25519PrivateKey.from_private_bytes(response_seed)
+    assert response_private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) == response_pub
+    assert response_private.sign(response_base.encode("ascii")) == response_sig
+
 rfc = data["rfc9421_official_ed25519"]
 rfc_pub = b64d(rfc["public_key_base64"])
 rfc_sig = b64d(rfc["signature_base64"])
