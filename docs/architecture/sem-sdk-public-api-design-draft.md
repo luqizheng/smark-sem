@@ -124,7 +124,7 @@ The current OpenAPI draft requires an ETag response header on both 200 and 304. 
 
 The SDK MUST verify the complete response signature and request-context association before exposing the snapshot or ETag. It MUST NOT cache an ETag or use it in a subsequent `If-None-Match` request before verification. ETag values are opaque and must be preserved exactly; do not normalize or reconstruct them.
 
-A 404 means the execution identifier is unknown to SEM; it must not be silently translated into an empty/queued execution. The current OpenAPI draft defines a signed structured 404 response for an authenticated request context; pre-authentication error correlation remains a separate D-04 open issue.
+A 404 means the execution identifier is unknown to SEM; it must not be silently translated into an empty/queued execution. The current OpenAPI draft defines a signed structured 404 for an authenticated request context. The D-04 candidate now separates authenticated signed application errors from unsigned pre-authentication 401/early-413 responses; see the D-04 bilateral addendum §18. The SDK must never treat an unsigned pre-authentication body or correlation value as authenticated protocol evidence.
 
 ### 3.3 Release request
 
@@ -170,14 +170,16 @@ The public error model must preserve uncertainty and protocol meaning. Proposed 
 | Error | Meaning | Caller action |
 |---|---|---|
 | `Configuration` | Invalid local URL, trust or signer configuration | Fix configuration; do not send |
-| `Authentication` | Request signing rejected or peer authentication failed | Security/configuration investigation |
+| `Authentication` | A verified, authenticated protocol response reports a request/key authentication failure (where applicable) | Security/configuration investigation |
+| `UnverifiedPreAuthentication` | Unsigned 401/early 413 or another response received before a trustworthy signed response context exists | Preserve status and transport trust metadata; do not trust body/correlation or treat it as a signed definitive outcome; reconcile mutating operations with the same idempotency identity |
 | `Protocol` | Invalid schema, unsupported version, invalid response/signature | Fail closed; investigate compatibility |
 | `Validation` | Request violates a protocol invariant | Correct request; do not retry unchanged |
 | `IdempotencyConflict` | Same idempotency key reused with different semantic body | Stop; reconcile caller state |
 | `FencingConflict` | Expected binding epoch is stale | Reconcile; never blindly retry |
 | `NotFound` | Execution unknown to SEM | Reconcile with AI-PM business record |
-| `RateLimited` | SEM returned 429 | Honor bounded Retry-After |
-| `TransientService` | Explicit retryable 5xx/service outcome | Caller-owned retry policy may retry same operation |
+| `RateLimited` | Authenticated signed 429 with valid Retry-After | Honor bounded Retry-After; preserve request identity |
+| `TransientService` | Authenticated signed retryable 5xx/service outcome | Caller-owned retry policy may retry same operation |
+
 | `Transport` | Connection failed before request transmission is known | Preserve transport stage where known |
 | `OutcomeUnknown` | Request may have reached SEM, but no authenticated definitive response was received | Reconcile using same request identity; never create a new attempt automatically |
 
@@ -194,7 +196,7 @@ An optional bounded per-call retry helper may be considered later, but only if:
 - retry count/deadline is bounded and caller-controlled;
 - ambiguous outcomes are returned to the caller for reconciliation rather than hidden.
 
-For 429, preserve Retry-After. For 5xx, follow the protocol's retryability classification. Never retry 412 fencing conflicts, 409 idempotency conflicts, authentication failures, schema failures or other definitive protocol rejections.
+For authenticated 429, preserve and validate Retry-After. For authenticated 5xx, follow the signed protocol retryability classification. Unsigned pre-authentication responses (401/early 413) are surfaced as UnverifiedPreAuthentication, not trusted as signed protocol outcomes; mutating calls must retain the same idempotency identity and reconcile before any new operation. Never retry 412 fencing conflicts, 409 idempotency conflicts, authentication failures, schema failures or other definitive signed protocol rejections.
 
 ## 7. Callback boundary
 
@@ -239,14 +241,15 @@ Proposed:
 9. Idempotent replay returns the same durable disposition; changed body conflicts.
 10. 412 stale epoch is typed and never automatically retried.
 11. 200/304 conditional reads verify signed ETag and request-context binding; tampered ETag/If-None-Match reject; authenticated 404 is a signed structured response.
-12. No automatic durable retry, Outbox access, DB access, Task transition or callback server exists in SDK.
-13. AI-PM compiles against the published immutable SDK version in bilateral CI.
-14. SEM CI verifies public API compatibility and package publication provenance.
-15. SDK docs include supported Rust/MSRV, runtime, TLS, registry and upgrade policy.
+12. Every authenticated application error (400/404/409/412/422/429/500) is signature-verified and bound to the originating request context; 401/early 413 are treated as unverified pre-authentication responses with no trusted correlation IDs.
+13. No automatic durable retry, Outbox access, DB access, Task transition or callback server exists in SDK.
+14. AI-PM compiles against the published immutable SDK version in bilateral CI.
+15. SEM CI verifies public API compatibility and package publication provenance.
+16. SDK docs include supported Rust/MSRV, runtime, TLS, registry and upgrade policy.
 
 ## 10. Blocking open decisions
 
-- D-04 exact request/response/event schema and signature profile ratification, complete signed error-class coverage, freshness/replay policy and live middleware proof.
+- D-04 exact request/response/event schema and signature profile ratification, deterministic signed error vectors for all authenticated response classes, freshness/replay policy and live middleware proof.
 - Final signer/verifier/key-resolver interfaces and crypto implementation ownership.
 - Whether reqwest 0.12/native-tls can meet explicit pinning requirements safely.
 - SEM CI access to internal Kellnr and immutable publish permissions.
@@ -283,5 +286,5 @@ This matrix maps the proposed API to the current D-04 candidate. It is intention
 - All authenticated responses, including error responses and 304, must have a precisely defined verification/correlation contract before a typed response is exposed as trusted.
 - The table's header names reflect the current OpenAPI draft. Candidate signed components and response-header names are specified in D-04; ratification and live middleware proof remain open.
 - SDK default remains **no automatic retry**. AI-PM owns durable retry scheduling. A future per-call helper must be explicitly invoked and bounded; no hidden retry may mask an ambiguous result.
-- The D-04 acceptance matrix currently contains protocol case identifiers, but the SDK-specific mapping above must be joined to the final case IDs after D-04 closure. Do not invent or treat provisional case IDs as normative.
+- The D-04 acceptance matrix currently includes H78–H85 for authenticated/pre-authentication error boundaries. The SDK-specific mapping must be reconciled to the final case IDs after D-04 ratification; do not treat Draft IDs as normative.
 - The SDK API, package version and implementation remain Draft / NOT RATIFIED until all blockers and bilateral consumer tests pass.
