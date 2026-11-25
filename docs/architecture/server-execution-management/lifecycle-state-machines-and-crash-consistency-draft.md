@@ -268,7 +268,7 @@ Runner serializes start and release commands per execution/binding under one dur
 | Fact | First durable authority | Propagation | What it does NOT prove |
 |---|---|---|---|
 | Business attempt created | AI-PM DB | Platform Outbox → SEM Inbox | SEM accepted or Runner started |
-| SEM request accepted | SEM DB | HTTPS response / reconciliation | Runner selected or delivery received |
+| SEM request accepted | SEM DB | Internal HTTP response / reconciliation | Runner selected or delivery received |
 | Capacity reserved | SEM DB | Internal ledger | Process exists |
 | Binding established | SEM DB | SEM event to AI-PM; WSS command to Runner | Business grant active |
 | Delegated grant active | AI-PM DB | Opaque one-time bootstrap via SEM | Process is running |
@@ -276,14 +276,14 @@ Runner serializes start and release commands per execution/binding under one dur
 | Process start observed | Runner journal / OS | WSS event → SEM → Platform Outbox → AI-PM Inbox | Business success |
 | MCP progress/result submitted | AI-PM DB | AI-PM business workflow | Process exited or Task completed |
 | Process exit observed | Runner journal / OS | WSS event → SEM → Platform Outbox → AI-PM Inbox | Run succeeded or Task completed |
-| Release requested | AI-PM DB + Outbox | HTTPS → SEM Inbox → WSS | Process stopped |
+| Release requested | AI-PM DB + Outbox | Internal HTTP → SEM Inbox → WSS | Process stopped |
 | Stop fence accepted | Runner journal | WSS ACK → SEM | Process exited |
 | Infrastructure released | SEM DB, based on positive evidence | SEM event → AI-PM | Task completed |
 | Task completed | AI-PM DB, guarded acceptance | Business read model | All infrastructure cleanup necessarily finished |
 
 ## 8. Reconciliation API responsibilities (logical contract)
 
-Exact HTTP paths and WSS schema are D-04, not defined here. The following logical operations are required:
+Exact internal HTTP paths and WSS schema are D-04, not defined here. Platform↔SEM uses plain HTTP only on the company private network in V1; it has no public ingress and does not require HTTPS. Authentication, request integrity, replay protection, idempotency and audit remain mandatory. HTTP does not provide confidentiality, so network isolation and the handling of sensitive payload material must be explicitly covered by D-09. The following logical operations are required:
 
 **Platform ↔ SEM**
 - `execution.requested`: idempotent create/accept using stable request and execution IDs.
@@ -319,7 +319,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 |---|---|---|
 | D05-01 | Platform retries identical execution request | One SEM execution; original acceptance returned |
 | D05-02 | Same idempotency key, changed payload | Conflict; no mutation |
-| D05-03 | SEM crashes after Inbox commit before HTTP response | Retry returns original accepted result |
+| D05-03 | SEM crashes after Inbox commit before internal HTTP response | Retry returns original accepted result |
 | D05-04 | SEM crashes after reservation commit | Reservation restored; no double allocation |
 | D05-05 | SEM crashes after binding commit before WSS send | Same binding/delivery identity resumed |
 | D05-06 | SEM sends WSS frame then crashes before recording receipt | Reconcile; no new delivery identity |
