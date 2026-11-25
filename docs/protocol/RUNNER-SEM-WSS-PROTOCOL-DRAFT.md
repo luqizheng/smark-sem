@@ -1,10 +1,11 @@
 # Runner–SEM WebSocket Protocol and Dispatch Contract Draft
 
-- Version: Draft 0.1
+- Version: Draft 0.2
 - Status: Architecture review; not normative and not implementation-authorizing.
 - Owner: SEM (Runner transport, identity, admission and infrastructure delivery).
 - Companion: [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md).
 - Scope: Runner registration follow-up, authenticated WSS session, liveness, dispatch, delivery ACK, telemetry, reconnect and replay.
+- Machine-readable schema: [Runner–SEM WSS v1 JSON Schema](./json-schema/runner-sem-v1.schema.yaml).
 - Explicit non-goals: AI-PM business authorization, Task state, Harness MCP grant semantics, business retry policy, process-exit inference from connection state.
 
 ## 1. Protocol invariants
@@ -73,8 +74,9 @@ All application messages use a common envelope. Fields shown are required unless
 Rules:
 
 - `message_id` is globally unique per sender message and is used for deduplication.
-- `message_sequence` is monotonically increasing for each direction within one connection generation, starting from a negotiated initial value.
-- Sequence numbers are not reused after reconnect; the new generation starts a new sequence space.
+- `message_sequence` is a transport sequence, monotonically increasing for each direction within one connection generation. It starts a new sequence space after reconnect and is used for connection-level gap detection only.
+- Durable Runner observations additionally carry `journal_id` and `event_sequence`. `event_sequence` is monotonically increasing within the durable stream keyed by `runner_id + journal_id`, survives WSS reconnects, and is never reset merely because `connection_id` or `session_generation` changes.
+- SEM validates both sequence domains independently. A transport sequence gap triggers connection replay/reconciliation; a durable event sequence gap triggers journal replay/reconciliation. Neither sequence may be substituted for the other.
 - `occurred_at` is the sender's observation time. SEM also records server-side `received_at`; server receipt time is authoritative for freshness decisions.
 - `runner_id`, `connection_id` and `session_generation` must match the authenticated session.
 - Unknown optional fields are ignored only when schema compatibility policy allows it. Unknown message types are rejected with a structured unsupported-message error.
@@ -347,7 +349,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 23. Unknown required protocol version fails closed; compatible optional fields are handled per schema policy.
 24. Prompt body and delegated bootstrap bytes remain opaque to SEM and are absent from logs/errors.
 
-## 14. Decisions still open before this contract can be frozen
+## 14. Machine-readable contract and decisions still open before this contract can be frozen
 
 - Exact Ed25519 transcript encoding, signature domain separation and challenge TTL (D-01).
 - Whether the initial protocol is JSON text frames only; frame-size and compression policy (D-09).
@@ -358,5 +360,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 - Exact event replay snapshot schema and retention window (D-05/D-10).
 - TLS termination topology, enterprise/self-signed certificate trust provisioning, pinning, hostname validation, renewal/rotation/revocation, rate limits and ingress protection (D-09).
 - Whether SEM sends an explicit server-side delivery cancellation before release or only the fenced release instruction (D-05).
+
+The JSON Schema is a validation baseline, not a ratified wire contract. It intentionally leaves the handshake transcript, complete payload refinements for every message, timer values, frame limits and replay snapshot semantics open.
 
 Until these are resolved and accepted, this document remains Draft / Review. It is not an implementation authorization.
