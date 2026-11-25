@@ -11,7 +11,8 @@ servers:
     description: HTTPS with explicitly configured trust; HTTP deployment may override the scheme.
 security:
   - httpMessageSignature: []
-    signatureInputHeader: []
+    httpMessageSignatureInput: []
+    contentDigestHeader: []
 tags:
   - name: Executions
   - name: SEM Events
@@ -145,14 +146,25 @@ paths:
         '500': { $ref: '#/components/responses/ServerError' }
 components:
   securitySchemes:
-    platformRequestSignature:
+    httpMessageSignature:
       type: apiKey
       in: header
-      name: X-SEM-Signature
+      name: Signature
       description: >-
-        Placeholder for the bilateral request-signature profile. Exact algorithm,
-        canonicalization, key identifiers, timestamp/nonce headers and rotation
-        are D-01/D-09 decisions. This placeholder is not an implementation spec.
+        RFC 9421 HTTP Message Signature value. V1 uses Ed25519. The signature
+        covers the request components and Content-Digest defined by the D-04
+        cryptographic profile decision. This is an API documentation representation,
+        not a replacement for RFC 9421 signature verification.
+    httpMessageSignatureInput:
+      type: apiKey
+      in: header
+      name: Signature-Input
+      description: RFC 9421 signature parameters including created, expires, nonce, keyid and alg.
+    contentDigestHeader:
+      type: apiKey
+      in: header
+      name: Content-Digest
+      description: RFC 9530 digest of the exact HTTP message content.
   parameters:
     MessageId:
       name: X-SEM-Message-Id
