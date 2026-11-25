@@ -77,7 +77,7 @@ Required closure: D-08/D-09 choose bounded values and the schema/OpenAPI expose 
 
 A dedicated GitHub Actions workflow now validates the OpenAPI 3.1 document and external references with Redocly, checks each JSON Schema against the Draft 2020-12 meta-schema, mechanically verifies all 19 post-handshake Runner message types and five SEM event branches, executes deterministic HTTP/WSS Ed25519 vectors and negative mutations, and validates positive plus three classes of negative payload fixtures for all 26 message/event/request examples.
 
-The workflow completed successfully on commit `df0c527d89db099901ed6cd9e9a215c2f4fd31c7` (run #26). This is schema/meta-schema and discriminator-coverage evidence only. It does not execute the 92 acceptance scenarios, validate positive/negative payload fixtures, verify cryptographic test vectors, or test the AI-PM callback receiver.
+The full workflow completed successfully on commit `067a40e55ecbc0a25fa92ff0d04e32ea63d1642e` (run #48), including the independent Node JCS/Ed25519 check. This is schema/meta-schema and discriminator-coverage evidence only. It does not execute the 92 acceptance scenarios, validate positive/negative payload fixtures, verify cryptographic test vectors, or test the AI-PM callback receiver.
 
 Required closure: test full RFC 9421 parsing/covered-component canonicalization, signed responses and replay storage; test full RFC 8785 edge cases and independent cross-language WSS verification; add cross-repository receiver contract tests.
 ## 3. Cross-contract invariants that must remain
