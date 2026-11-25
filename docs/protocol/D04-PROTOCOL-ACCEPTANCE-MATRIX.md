@@ -95,13 +95,13 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 
 ### 2.3 Executable payload-schema fixture coverage
 
-[Payload fixtures](../../tests/protocol/fixtures/payload-fixtures-v1.json) and [their validator](../../scripts/validate_sem_payload_fixtures.py) cover every current strict payload branch. The suite contains 26 valid examples (19 Runner WSS messages, 2 Platform requests and 5 SEM infrastructure events). For each example it asserts rejection of an unknown top-level field, an unknown payload field and an empty payload missing required fields: 78 negative mutations. Total: **104 executable schema fixture assertions**, in addition to the 102 scenario-level acceptance cases above.
+[Payload fixtures](../../tests/protocol/fixtures/payload-fixtures-v1.json) and [their validator](../../scripts/validate_sem_payload_fixtures.py) cover every current strict payload branch. The suite now contains 29 valid examples (20 Runner WSS messages, 2 Platform requests and 7 SEM infrastructure events). For each example it asserts rejection of an unknown top-level field, an unknown payload field and an empty payload missing required fields: 87 baseline negative mutations. Total baseline coverage: **116 positive/negative schema fixture assertions**, plus dedicated ACK and cross-field exit/uncertainty assertions in the validator. These are distinct from the scenario-level acceptance requirements below.
 
 | Fixture group | Positive examples | Negative mutations | Coverage |
 |---|---:|---:|---|
-| Runner WSS application messages | 19 | 57 | Every post-handshake message type |
+| Runner WSS application messages | 20 | 60 | Every post-handshake message type, including signal-terminated process exit |
 | Platform HTTP requests | 2 | 6 | Execution request and release request |
-| SEM infrastructure events | 5 | 15 | All five event types |
+| SEM infrastructure events | 7 | 21 | All five event types plus exited and unknown-exit process observations |
 
 ## 3. Runner↔SEM WSS contract cases
 
