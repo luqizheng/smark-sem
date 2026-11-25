@@ -243,3 +243,10 @@ CI evidence update: latest PR head `cda9912d106cd0bb90f67da42c3f971f9147b8b7` pa
 The deterministic HTTP response suite now includes `http_callback_ack`: a SEM→AI-PM POST request carrying the shared `execution.infrastructure_uncertain` event and a signed 200 ACK response. The response `X-SEM-Event-Id` is bound to the authenticated `event_id`. Python and Node independently verify exact request/response Content-Digest values, RFC 9421 signature-base bytes, Ed25519 signature verification and reproducibility. Both also reject a response signature if the event correlation header is mutated to the transport `message_id`.
 
 D04-H68/H69 cover the valid callback ACK and mismatched event-correlation cases. This closes the deterministic fixture gap for one successful callback response class only; signed 409 errors, all other signed error classes, a third independent implementation, live HTTP middleware and bilateral request/response association tests remain open.
+
+
+## 14. Signed 409 error response vector and request_id distinction
+
+The SEM response fixture now also includes `http_error_409`, a Platform→SEM signed `IDEMPOTENCY_CONFLICT` response. Python and Node verify the exact structured error body, request/response digests, RFC 9421 signature base and Ed25519 signature. Both reject a mutated `X-SEM-Request-Id` that substitutes `message_id` for `request_id`. D04-H70/H71 cover the positive and negative cases.
+
+Together with `http_callback_ack`, this provides deterministic fixtures for Platform→SEM 202, Platform→SEM signed 409, SEM→AI-PM callback 200 ACK and Platform→SEM 304. The bodyless non-304 fixture is no longer a current V1 requirement because no current operation defines that response class. Signed errors beyond 409, third-implementation cross-checks and live HTTP/replay-store tests remain open.
