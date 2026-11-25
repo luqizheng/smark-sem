@@ -194,7 +194,7 @@ Required closure:
 - Decide whether shared protocol models and callback-verification primitives belong in the SDK crate or a companion crate.
 - Add SEM schema/fixture validation and AI-PM pinned-SDK bilateral compile/contract CI.
 
-The SDK must not own AI-PM Outbox, database, business retry decisions, Task state or callback transaction. The callback receiver and Inbox remain AI-PM-owned. This is a Draft contract; no SDK code is authorized.
+The SDK must not own AI-PM Outbox, database, business retry decisions, Task state or callback transaction. The callback receiver and Inbox remain AI-PM-owned. A source compatibility audit now recommends an isolated `sem-sdk` crate over canonical `sem-protocol`, Tokio 1 + reqwest 0.12/native-tls as a candidate, and internal Kellnr distribution subject to SEM CI access verification. Explicit certificate/public-key pinning must be proven independently from CA-chain validation. See [SEM SDK Source Compatibility Audit](./sem-sdk-source-compatibility-audit.md). This is a Draft contract; no SDK code is authorized.
 
 ## 7. Document status vocabulary
 
