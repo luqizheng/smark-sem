@@ -204,7 +204,14 @@ $defs:
                 - required: [exit_signal]
                   not: { required: [exit_code] }
       - if: { properties: { observation: { const: exit_status_unknown } }, required: [observation] }
-        then: { required: [exit_evidence] }
+        then:
+          required: [exit_evidence]
+          properties:
+            exit_evidence:
+              not:
+                anyOf:
+                  - required: [exit_code]
+                  - required: [exit_signal]
       - if: { properties: { observation: { const: start_failed } }, required: [observation] }
         then: { required: [failure_code] }
     additionalProperties: false
@@ -245,7 +252,7 @@ $defs:
           payload: { $ref: '#/$defs/InfrastructureUncertainPayload' }
   InfrastructureUncertainPayload:
     type: object
-    required: [binding_epoch, uncertainty_code, uncertainty_scope, runner_id, runner_key_version, boot_id, supervisor_instance_id, since, reconciliation_required]
+    required: [binding_epoch, uncertainty_code, uncertainty_scope, runner_id, runner_key_version, boot_id, supervisor_instance_id, since, reconciliation_required, reservation_retained]
     properties:
       binding_epoch: { type: integer, minimum: 1 }
       uncertainty_code: { enum: [wss_disconnected, heartbeat_stale, supervisor_unavailable, delivery_ack_unknown, process_state_unknown, host_unreachable, journal_gap, evidence_conflict] }
