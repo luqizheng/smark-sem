@@ -101,20 +101,21 @@ This section removes ambiguity from the *candidate* response profile. It is norm
 
 ### 8.2 Body-bearing response Signature-Input
 
-For all non-304 responses, including structured errors and empty-body statuses, the candidate covered-component order is:
+For every non-304 response class currently defined by the operation matrix (including structured 4xx/5xx errors), the response has a representation body and Content-Type. The candidate covered-component order is:
 
 1. `"@status"`
 2. `"content-digest";sf`
 3. Exactly one response correlation field: `"x-sem-request-id"` for Platform→SEM responses, or `"x-sem-event-id"` for SEM→AI-PM callback responses.
-4. `"@method";req`
-5. `"@authority";req`
-6. `"@path";req`
-7. `"content-digest";req;sf`
+4. `"content-type"`
+5. `"@method";req`
+6. `"@authority";req`
+7. `"@path";req`
+8. `"content-digest";req;sf`
 
 The Structured Fields serialization template is therefore exactly one of:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "@method";req "@authority";req "@path";req "content-digest";sf;req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "@method";req "@authority";req "@path";req "content-digest";req;sf);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 or:
@@ -125,7 +126,7 @@ Signature-Input: sig1=("@status" "content-digest";sf "x-sem-event-id" "@method";
 
 These are Structured Fields serialization templates, not literal valid header values until placeholders are replaced. There is no whitespace around separators. Component identifiers and signature parameters are serialized using RFC 9421 / RFC 8941 rules; implementations MUST NOT hand-roll ad-hoc quoting or parse the field with comma/semicolon splitting.
 
-For a response with a representation body, `content-type` is additionally required by the operation contract and MUST be placed immediately after the direction-specific correlation field (the fourth component), before the request-derived components. It is not optional within a given operation response class. For a response class whose contract has no content type, it is omitted. This eliminates the prior ambiguous instruction to sign `content-type` only when present.
+All non-304 response classes in the current operation matrix require Content-Type, placed immediately after the direction-specific correlation field. A future no-content non-304 status is out of this candidate profile and must define a separate exact component set before being added to OpenAPI.
 
 ### 8.3 Conditional 304 Signature-Input
 
