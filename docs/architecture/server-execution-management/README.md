@@ -50,10 +50,10 @@ These documents are the active design-review set. They are still drafts and must
 1.6. [Delegated Harness Grant and Credential Broker Draft](../delegated-harness-grant-and-credential-broker-draft.md) — exact attempt grant, one-time bootstrap, short-lived MCP token and local broker.
 1.5. [Runner Enrollment and Cryptographic Identity Draft](../runner-enrollment-and-cryptographic-identity-draft.md) — Runner proof of possession, AI-PM trust record and WSS identity.
 2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.\n2.1. [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md) — WSS authentication, heartbeat, resource telemetry, delivery ACK, reconnect/replay and dispatch readiness.
-3. [Execution Identity, Lifecycle, Fencing and Delivery Contract Draft](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) — delegated Harness identity, three lifecycles, process fencing and Git evidence.
-4. [Consistency Review](./consistency-review.md) — source-audit findings and cross-document invariants.
-5. [Code Contract Mapping](./code-contract-mapping.md) — current source responsibilities and candidate adapter boundaries.
-6. [Repository Migration Record](../../migration/REPOSITORY-MIGRATION.md) — repository ownership and document migration history.
+3. [Lifecycle State Machines and Crash Consistency Draft](./lifecycle-state-machines-and-crash-consistency-draft.md) — D-05 state tables, durable transitions, crash recovery and acceptance matrix.\n4. [Execution Identity, Lifecycle, Fencing and Delivery Contract Draft](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) — delegated Harness identity, three lifecycles, process fencing and Git evidence.
+5. [Consistency Review](./consistency-review.md) — source-audit findings and cross-document invariants.
+6. [Code Contract Mapping](./code-contract-mapping.md) — current source responsibilities and candidate adapter boundaries.
+7. [Repository Migration Record](../../migration/REPOSITORY-MIGRATION.md) — repository ownership and document migration history.
 
 ## 5. Required design packages still to close
 
