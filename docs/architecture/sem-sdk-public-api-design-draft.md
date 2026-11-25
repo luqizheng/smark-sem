@@ -3,8 +3,8 @@
 - Status: **DRAFT / ARCHITECTURE REVIEW — NOT IMPLEMENTATION-AUTHORIZING**
 - Owner: `smark-sem`
 - Consumer: `ai-pm`
-- Protocol baseline reviewed: SEM PR #3, commit `1b81fb2cc5f92ef43ae09e46547587fd681359b4` (Draft, not ratified)
-- Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `2e19a7ed905a78d037de5ff172fc309256e68336` (Draft only, not runtime source)
+- Protocol baseline reviewed: SEM PR #3, commit `d3e5d4eefacf91aee533ed51be7d16baf9bffe03` (Draft, not ratified; includes D04-H78..H85 response boundary)
+- Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `61ff5faddff751fa0a0df8e01a73bf18ba791e33` (Draft only, not runtime source)
 - Companion: [SEM SDK source compatibility audit](./sem-sdk-source-compatibility-audit.md)
 - Protocol source: [Platform–SEM execution message protocol](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
 - OpenAPI source: [Platform–SEM OpenAPI draft](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/openapi/platform-sem-v1-draft.yaml)
@@ -288,3 +288,15 @@ This matrix maps the proposed API to the current D-04 candidate. It is intention
 - SDK default remains **no automatic retry**. AI-PM owns durable retry scheduling. A future per-call helper must be explicitly invoked and bounded; no hidden retry may mask an ambiguous result.
 - The D-04 acceptance matrix currently includes H78–H85 for authenticated/pre-authentication error boundaries. The SDK-specific mapping must be reconciled to the final case IDs after D-04 ratification; do not treat Draft IDs as normative.
 - The SDK API, package version and implementation remain Draft / NOT RATIFIED until all blockers and bilateral consumer tests pass.
+
+
+## 13. Review snapshot refresh — 2026-11-25
+
+This document was rechecked against:
+- SEM PR #3 protocol/response-contract head: `d3e5d4eefacf91aee533ed51be7d16baf9bffe03`.
+- AI-PM PR #9 callback/Inbox contract head: `61ff5faddff751fa0a0df8e01a73bf18ba791e33`.
+- SEM PR #4 SDK document branch before this update: `9493a689c15db806f9d4aaa47d8191c19c8ba8a2`.
+
+The D-04 candidate now specifies authenticated signed application errors and unsigned pre-authentication 401/early-413 responses. The SDK error taxonomy and traceability table were updated to include `UnverifiedPreAuthentication`, direction-specific signed correlation, signed application 404/409/412/429/500, and the no-downgrade rule when response signing fails.
+
+This remains a design-only cross-reference refresh. The updated SDK document branch itself is not a consumer build, D-04 is not ratified, and no SDK implementation or TLS pinning proof exists.
