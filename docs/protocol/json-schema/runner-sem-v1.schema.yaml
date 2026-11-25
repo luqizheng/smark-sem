@@ -305,8 +305,14 @@ $defs:
     required: [acknowledged_message_id, disposition]
     properties:
       acknowledged_message_id: { type: string, format: uuid }
+      acknowledged_journal_id: { type: string, format: uuid }
       acknowledged_event_sequence: { type: integer, minimum: 1 }
       disposition: { enum: [accepted, duplicate, durably_recorded, rejected] }
+    allOf:
+      - if: { required: [acknowledged_event_sequence] }
+        then: { required: [acknowledged_journal_id] }
+      - if: { required: [acknowledged_journal_id] }
+        then: { required: [acknowledged_event_sequence] }
     additionalProperties: false
   ProtocolError:
     type: object
