@@ -214,6 +214,7 @@ callback = json.loads(
     object_pairs_hook=reject_duplicate_object_members,
 )
 envelope = callback["envelope"]
+assert data["http_callback_ack"]["request"]["body"] == callback["expected"]["event_envelope_jcs_utf8"], "callback ACK HTTP vector must use the shared canonical event-envelope bytes"
 expected = callback["expected"]
 payload_jcs = json.dumps(envelope["payload"], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 envelope_jcs = json.dumps(envelope, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
