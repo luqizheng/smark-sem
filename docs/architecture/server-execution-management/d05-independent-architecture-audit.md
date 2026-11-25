@@ -418,7 +418,7 @@ The Runner–SEM WSS protocol §9.2 now freezes the V1 model:
 **Disposition: CONTRACT SEMANTICS CLOSED AT DRAFT LEVEL.** D-10 must still prove immutable journal commit/fsync, digest generation over exact JCS bytes, replay identity preservation, ACK gating and configured post-ACK retention under disk pressure and Supervisor restart. These are implementation acceptance requirements, not reasons to invent a second V1 evidence transport.
 
 
-The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format, supported evidence schema version and complete durable ACK cursor. They do not prove runtime digest calculation, event replay persistence or retention; latest CI and later D-10 failure-injection evidence are required.
+The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format, supported evidence schema version and complete durable ACK cursor. They do not prove runtime digest calculation, event replay persistence or retention. GitHub Actions Run #474 passed all 10 contract-validation steps (OpenAPI, JSON Schema/message coverage, crypto vectors, payload fixtures including the new negative cases, and independent Node JCS/Ed25519 vectors); D-10 failure-injection evidence remains mandatory.
 
 
 ## 15. D-03 manual host-loss disposition challenge
