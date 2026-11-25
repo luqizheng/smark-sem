@@ -155,3 +155,18 @@ These are new boundary artifacts, not copies. Protocol V1 is the implementation 
 - Runtime code migration: **not started by design**; current Platform-coupled code remains in ai-pm.
 - SEM-02J Platform transaction audit: **still Changes Required / Audit In Progress**.
 - No Phase 0, no Platform business code changes, no Platform migration changes, and no PR merge were performed in this repository-boundary pass.
+
+
+Directory comparison details:
+- The 23-file SEM architecture source directory and destination have identical filenames. README.md and consistency-review.md have intentional destination-side updates for the standalone-repository ownership/status; all other source documents retain matching blob content.
+- All 6 SEM-01 deployment audit files have matching source/destination blob content.
+- The destination contains additional SEM-02E–02J review documents and newly authored ownership/protocol documents.
+
+## Modular-monolith skeleton PR
+
+- Draft PR: https://github.com/luqizheng/smark-sem/pull/1
+- Branch: feat/sem-modular-monolith-skeleton
+- Head: 488e772a165d76810cf21b91e70dd76d0effb26b
+- Scope: Rust workspace, sem-server binary, sem-domain, sem-protocol, sem-application, sem-infrastructure, liveness-only HTTP endpoint and CI.
+- GitHub Actions: Format, Test and Clippy passed on the current PR head.
+- PR remains Draft and unmerged. The skeleton is not a production-ready service.
