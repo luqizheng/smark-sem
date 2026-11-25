@@ -157,6 +157,11 @@ release_stale_without_fence["payload"]["release_state"] = "stale_rejected"
 release_stale_without_fence["payload"].pop("stop_fence_id", None)
 expect_valid(platform_validator, release_stale_without_fence, "stale release rejected before stop fence exists")
 
+release_uncertain_without_fence = json.loads(json.dumps(release_event))
+release_uncertain_without_fence["payload"]["release_state"] = "release_uncertain"
+release_uncertain_without_fence["payload"].pop("stop_fence_id", None)
+expect_valid(platform_validator, release_uncertain_without_fence, "release uncertain before stop fence is durably known")
+
 release_fenced_without_id = json.loads(json.dumps(release_event))
 release_fenced_without_id["payload"]["release_state"] = "stop_fenced"
 release_fenced_without_id["payload"].pop("stop_fence_id", None)
