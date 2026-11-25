@@ -60,7 +60,7 @@ The registration token is a bootstrap secret, not a Runner identity and not a de
 Illustrative CLI (exact command and flags remain to be frozen):
 
 ~~~bash
-sem-runner register --registry https://sem.example.com --registration-token <TOKEN>
+sem-runner register --registry http://sem.internal.example --registration-token <TOKEN>
 ~~~
 
 The CLI sends the token only to the configured HTTPS SEM endpoint. It must validate TLS normally and must not permit insecure TLS bypass in production.
