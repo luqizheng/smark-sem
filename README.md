@@ -55,3 +55,6 @@ The SEM-02E–02J architecture and transaction-audit documents have been copied 
 ## Development policy
 
 Architecture and transaction contracts must be reviewed before implementation. The initial service should be a modular monolith, not a fleet of microservices.
+
+
+**Security review gate:** The protocol draft now includes delegated Harness identity, independent AI-PM authorization-generation fencing vs SEM Runner-binding epoch fencing, uncertain-Runner reassignment prohibition, and the distinction between delivery submission and Task completion. These are review requirements, not implemented features.
