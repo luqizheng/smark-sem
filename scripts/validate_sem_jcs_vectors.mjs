@@ -354,6 +354,9 @@ const callbackFixtureText = fs.readFileSync(
 const callbackFixture = parseStrictJson(callbackFixtureText);
 const callbackEnvelope = callbackFixture.envelope;
 const callbackExpected = callbackFixture.expected;
+if (fixture.http_callback_ack.request.body !== callbackExpected.event_envelope_jcs_utf8) {
+  throw new Error("Callback ACK HTTP vector must use the shared canonical event-envelope bytes");
+}
 const payloadJcs = canonicalize(callbackEnvelope.payload);
 const envelopeJcs = canonicalize(callbackEnvelope);
 if (payloadJcs !== callbackExpected.payload_jcs_utf8) {
