@@ -51,7 +51,7 @@ if (!reproduced.equals(signature)) {
 
 // Cross-check the body-bearing response and conditional 304 vectors using
 // Node's independent Ed25519 implementation and exact request context.
-for (const name of ["http_response", "http_error_409", "http_snapshot_200", "http_304", "http_callback_ack"]) {
+for (const name of ["http_response", "http_error_409", "http_error_404", "http_snapshot_200", "http_304", "http_callback_ack", "http_callback_error_404"]) {
   const vector = fixture[name];
   const request = vector.request;
   const response = vector.response;
@@ -62,7 +62,13 @@ for (const name of ["http_response", "http_error_409", "http_snapshot_200", "htt
   const responseDigest = "sha-256=:" + crypto.createHash("sha256").update(responseBody).digest("base64") + ":";
   if (responseDigest !== response.content_digest) throw new Error(name + " Content-Digest mismatch");
   let pairs;
-  if (name === "http_callback_ack") {
+  if (name === "http_callback_ack" || name === "http_callback_error_404") {
+    if (name === "http_callback_error_404") {
+      const errorBody = parseStrictJson(response.body);
+      if (response.status !== 404 || errorBody.error?.code !== "EXECUTION_NOT_FOUND") {
+        throw new Error("Signed callback 404 fixture must be a structured not-found error");
+      }
+    }
     if (response.event_id !== request.event_id || response.event_id !== request.idempotency_key) {
       throw new Error("Callback ACK correlation must equal authenticated event_id");
     }
@@ -77,11 +83,13 @@ for (const name of ["http_response", "http_error_409", "http_snapshot_200", "htt
       ['"@path";req', request.path],
       ['"content-digest";req;sf', request.content_digest],
     ];
-  } else if (name === "http_response" || name === "http_error_409" || name === "http_snapshot_200") {
-    if (name === "http_error_409") {
+  } else if (name === "http_response" || name === "http_error_409" || name === "http_error_404" || name === "http_snapshot_200") {
+    if (name === "http_error_409" || name === "http_error_404") {
       const errorBody = parseStrictJson(response.body);
-      if (response.status !== 409 || errorBody.error?.code !== "IDEMPOTENCY_CONFLICT") {
-        throw new Error("Signed 409 fixture must be a structured idempotency conflict");
+      const expectedStatus = name === "http_error_409" ? 409 : 404;
+      const expectedCode = name === "http_error_409" ? "IDEMPOTENCY_CONFLICT" : "EXECUTION_NOT_FOUND";
+      if (response.status !== expectedStatus || errorBody.error?.code !== expectedCode) {
+        throw new Error("Signed error fixture status/code mismatch");
       }
     }
     if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
@@ -190,7 +198,7 @@ for (const name of ["http_response", "http_error_409", "http_snapshot_200", "htt
     }
   }
 
-  if (name === "http_response" || name === "http_error_409" || name === "http_snapshot_200") {
+  if (name === "http_response" || name === "http_error_409" || name === "http_error_404" || name === "http_snapshot_200") {
     const wrongPairs = pairs.map(pair => [...pair]);
     wrongPairs[2][1] = request.message_id;
     const wrongBase = wrongPairs.map(([component, value]) => component + ": " + value).join("\\n")
@@ -199,13 +207,13 @@ for (const name of ["http_response", "http_error_409", "http_snapshot_200", "htt
       throw new Error(name + " signature accepted message_id as request correlation");
     }
   }
-  if (name === "http_callback_ack") {
+  if (name === "http_callback_ack" || name === "http_callback_error_404") {
     const wrongPairs = pairs.map(pair => [...pair]);
     wrongPairs[2][1] = request.message_id;
     const wrongBase = wrongPairs.map(([component, value]) => component + ": " + value).join("\\n")
       + '\\n"@signature-params": ' + vector.signature_params;
     if (crypto.verify(null, Buffer.from(wrongBase, "ascii"), responsePublicKey, responseSignature)) {
-      throw new Error("Callback ACK signature accepted a mismatched X-SEM-Event-Id");
+      throw new Error("Callback response signature accepted a mismatched X-SEM-Event-Id");
     }
   }
   const responseSeed = Buffer.from(vector.test_private_seed_base64, "base64");
