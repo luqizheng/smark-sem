@@ -142,6 +142,25 @@ for name in ("http_response", "http_error_409", "http_304", "http_callback_ack")
     response_sig = b64d(vector["signature_base64"])
     assert verify(response_pub, response_sig, response_base.encode("ascii")), name + " Ed25519 response signature failed"
 
+    # A signed response is bound to the exact originating request context.
+    for component_index, wrong_value in (
+        (4, "PATCH"),
+        (5, "other.internal.example"),
+        (6, request["path"] + "/different"),
+        (7, "sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:"),
+    ):
+        wrong_context_pairs = list(pairs)
+        wrong_context_pairs[component_index] = (wrong_context_pairs[component_index][0], wrong_value)
+        wrong_context_base = "\\n".join(f"{component}: {value}" for component, value in wrong_context_pairs)
+        wrong_context_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        assert not verify(response_pub, response_sig, wrong_context_base.encode("ascii")), name + " response accepted a different request context"
+    if name == "http_304":
+        wrong_validator_pairs = list(pairs)
+        wrong_validator_pairs[8] = ('"if-none-match";req', '"different-validator"')
+        wrong_validator_base = "\\n".join(f"{component}: {value}" for component, value in wrong_validator_pairs)
+        wrong_validator_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        assert not verify(response_pub, response_sig, wrong_validator_base.encode("ascii")), "304 response accepted a different If-None-Match context"
+
     if name in ("http_response", "http_error_409"):
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-request-id"', request["message_id"])
