@@ -405,12 +405,17 @@ A branch-level review of `runner-sem-v1.schema.yaml`, `RUNNER-SEM-WSS-PROTOCOL-D
 - The WSS narrative states that durable Runner observations use the `runner_id + journal_id` stream and that transport `message_sequence` is not a substitute. The seven-branch list is now pinned in `validate_sem_contracts.py`; payload fixtures now reject missing `journal_id` and missing `event_sequence` independently for each durable message.
 - Replaceable heartbeat/health/resource snapshots remain outside the durable event stream. The schema/validator must be updated together if a new message becomes state-changing or replayable.
 
-### P1 — Exit evidence reference semantics are not yet frozen
+### P1 — Exit evidence reference semantics
 
-The new D-05 Linux proof addendum defines a complete local evidence record (boot, launch, unit, invocation, cgroup, job snapshots, unit state, exit status and observation sequence). The current Runner WSS `HarnessProcessExited` schema carries the key correlation fields and an `evidence_id`, but it does not carry the complete bracket observations or define a separate evidence-fetch/replay resource.
+The Runner–SEM WSS protocol §9.2 now freezes the V1 model:
 
-This is not automatically a defect if the contract intentionally treats the authenticated Runner Supervisor as the authority and `evidence_id` as an opaque audit reference into its durable journal. However, D-04 must explicitly choose and define that model: evidence retention duration, replay/snapshot behavior, what SEM persists, and what happens when SEM asks for an evidence_id that Runner can no longer serve. If SEM is expected to independently validate the bracket, the wire schema needs a structured evidence summary or a defined authenticated evidence retrieval operation.
+- `evidence_id` is an immutable opaque reference to the full Runner local-journal record; no HTTP fetch endpoint or second transport is introduced.
+- `evidence_schema_version=1` and `evidence_digest` (SHA-256 over RFC 8785 JCS of the complete evidence record) accompany the process-exit event.
+- The event carries the minimum exit-proof summary; SEM persists the complete event envelope before ACKing its durable Runner event sequence.
+- Runner retains the full record until that durable ACK; post-ACK local retention is a D-10 operational policy. SEM's stored summary and digest remain the durable audit copy after local raw-record expiry.
+- The digest is an integrity binding, not a digital signature. V1 trusts authenticated WSS provenance and the Runner Supervisor authority; independent remote verification of the full raw record is explicitly out of scope.
 
-**Disposition: P1 OPEN — do not silently assume that an evidence_id is self-describing or fetchable.**
+**Disposition: CONTRACT SEMANTICS CLOSED AT DRAFT LEVEL.** D-10 must still prove immutable journal commit/fsync, digest generation over exact JCS bytes, replay identity preservation, ACK gating and configured post-ACK retention under disk pressure and Supervisor restart. These are implementation acceptance requirements, not reasons to invent a second V1 evidence transport.
 
-The added validator checks schema branch parity and required journal cursor fields; it does not prove the semantics of event production, replay persistence or evidence retention. Latest CI is required to validate the new checks.
+
+The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format and supported evidence schema version. They do not prove runtime digest calculation, event replay persistence or retention; latest CI and later D-10 failure-injection evidence are required.
