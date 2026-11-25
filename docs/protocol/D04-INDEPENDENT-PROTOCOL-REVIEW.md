@@ -168,3 +168,20 @@ This corrects a concrete standards mismatch in the proposed profile. Exact seria
 ### CI evidence update for §5.4 — 2026-11-25
 
 The schema/validator correction described in §5.4 was validated by SEM Protocol Contract Validation run #127 on commit `0ac34a194779260ea241e7e7c5d6960f8c3d3d45`: **success**. The run completed OpenAPI validation, JSON Schema meta-schema/message coverage, cryptographic vectors, positive/negative payload fixtures, and independent Node JCS/Ed25519 checks. A subsequent documentation-only fixture-count refresh does not alter those executable files. This remains contract/fixture CI, not live WSS session-supersession interoperability.
+
+
+## 5.6 Follow-up: authenticated and pre-authentication error response boundary — 2026-11-25
+
+The Draft previously distinguished authenticated GET 404 from pre-authentication failures but did not define the response-signature requirement for every error class. This left an ambiguity that could produce unsigned application errors or cause an API to echo untrusted request/event identifiers.
+
+The candidate contract now defines:
+- Verify raw-body digest and RFC 9421 request signature before JSON parsing.
+- After successful authentication, sign every application response, including 400/404/409/412/422/429/500, and correlate only to the authenticated Idempotency-Key header (\`X-SEM-Request-Id\` or \`X-SEM-Event-Id\` by direction).
+- Reject a callback whose authenticated Idempotency-Key does not equal its envelope event_id; a signed error correlates only to the authenticated header and does not echo the body value.
+- Before authentication succeeds (invalid signature/key, stale or replayed nonce, early body-size rejection), return only a generic unsigned response without signature/correlation headers or request/event identifiers in its body.
+- Application-level 429 is authenticated and signed with Retry-After. Edge/WAF rejection before authentication is outside the protocol and must not reflect identifiers.
+- If an authenticated response cannot be signed, fail closed by terminating the response/connection; never downgrade to an unsigned correlated response.
+
+OpenAPI now separates direction-specific signed errors, signed rate-limit errors and the restricted pre-authentication error envelope. D04-H78..H85 record the new cases. The AI-PM PR #9 bilateral addendum and Inbox design have been updated to the same callback rule.
+
+This closes the Draft-level ambiguity only. It does not close P0-01: deterministic signed-error vectors, OpenAPI validator CI on the updated branch, actual HTTP middleware ordering, nonce replay storage, reverse-proxy behavior and bilateral runtime interoperability remain unproven. Disposition remains **CHANGES REQUIRED**.
