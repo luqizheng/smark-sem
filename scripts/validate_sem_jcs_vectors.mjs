@@ -378,7 +378,7 @@ expectCanonical(
 expectReject(() => JSON.parse("{"), "malformed JSON");
 const duplicateMemberInput = String.raw`{"a":1,"\u0061":2}`;
 expectReject(() => parseStrictJson(duplicateMemberInput), "duplicate object member after escape decoding");
-expectReject(() => parseStrictJson(String.raw`{"outer":{"a":1,"\\u0061":2}}`), "nested duplicate object member after escape decoding");
+expectReject(() => parseStrictJson(String.raw`{"outer":{"a":1,"\u0061":2}}`), "nested duplicate object member after escape decoding");
 expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\ud800"}`)), "unpaired high surrogate");
 expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\udc00"}`)), "unpaired low surrogate");
 expectReject(() => canonicalize(Number.NaN), "NaN");
