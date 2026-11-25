@@ -81,13 +81,13 @@ for (const name of ["http_response", "http_304"]) {
     }
     pairs = [
       ['"@status"', String(response.status)],
-      ['"content-digest"', response.content_digest],
+      ['"content-digest";sf', response.content_digest],
       ['"x-sem-request-id"', response.request_id],
       ['"etag"', response.etag],
       ['"@method";req', request.method],
       ['"@authority";req', request.authority],
       ['"@path";req', request.path],
-      ['"content-digest";req', request.content_digest],
+      ['"content-digest";req;sf', request.content_digest],
       ['"if-none-match";req', request.if_none_match],
     ];
   }
