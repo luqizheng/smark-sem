@@ -198,3 +198,21 @@ assert hashlib.sha256(payload_jcs.encode("utf-8")).hexdigest() == expected["payl
 assert envelope_jcs == expected["event_envelope_jcs_utf8"], "callback event-envelope JCS bytes mismatch"
 assert hashlib.sha256(envelope_jcs.encode("utf-8")).hexdigest() == expected["event_envelope_hash_sha256"], "callback event_envelope_hash mismatch"
 print("callback-jcs-ok: payload and complete authenticated envelope bytes + SHA-256")
+
+# Full-envelope identity must change when authenticated metadata changes, even
+# when the payload itself is byte-for-byte unchanged.
+mutated_event_type = dict(envelope)
+mutated_event_type["event_type"] = "execution.delivery_status"
+mutated_envelope_jcs = json.dumps(mutated_event_type, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+assert hashlib.sha256(payload_jcs.encode("utf-8")).hexdigest() == expected["payload_hash_sha256"]
+assert hashlib.sha256(mutated_envelope_jcs.encode("utf-8")).hexdigest() != expected["event_envelope_hash_sha256"], "event_type mutation did not change full-envelope hash"
+
+mutated_time = dict(envelope)
+mutated_time["occurred_at"] = "2026-11-25T10:15:32Z"
+mutated_time_jcs = json.dumps(mutated_time, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+assert hashlib.sha256(mutated_time_jcs.encode("utf-8")).hexdigest() != expected["event_envelope_hash_sha256"], "occurred_at mutation did not change full-envelope hash"
+
+reordered_envelope = dict(reversed(list(envelope.items())))
+assert json.dumps(reordered_envelope, ensure_ascii=False, sort_keys=True, separators=(",", ":")) == expected["event_envelope_jcs_utf8"], "member order changed callback canonical bytes"
+print("callback-idempotency-ok: event_type/occurred_at mutations change envelope hash; member order does not")
+
