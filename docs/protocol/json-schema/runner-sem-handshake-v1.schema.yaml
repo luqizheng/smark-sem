@@ -7,7 +7,6 @@ oneOf:
   - $ref: '#/$defs/AuthenticationProof'
   - $ref: '#/$defs/SessionEstablished'
   - $ref: '#/$defs/SessionAcknowledgement'
-  - $ref: '#/$defs/SessionSuperseded'
 $defs:
   Challenge:
     type: object
@@ -64,14 +63,4 @@ $defs:
       runner_id: { type: string, format: uuid }
       connection_id: { type: string, format: uuid }
       session_generation: { type: integer, minimum: 1 }
-    additionalProperties: false
-  SessionSuperseded:
-    type: object
-    required: [handshake, message_type, connection_id, session_generation, reason]
-    properties:
-      handshake: { const: sem.runner.handshake.v1 }
-      message_type: { const: runner.session.superseded }
-      connection_id: { type: string, format: uuid }
-      session_generation: { type: integer, minimum: 1 }
-      reason: { enum: [newer_session_authenticated, administrative_disconnect, key_revoked] }
     additionalProperties: false
