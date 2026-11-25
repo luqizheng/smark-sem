@@ -7,9 +7,9 @@
 ## 1. Binding ownership rules
 
 1. AI-PM Platform is the sole authority for Project, Task, Task status, business Run state, requirements, acceptance criteria, approvals, HIR, Barrier, business commands/results, retry/successor decisions and business audit.
-2. SEM is an independent execution-message transport and runtime-management service. It receives opaque execution requests/prompts, routes them to infrastructure-eligible Runners, supervises execution delivery/process/resource lifecycle, and reports infrastructure facts.
+2. SEM is an independent execution-message transport and runtime-management service. It receives opaque execution requests/prompts, routes them to infrastructure-eligible Runners, coordinates delivery/release messages, records Runner-reported process/resource facts, and reports infrastructure status.
 3. Harness obtains Task context and performs all business reads/writes directly through independently authenticated AI-PM MCP. SEM never supplies business context and never mutates business state.
-4. AI-PM decides when a Task is complete/cancelled and explicitly instructs SEM to release the associated execution resources. SEM performs cleanup and reports the result; cleanup does not decide Task completion.
+4. AI-PM decides when a Task is complete/cancelled and explicitly instructs SEM to release the associated execution resources. SEM forwards the release instruction; Runner Supervisor performs local cleanup and reports process facts through SEM. Cleanup does not decide Task completion.
 5. Runner checks/starts the Harness and injects the prompt. Runner reports delivery/process/resource facts to SEM. Harness MCP operations go directly to AI-PM.
 6. Platform and SEM are separate deployable services, separate repositories and separate PostgreSQL databases. SEM has no Platform DB credentials or direct SQL access.
 7. A Task lifecycle and a SEM Execution lifecycle are separate state machines. Opaque execution/correlation IDs associate them without making SEM a mirror of Task/Run state.
@@ -51,7 +51,7 @@ No code or migration changes are authorized until this mapping is reviewed.
 | sem-session | Runner session and infrastructure availability lifecycle | Human approval or Task status |
 | sem-dispatch | Infrastructure-eligible Runner selection, capacity admission, atomic resource reservation and durable prompt delivery operation | Business Task eligibility, Claim, retry or approval |
 | sem-prompt-delivery | Opaque prompt/body delivery and transport receipt tracking | Parsing prompts or deriving Task semantics |
-| sem-process | Harness runtime coordination, process identity/exit observation, graceful/forced stop and orphan reconciliation | Business Run terminalization or Task completion |
+| sem-runtime | Runtime-control message coordination, Runner-reported process/cleanup observations, infrastructure uncertainty and orphan reconciliation | Local OS process ownership, business Run terminalization or Task completion |
 | sem-resources | CPU/memory/disk telemetry, capacity snapshots and reservations | Business priority or Task status |
 | sem-persistence | SEM PostgreSQL schema and repository adapters | Mirrored Task/Run/Lease/HIR/Barrier state |
 | sem-protocol | Versioned HTTPS/WSS transport DTOs and schema validation | Duplicated Platform domain entities |
