@@ -75,7 +75,7 @@ Every service-to-service mutating request includes:
 - X-Correlation-ID: stable correlation UUID
 - X-Request-ID: unique HTTP attempt UUID
 
-Idempotency-Key is business-operation identity. JWT jti is token replay identity. They are separate and must never be substituted for one another.
+For a given operation, the body identifier is equal to Idempotency-Key: claim_request_id for Claim, request_id for Lease Renewal, observation_id for process observation, delivery_id for command delivery, and ack_id for command ACK. Event ingestion uses event_id as its idempotency identity. JWT jti is token replay identity. These identities are separate and must never be substituted for one another.
 
 ### 2.4 Common response envelope
 
@@ -104,7 +104,7 @@ Maximum JWT lifetime: 5 minutes. Validate signature, key id, issuer, exact audie
 
 Minimum scopes:
 - Platform → SEM: sem.events.write
-- SEM → Platform: platform.run.claim, platform.lease.renew, platform.command.delivery, platform.command.ack, platform.process.observe, platform.runner.ticket.issue, platform.execution.reconcile
+- SEM → Platform: platform.run.claim, platform.lease.renew, platform.command.delivery, platform.command.ack, platform.process.observe, platform.execution.reconcile
 
 Implementations may split scopes further; they must not broaden a token beyond its service's required operations.
 
@@ -123,7 +123,7 @@ The following endpoints are owned and implemented by Platform in ai-pm. SEM call
 
 ### 4.1 Runner WSS ticket issuance
 
-POST /internal/v1/runner-tickets
+POST /api/v1/runner/tickets
 
 Caller: authenticated Runner device credential over TLS (device-authenticated endpoint; not SEM service JWT).
 
@@ -199,7 +199,7 @@ Response when no eligible work:
     }
 
 Rules:
-- SEM chooses the target Runner before requesting Claim. Platform chooses/validates eligible work and remains the final authorization authority.
+- SEM chooses the target Runner before requesting Claim. runner_capabilities are scheduling hints only; Platform intersects them with the registered device capabilities and chooses/validates eligible work as the final authorization authority.
 - Platform atomically checks device identity/status, project binding, Runner qualification, Task/Project gates, Scheduling Shield, Execution Barrier, concurrency policy and all relevant Run/Task state.
 - Platform alone increments Generation, signs/returns Lease Token and commits Claim/audit/events.
 - Claim result and idempotency record are committed in the same Platform transaction. A retry with the same claim_request_id and same canonical body returns the same grant; same key with a different body is rejected.
