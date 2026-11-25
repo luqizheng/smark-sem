@@ -35,13 +35,13 @@ A deterministic Ed25519/JCS WSS transcript vector now exists with exact transcri
 
 Required closure: freeze the exact Ed25519/JCS transcript fields; add at least two independent language implementations, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
-### P0-03 — WSS message payloads have strict schemas; mechanical coverage remains unverified
+### P0-03 — WSS strict payload schemas and discriminator coverage are validated; payload fixtures remain incomplete
 
 The Runner WSS schema now defines a dedicated strict payload schema for every post-handshake message type: heartbeat/health, resource telemetry, admission, delivery, credential bootstrap, process lifecycle, release, ACK/error, superseded session and replay request/snapshot. State-changing payloads reject undeclared fields. The session-ack frame is defined only in the pre-application handshake schema to avoid duplicate ownership.
 
-This closes the former generic-payload design gap at the schema-authoring level. It does not yet prove that every narrative catalogue row has exactly one branch, that all direction constraints match, or that every positive/negative fixture validates.
+The GitHub Actions validator confirms that all 19 application message enum values have exactly one corresponding conditional schema branch, and all five event types map to a discriminated payload branch. OpenAPI and JSON Schema meta-schema validation also pass. This verifies structural branch coverage, but not semantic direction correctness or positive/negative payload fixtures for every branch.
 
-Required closure: mechanically compare the message_type enum and conditional branches to the narrative direction catalogue; add positive/negative fixtures for every branch; validate cross-field conditions and D-05 identity requirements; record reproducible validator output.
+Required closure: compare each branch's sender direction to the narrative catalogue; add positive/negative fixtures for every branch; validate cross-field conditions and D-05 identity requirements.
 ### P0-04 — SEM→AI-PM event payloads are discriminated; producer/receiver mapping remains open
 
 The Platform–SEM schema now defines five discriminated event payloads: binding-established, delivery-status, process-observed, release-status and infrastructure-uncertain. They carry binding_epoch, Runner identity/key version, delivery/process/release evidence references and explicit uncertainty semantics. The schema deliberately excludes AI-PM Task/Requirement/Approval status fields.
