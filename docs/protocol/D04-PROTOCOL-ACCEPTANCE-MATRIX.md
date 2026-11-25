@@ -355,3 +355,5 @@ These cases define response-authentication classes only. They do not close D-04 
 | D04-H98 | same release_id reused with changed expected_binding or stop_policy | 409 IDEMPOTENCY_CONFLICT; no mutation |
 | D04-H99 | duplicate execution.unbound_release_applied callback | AI-PM exact duplicate ACK; no projection rewrite |
 | D04-H100 | new AI-PM attempt uses a new execution_id after old released_unbound | New execution is independent; old tombstone remains scoped to old execution_id |
+
+**Case-ID integrity note (2026-11-25):** The matrix contained a duplicated D04-H41..H46 block: the earlier IDs belong to HTTP cryptographic vectors, while the later six rows cover infrastructure identity/evidence validation. The latter rows are now uniquely numbered D04-H101..H106. D04-H89..H100 are the release-fence and unbound-release additions. All 102 H-case identifiers are now unique; H48..H51 are currently unassigned (WSS cases use the separate D04-W namespace). Do not describe the H identifiers as contiguous.
