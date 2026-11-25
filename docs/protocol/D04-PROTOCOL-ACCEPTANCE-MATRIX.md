@@ -269,3 +269,23 @@ See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-R
 | D04-H62 | Signed response uses unknown/revoked keyid | Client fails closed |
 
 These cases do not close P0-01 until they are represented in executable independent vectors and live request/response/replay integration tests.
+
+
+### 3.2 Full RFC 8785 JCS conformance cases (Draft addendum)
+
+See [D-04 RFC 8785 Full JCS Conformance Addendum](./D04-RFC8785-FULL-JCS-CONFORMANCE-ADDENDUM.md). The existing fixed WSS vector remains a smoke test only; these additional cases are required before P0-02 closure.
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-W52 | UTF-16 ordering fixture with supplementary-plane and BMP property names | Python and Node produce exact RFC 8785 bytes, independently checked against a published/reference vector |
+| D04-W53 | String escaping fixture with control characters, quotes, reverse solidus and non-ASCII text | Exact canonical UTF-8 bytes match reference vector |
+| D04-W54 | Number serialization boundary fixture | Python and Node match RFC 8785/ECMAScript number serialization exactly |
+| D04-W55 | Negative zero and non-finite numeric values | -0 serializes as 0; NaN and infinities are rejected before signing |
+| D04-W56 | Duplicate object member names | Parser rejects before transcript verification; no last-key-wins acceptance |
+| D04-W57 | Unpaired surrogate in transcript string/property name | Reject before UTF-8 signing; no replacement-character normalization |
+| D04-W58 | Nested object/array ordering and canonicalization | Exact reference bytes match across independent implementations |
+| D04-W59 | Transcript contains unknown or missing required field | Schema/semantic validation rejects before signature acceptance |
+| D04-W60 | Proof uses mismatched challenge nonce, key version, audience or authority | Reject authentication and do not establish session |
+| D04-W61 | Replayed challenge_id or server_nonce | Reject atomically; no second session |
+| D04-W62 | Challenge expires while proof is in flight | Reject according to server receipt-time freshness rule |
+| D04-W63 | Selected protocol version is unsupported or downgrade-forced | Reject; no fallback to weaker/older protocol |
