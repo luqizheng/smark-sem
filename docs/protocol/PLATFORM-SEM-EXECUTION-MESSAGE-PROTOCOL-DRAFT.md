@@ -4,6 +4,7 @@
 - Status: Architecture review only; not normative and not implementation-authorizing.
 - Replaces: the superseded Platform–SEM–Runner Protocol V1.
 - Authority baseline: [SEM Authority Boundary and Execution Message Model](../architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
+- Detailed companion contract: [Execution Identity, Lifecycle, Fencing and Delivery Contract](./EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
 
 ## 1. Contract invariants
 
@@ -23,13 +24,13 @@
 | message_id | Sender | Unique message identity / deduplication |
 | request_id | AI-PM | Idempotency identity for one execution request |
 | execution_id | AI-PM | Opaque identity for one requested execution attempt; not a Task ID |
-| execution_epoch | SEM | Fencing token for the current Runner binding |
+| binding_epoch | SEM | Fencing token for the current Runner binding |
 | delivery_id | SEM | One durable SEM→Runner delivery operation |
 | runner_id | SEM / registered identity | Infrastructure endpoint identity |
 | correlation_id | AI-PM | Trace correlation only; never authorization |
 | process_identity | Runner | Exact local OS process identity, including boot/start identity |
 
-A new business execution attempt should receive a new execution_id from AI-PM. SEM may retry delivery of the same execution_id idempotently. SEM increments execution_epoch when it establishes or replaces a valid Runner binding. SEM reports the current binding through an execution.binding_established infrastructure event. AI-PM stores that opaque epoch with its execution mapping and includes it in a release request. An old epoch cannot stop a newer binding. If AI-PM has not received the latest binding event, it must query/reconcile the execution by execution_id before issuing a fenced release.
+A new business execution attempt should receive a new execution_id from AI-PM. SEM may retry delivery of the same execution_id idempotently. SEM increments binding_epoch when it establishes or replaces a valid Runner binding. SEM reports the current binding through an execution.binding_established infrastructure event. AI-PM stores that opaque epoch with its execution mapping and includes it in a release request. An old epoch cannot stop a newer binding. If AI-PM has not received the latest binding event, it must query/reconcile the execution by execution_id before issuing a fenced release.
 
 ## 3. Platform → SEM: execution request
 
@@ -74,14 +75,14 @@ Rules:
   "request_id": "uuid",
   "execution_id": "uuid",
   "acceptance": "accepted",
-  "sem_execution_epoch": 1,
+  "sem_binding_epoch": 1,
   "accepted_at": "RFC3339 UTC"
 }
 ~~~
 
 Possible acceptance values: accepted, duplicate, rejected.
 
-Acceptance means only that SEM durably accepted the infrastructure execution request. It does not mean a Runner was selected, the prompt was delivered, Harness started, or business work began. The current execution_epoch is assigned only when a Runner binding is established and is reported separately.
+Acceptance means only that SEM durably accepted the infrastructure execution request. It does not mean a Runner was selected, the prompt was delivered, Harness started, or business work began. The binding_epoch is assigned only when a Runner binding is established and is reported in execution.binding_established; it is not part of the initial durable-acceptance response.
 
 Duplicate request_id with the same canonical payload returns the original acceptance result. The same request ID with a different payload is a conflict.
 
@@ -93,7 +94,7 @@ Duplicate request_id with the same canonical payload returns the original accept
   "message_type": "execution.deliver",
   "schema_version": 1,
   "execution_id": "uuid",
-  "execution_epoch": 1,
+  "binding_epoch": 1,
   "delivery_id": "uuid",
   "harness_profile": "codex",
   "prompt": {
@@ -116,7 +117,7 @@ Runner must not fetch Task context from SEM or ask SEM to mutate Task state.
 ## 6. Runner → SEM: infrastructure observations
 
 Use distinct message types for distinct facts:
-- execution.binding_established: SEM has bound the execution to a specific Runner and assigned the current execution_epoch.
+- execution.binding_established: SEM has bound the execution to a specific Runner and assigned the current binding_epoch.
 - execution.delivery_received: Runner durably accepted the delivery message.
 - harness.starting: launch is in progress.
 - harness.started: exact Harness process identity has been established.
@@ -140,7 +141,7 @@ Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
   "correlation_id": "uuid",
   "payload": {
     "execution_id": "uuid",
-    "expected_execution_epoch": 1,
+    "expected_binding_epoch": 1,
     "stop_policy": {
       "mode": "graceful_then_force",
       "grace_period_seconds": 30
@@ -151,7 +152,7 @@ Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
 
 Rules:
 - AI-PM sends this only after its own business decision (Task completed, cancelled, or otherwise no longer requiring this execution).
-- SEM validates the exact execution_id and expected_execution_epoch, deduplicates request_id, and forwards the stop request to the bound Runner.
+- SEM validates the exact execution_id and expected_binding_epoch, deduplicates request_id, and forwards the stop request to the bound Runner.
 - Runner Supervisor owns the actual local graceful/forced process termination.
 - Repeated release requests are idempotent.
 - A stale epoch is rejected and must never terminate a newer execution.
@@ -174,7 +175,7 @@ Distinct infrastructure event types:
   "correlation_id": "uuid",
   "payload": {
     "execution_id": "uuid",
-    "execution_epoch": 1,
+    "binding_epoch": 1,
     "release_status": "released",
     "process_exit_observation_id": "uuid",
     "runner_id": "uuid"
@@ -219,7 +220,7 @@ Do not put a reusable human API Key in the prompt or reuse SEM service JWT / Run
 
 Two independent fencing domains are mandatory:
 - AI-PM authorization_generation fences every delegated Harness MCP operation for the business attempt.
-- SEM execution_epoch/binding_epoch fences delivery/release operations for the current Runner binding.
+- SEM binding_epoch/binding_epoch fences delivery/release operations for the current Runner binding.
 
 Neither value substitutes for the other. A new business retry invalidates the prior AI-PM grant. A Runner rebind must fence the old Harness business grant before another Harness can mutate the Task. Revoking MCP access alone does not prove an old process cannot mutate Git remotes or external systems.
 
@@ -279,3 +280,12 @@ SEM release is triggered when AI-PM decides that the corresponding Run/attempt n
 8. Retention policy for prompt bodies, process observations and infrastructure logs.
 
 No implementation or migration is authorized until these questions are reviewed and the bilateral contract is approved.
+
+
+## 12. Contract clarifications and companion design
+
+The detailed companion contract defines the proposed two-stage Runner-bound credential bootstrap, AI-PM grant claims and per-call authorization, the AI-PM Run ↔ SEM Execution correlation, durable inbox/outbox and event ordering, Runner process identity evidence, disconnect quarantine, release/start races, resource reservation and remote Git delivery evidence.
+
+The canonical SEM fencing identifier in this draft is binding_epoch. It is allocated when a Runner binding is established, not when SEM first accepts the request. Therefore the synchronous acceptance response contains no epoch. AI-PM learns the epoch from the authenticated execution.binding_established event (or an explicit reconciliation response). Release must use the expected binding_epoch; if AI-PM does not know the current epoch, it must reconcile by execution_id before issuing a fenced release.
+
+The credential bootstrap described in the companion contract is a design proposal, not an approved implementation choice. It requires review of the Runner registration trust chain and the cryptographic binding of the one-time ticket to the selected Runner key. No reusable human credential or MCP bearer token may be carried in the prompt body.
