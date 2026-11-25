@@ -56,3 +56,19 @@ An implementation must follow RFC 8785, including ECMAScript-compatible JSON pri
 ## 5. Review disposition
 
 The current fixed vector remains useful and should be retained as a smoke test. It does not close P0-02. Before D-04 ratification, add the full edge-case corpus, independent cross-language byte comparisons, duplicate-member rejection, challenge replay/expiry tests, and semantic binding between the challenge and proof. No production WSS authentication implementation is authorized by this addendum.
+
+## 6. Partial implementation progress (2026-11-25; not a closure)
+
+The Node-side validator now adds executable checks for:
+- RFC 8785 §3.2.3 UTF-16 property ordering using the RFC's BMP/supplementary-plane example.
+- Recursive object sorting while preserving array order.
+- Control-character and Unicode serialization.
+- Representative RFC 8785 Appendix B IEEE-754 samples, including positive/negative zero, subnormals, large values, and exponent notation.
+- The fixed/scientific notation boundary values around 1e-6, 1e-7, 1e20 and 1e21.
+- Malformed JSON, lone high/low surrogate values, and non-finite numbers.
+
+The existing Python verifier still independently validates only the fixed ASCII/integer WSS transcript. The new Unicode/number edge vectors are currently Node-only and therefore do **not** satisfy the two-independent-implementation requirement in §4. The Node validator currently uses JSON.parse for object materialization; duplicate member names (including escaped-equivalent names) are not yet rejected before last-key-wins parsing and D04-W56 remains open.
+
+CI run #157 on commit `8b3eec5aa5711edee98b9da7dc1102c7c094040d` completed successfully, including the Node JCS edge-vector step. This proves the committed Node checks execute successfully; it does not prove cross-language JCS conformance or close P0-02.
+
+Updated disposition: **PARTIAL PROGRESS / P0-02 OPEN / CHANGES REQUIRED**. Remaining gates include a second independent implementation for the same Unicode and numeric fixtures, duplicate-member rejection at the raw JSON parsing boundary, reference-byte fixtures, transcript semantic checks, and challenge replay/expiry tests with no-side-effect assertions.
