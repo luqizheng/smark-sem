@@ -175,3 +175,16 @@ At the review snapshot:
 These are independent branches and workflows. PR #1's successful skeleton CI does not compile PR #4's proposed SDK, and PR #3's schema/fixture validation does not prove live HTTP signatures, TLS pinning, callback transaction correctness or cross-repository interoperability.
 
 **Updated disposition:** source compatibility remains a static design input only. No combined workspace build, dependency resolution with SDK, TLS pin test, registry publish/read, AI-PM SDK compile, or live interoperability test has been executed.
+
+
+## 11. Manifest path verification addendum — 2026-11-25
+
+The consumer dependency claims were rechecked against the current `ai-pm/master` file paths:
+
+- `apps/ai-pm-runner/Cargo.toml` declares both `tokio = { workspace = true }` and `reqwest = { workspace = true }` (file blob `52e418317f944eea2cdd580ab2b3a88d3440d019`).
+- `apps/ai-pm-worker/Cargo.toml` declares `tokio.workspace = true`; it does not declare reqwest (file blob `7bcd231a8a88a06528815adae790c8725b759746`).
+- `apps/pm-worker/Cargo.toml` also declares Tokio, not reqwest (file blob `0ac736a3bad526cc8c72973d278b4aac4b36549f`).
+- AI-PM root `Cargo.lock` blob `5cf4796f81113c89a506ba67903d0ddd47806731` resolves Tokio `1.54.1`, reqwest `0.12.28` and native-tls `0.2.18`.
+- AI-PM `.cargo/config.toml` blob `2060af9d3c1e958f26b06b4cb136ee7c2594b119` configures sparse internal registry `kellnr` at `192.168.2.12:16444`; this endpoint is private infrastructure and is documented here only as source evidence, not a public dependency URL or proof SEM CI can access it.
+
+This narrows the earlier statement: `ai-pm-runner` consumes reqwest; `ai-pm-worker` consumes Tokio for worker scheduling and is not shown to consume reqwest directly. These manifest observations do not establish that an SDK dependency has been integrated or compiled.
