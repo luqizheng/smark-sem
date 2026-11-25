@@ -338,6 +338,8 @@ AI-PM remains the sole authority for TaskStatus, RunKind, RunStatus, RunOutcome 
 8. SEM may retain the previous known state alongside infrastructure_uncertain; implementation must not destroy that state history when entering or leaving uncertainty.
 
 ### 3.6 V1 Linux process-owner contract
+> **Additional challenge contract:** See [D-05 Linux Launch, Release and Exit-Proof Addendum](./d05-linux-launch-release-exit-proof-addendum.md). It defines the conservative lost-D-Bus-reply rule, sole-broker boundary, start/release decision table and bracketed exit-evidence protocol. The addendum remains Draft and does not claim P0-02/P0-03/P0-04 closed without Linux failure-injection evidence.
+
 
 User decision (2026-11-25): V1 Runner hosts are Linux-only. Windows and other operating systems are out of scope for V1.
 
