@@ -62,6 +62,7 @@ Initial event types:
 - run.control.changed — command or control state may need delivery; payload carries command_id/run_id/generation.
 - runner.authorization.changed — runner/device/project authorization changed; payload carries runner_id/device_id and authorization revision.
 - project.execution.policy.changed — project dispatch policy changed; payload carries project_id and revision.
+- execution.successor.authorized — Platform has committed a human-approved E6 successor authorization; payload carries the exact authorization_id, predecessor Run/Generation, successor Task/Run scope and risk-acceptance metadata. This event is not itself a Claim grant.
 
 Event payloads never carry a Lease Token or a WSS Ticket.
 
@@ -341,6 +342,18 @@ Platform exposes read APIs for SEM to reconcile after restart, reconnect, timeou
 - current execution disposition and outstanding Barrier/HIR constraints.
 
 These reads must return only the caller's authorized scope and must not expose Lease Tokens except through the idempotent Claim recovery operation. Exact pagination/filter query parameters are implementation detail, but consistency and authorization semantics are not.
+
+
+### 4.7 Human Intervention, Barrier and E6 successor authorization
+
+There is no SEM API that creates, decides, closes or overrides HIR, Execution Barrier, generic Human Consultation or E6 authorization.
+
+- HIR creation/decision and Execution Barrier lifecycle remain Platform-owned.
+- A generic Consultation decision is not an E6 authorization and cannot release a Barrier.
+- E6 requires a human-authorized, uniquely bound successor authorization record in Platform, with explicit predecessor Run/Generation and one successor scope. The Platform record is the sole authority.
+- SEM may receive execution.successor.authorized as an Outbox hint and reconcile the exact authorization through Platform APIs. SEM cannot infer approval from a notification, interaction response, command ACK or stale event.
+- E6 accepts residual risk; it does not prove the predecessor process exited and does not release the predecessor Barrier. The successor must use a separate Workspace, new Platform Claim and new Generation. Platform keeps the predecessor marked risk_accepted_unconfirmed.
+- Without a valid E6 authorization, E4/E5 must not be automatically reassigned. SEM may not manufacture a successor grant.
 
 ## 5. Runner–SEM WSS contract
 
