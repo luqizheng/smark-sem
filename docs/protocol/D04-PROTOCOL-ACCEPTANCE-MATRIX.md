@@ -342,3 +342,6 @@ These are protocol/fixture requirements. They do not prove that the production R
 | D04-H88 | Pre-authentication 401/early-413 response fixture | Python and Node assert no signature/correlation headers and a minimal error body with no message_id/in_reply_to/request_id/event_id |
 
 These cases define response-authentication classes only. They do not close D-04 P0-01 until deterministic signed-error vectors, OpenAPI validation, middleware ordering tests, and live HTTP/replay integration pass.
+
+| D04-H89 | execution.release_status reports requested or stale_rejected before a stop fence exists and omits stop_fence_id | Accept; no fence may be fabricated before Runner durably records it |
+| D04-H90 | execution.release_status reports stop_fenced/termination_requested/process_exited/released/cleanup_failed without stop_fence_id | Reject; every post-fence state must reference the exact immutable stop-fence journal record |
