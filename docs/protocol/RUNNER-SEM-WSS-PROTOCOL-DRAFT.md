@@ -66,6 +66,8 @@ All application messages use a common envelope. Fields shown are required unless
   "connection_id": "uuid",
   "session_generation": 17,
   "message_sequence": 42,
+  "journal_id": "uuid (durable observations only)",
+  "event_sequence": 42 (durable observations only),
   "occurred_at": "RFC3339 UTC",
   "payload": {}
 }
@@ -339,7 +341,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 13. WSS loss before receipt ACK causes uncertain state and reconciliation, not blind reassignment.
 14. WSS loss after receipt ACK but before process-start event remains uncertain until replay/reconciliation.
 15. Reconnect uses a new connection generation and rejects old-generation events.
-16. Runner replay is idempotent and preserves original event identity.
+16. Runner replay is idempotent and preserves original event_id, journal_id and event_sequence; transport message_id/message_sequence are newly framed for the current connection only.
 17. Sequence gap prevents unsafe state advancement and triggers reconciliation.
 18. Resource snapshots may coalesce; process/delivery/release events may not be silently dropped.
 19. Heartbeat timeout never creates process-exited evidence.
