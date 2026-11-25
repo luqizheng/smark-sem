@@ -261,6 +261,8 @@
         "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
         "cgroup_populated": 0,
         "evidence_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "evidence_schema_version": 1,
+        "evidence_digest": "0171e6ee96ba10ee568a5d1680c1c2be30c76243c9926c899c39d54b327b7061",
         "exit_status": {
           "kind": "code",
           "code": 0
@@ -430,6 +432,8 @@
         "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
         "cgroup_populated": 0,
         "evidence_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "evidence_schema_version": 1,
+        "evidence_digest": "0171e6ee96ba10ee568a5d1680c1c2be30c76243c9926c899c39d54b327b7061",
         "exit_status": {
           "kind": "signal",
           "signal": 9
