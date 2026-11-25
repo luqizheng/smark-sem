@@ -32,10 +32,10 @@ This proposed baseline is deliberately explicit about the empty-content digest a
 
 | Operation | Response classes | Correlation header | Additional response semantics |
 |---|---|---|---|
-| submitExecutionRequest | 202, 400, 401, 409, 413, 422, 429, 500 | X-SEM-Request-Id | Every response signed; 202 body binds message_id/request_id/execution_id and accepted/duplicate disposition |
-| getExecutionInfrastructureState | 200, 304, 401, 404, 500 | X-SEM-Request-Id | 200 carries ETag and signed snapshot; 304 has no content, echoes ETag, carries empty-content digest and signature; 404/error body signed |
-| requestExecutionRelease | 202, 400, 401, 404, 409, 412, 422, 500 | X-SEM-Request-Id | Every response signed; 412 is an authenticated fencing conflict, not a retryable transport failure |
-| receiveSemInfrastructureEvent | 200, 400, 401, 409, 422, 500 | X-SEM-Event-Id | Every response signed; 200 ACK only after Inbox + Run observation + cursor commit; ACK echoes event_id and execution_event_sequence |
+| submitExecutionRequest | 202, 400, 401, 409, 413, 422, 429, 500 | X-SEM-Request-Id = request_id | Every response signed; 202 body binds message_id/request_id/execution_id and accepted/duplicate disposition |
+| getExecutionInfrastructureState | 200, 304, 401, 404, 500 | X-SEM-Request-Id = request_id | 200 carries ETag and signed snapshot; 304 has no content, echoes ETag, carries empty-content digest and signature; 404/error body signed |
+| requestExecutionRelease | 202, 400, 401, 404, 409, 412, 422, 500 | X-SEM-Request-Id = request_id | Every response signed; 412 is an authenticated fencing conflict, not a retryable transport failure |
+| receiveSemInfrastructureEvent | 200, 400, 401, 409, 422, 500 | X-SEM-Event-Id = event_id | Every response signed; 200 ACK only after Inbox + Run observation + cursor commit; ACK echoes event_id and execution_event_sequence |
 
 The OpenAPI currently contains the operation names/statuses shown above. This matrix does not assert that the callback receiver or transaction exists in AI-PM source.
 
