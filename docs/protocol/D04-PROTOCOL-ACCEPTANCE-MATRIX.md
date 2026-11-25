@@ -1,6 +1,6 @@
 # D-04 Bilateral Protocol Acceptance Matrix (Draft)
 
-- Version: Draft 0.1
+- Version: Draft 0.2
 - Status: Review only; not normative and not implementation-authorizing.
 - Scope: Platform↔SEM HTTP/HTTPS and Runner↔SEM authenticated WSS.
 - Machine-readable artifacts:
@@ -8,6 +8,7 @@
   - [Platform–SEM JSON Schema](./json-schema/platform-sem-v1.schema.yaml)
   - [Runner–SEM WSS JSON Schema](./json-schema/runner-sem-v1.schema.yaml)
   - [Runner–SEM handshake JSON Schema](./json-schema/runner-sem-handshake-v1.schema.yaml)
+- Cryptographic decision: [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md)
 - Narrative contracts:
   - [Platform–SEM execution protocol](./PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
   - [Runner–SEM WSS protocol](./RUNNER-SEM-WSS-PROTOCOL-DRAFT.md)
@@ -55,7 +56,7 @@
 
 ## 2.1 Approved cryptographic profile acceptance cases
 
-The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These cases are required additions to the existing HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
+The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cases extend the previous 67-case matrix to 80 cases. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
 
 | ID | Scenario | Expected result |
 |---|---|---|
