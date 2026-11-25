@@ -362,5 +362,11 @@ const mutatedCorrelationJcs = canonicalize(mutatedCorrelation);
 if (crypto.createHash("sha256").update(mutatedCorrelationJcs, "utf8").digest("hex") === callbackExpected.event_envelope_hash_sha256) {
   throw new Error("Changing optional correlation_id did not change the complete-envelope hash");
 }
+const absentCorrelation = { ...callbackEnvelope };
+delete absentCorrelation.correlation_id;
+const absentCorrelationJcs = canonicalize(absentCorrelation);
+if (crypto.createHash("sha256").update(absentCorrelationJcs, "utf8").digest("hex") === callbackExpected.event_envelope_hash_sha256) {
+  throw new Error("Omitting a present optional correlation_id did not change the complete-envelope hash");
+}
 console.log("callback-idempotency-ok: event_type/occurred_at mutations change envelope hash; member order does not");
 
