@@ -248,3 +248,24 @@ These cases complement the wire/schema cases above. They are normative test requ
 | D04-BI-24 | Duplicate JSON member names or invalid JCS input | Reject before persistence or cursor movement |
 
 **Execution status:** specification only. Every case still requires a real PostgreSQL two-connection test where applicable, exact row-count/value assertions across Inbox + Run event + cursor, and bilateral CI execution. No test is marked passed by the presence of this matrix.
+
+
+### 2.4 Signed-response and conditional-GET acceptance cases (Draft addendum)
+
+See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-RESPONSE-AND-CONDITIONAL-GET-ADDENDUM.md). These cases are additional requirements and are not yet executable fixtures.
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-H52 | Valid signed 202 response with matching X-SEM-Request-Id | Client trusts acceptance only after signature/digest/correlation verification |
+| D04-H53 | Signed structured 4xx/5xx response | Client accepts typed error only after response verification |
+| D04-H54 | Missing response Signature or Signature-Input | Client fails closed; no typed result |
+| D04-H55 | Response Content-Digest mismatch | Client rejects before decoding/trusting body |
+| D04-H56 | Response correlation header does not match request message_id/event_id | Client rejects as response-confusion/replay |
+| D04-H57 | Valid 304 with ETag echo, empty-content digest and valid signature | Client returns NotModified only after all checks |
+| D04-H58 | 304 missing ETag, signature, digest or correlation header | Client rejects; must not treat as cache hit |
+| D04-H59 | 304 contains a response body | Client rejects as protocol violation |
+| D04-H60 | 304 ETag differs from requested/current validator | Client rejects or performs unconditional reconciliation; never silently accepts |
+| D04-H61 | Replay a previously accepted signed response nonce | Client rejects replay according to the ratified response replay scope |
+| D04-H62 | Signed response uses unknown/revoked keyid | Client fails closed |
+
+These cases do not close P0-01 until they are represented in executable independent vectors and live request/response/replay integration tests.
