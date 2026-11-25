@@ -319,3 +319,19 @@ These are protocol/fixture requirements. They do not prove that the production R
 | ID | Scenario | Expected result |
 |---|---|---|
 | D04-W64 | A message_type appears in both pre-application handshake and post-handshake application schemas | Contract validation fails; the two frame ownership sets must be disjoint. `runner.session.ack` is handshake-only; `runner.session.superseded` is post-handshake-only because it is sent over an already authenticated old connection. |
+
+
+### 4.4 Authenticated and pre-authentication HTTP error boundary
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-H78 | Valid request signature over malformed JSON bytes | Authenticated signed 400; response binds exact request context and correlates only to signed Idempotency-Key; no application/database side effects |
+| D04-H79 | Missing/invalid signature, unknown/revoked key, stale timestamp or replayed nonce | Generic unsigned 401; no Content-Digest/Signature response headers, no protocol correlation headers and no request/event IDs in body |
+| D04-H80 | Body-size limit rejects before the complete body can be authenticated | Generic unsigned 413; no protocol signature/correlation headers or attacker-controlled IDs |
+| D04-H81 | Authenticated application-level rate limit | Signed 429 with Retry-After and direction-correct correlation; request is not applied |
+| D04-H82 | Authenticated application failure returns 500 | Signed 500 bound to exact request context; if response signing is unavailable, terminate response/connection and never downgrade to an unsigned correlated response |
+| D04-H83 | Callback Idempotency-Key differs from envelope event_id or event_id is absent after request signature verification | Signed 400 correlated only to the authenticated Idempotency-Key header; do not echo the untrusted body event_id; no Inbox/cursor writes |
+| D04-H84 | HTTP framing/parser rejects request before API handler | Outside application protocol; no protocol correlation identifiers are reflected |
+| D04-H85 | Network-edge/WAF rate limit rejects before API authentication | Outside application protocol; no protocol correlation identifiers are reflected; application-level 429 remains signed |
+
+These cases define response-authentication classes only. They do not close D-04 P0-01 until deterministic signed-error vectors, OpenAPI validation, middleware ordering tests, and live HTTP/replay integration pass.
