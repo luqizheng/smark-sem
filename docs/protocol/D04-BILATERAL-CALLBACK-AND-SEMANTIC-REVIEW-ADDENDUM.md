@@ -282,3 +282,6 @@ The OpenAPI draft now models an authenticated unknown-execution 404 as a structu
 
 
 D04-H77 separately requires that pre-authentication or malformed-request errors not echo untrusted request/event identifiers as authenticated correlation when no canonical request context exists. The generic error signing/correlation policy remains an explicit open decision.
+
+
+Latest PR #3 head `1ae585302f284a0937958ff52b0ee44a12cb0693` passed CI runs #367/#368, including OpenAPI 404 and pre-auth correlation safety acceptance updates.
