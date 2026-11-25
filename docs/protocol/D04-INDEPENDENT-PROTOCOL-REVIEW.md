@@ -31,18 +31,20 @@ A separate WSS handshake JSON Schema now defines challenge, proof-of-possession,
 
 Required closure: freeze the exact Ed25519/JCS transcript fields; add positive/negative cross-language signature test vectors, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
-### P0-03 — WSS schema does not yet define every message payload
+### P0-03 — WSS message payloads have strict schemas; mechanical coverage remains unverified
 
-Heartbeat, resource report, delivery receipt, Harness start/exit, delivery and release have partial schema branches. Health probe/report, admission change, release-applied, replay request/snapshot, protocol ACK/error and credential bootstrap remain incomplete or generic.
+The Runner WSS schema now defines a dedicated strict payload schema for every post-handshake message type: heartbeat/health, resource telemetry, admission, delivery, credential bootstrap, process lifecycle, release, ACK/error, superseded session and replay request/snapshot. State-changing payloads reject undeclared fields. The session-ack frame is defined only in the pre-application handshake schema to avoid duplicate ownership.
 
-Required closure: every catalogue message must map to exactly one complete schema branch, including required payload fields, identity tuple, duplicate semantics and legal sender direction. No untyped opaque payload is allowed for state-changing messages except explicitly opaque business material.
+This closes the former generic-payload design gap at the schema-authoring level. It does not yet prove that every narrative catalogue row has exactly one branch, that all direction constraints match, or that every positive/negative fixture validates.
 
-### P0-04 — SEM→AI-PM event payloads are now discriminated; bilateral receiver contract remains unimplemented
+Required closure: mechanically compare the message_type enum and conditional branches to the narrative direction catalogue; add positive/negative fixtures for every branch; validate cross-field conditions and D-05 identity requirements; record reproducible validator output.
+### P0-04 — SEM→AI-PM event payloads are discriminated; producer/receiver mapping remains open
 
-The event schema defines the envelope and event type enum, but payload is only a generic object. Binding-established, delivery-status, process-observed, release-status and infrastructure-uncertain payloads need exact versioned schemas and required fields.
+The Platform–SEM schema now defines five discriminated event payloads: binding-established, delivery-status, process-observed, release-status and infrastructure-uncertain. They carry binding_epoch, Runner identity/key version, delivery/process/release evidence references and explicit uncertainty semantics. The schema deliberately excludes AI-PM Task/Requirement/Approval status fields.
+
+The schema definitions are not yet mapped field-by-field to the SEM durable ledger and Runner event evidence, nor to an AI-PM receiver application service.
 
 Required closure: source-map every event field to SEM durable ledger and Runner evidence; verify event sequence/outbox producer; define AI-PM Inbox table/unique key, authorization, transaction and response cursor semantics; add cross-repository fixtures. Ensure infrastructure events cannot express TaskStatus or approval decisions.
-
 ### P0-05 — Proposed SEM callback route does not exist in current AI-PM source; bilateral Inbox contract is not implemented
 
 Read-only source audit against AI-PM master `d0e72fa6805aebeadf1b282e430deba493072fd6` confirms the proposed `/internal/ai-pm/v1/sem-events` route is not registered in `apps/pm-api/src/routes.rs`. The existing `/api/v1/events` route is a generic project-event ingestion endpoint with a different contract; it is not a SEM infrastructure-event Inbox and must not be repurposed by assumption. AI-PM has a transactional `integration.outbox_event` producer/worker framework, but that is outbound event handling and does not establish an inbound SEM event receiver. No SEM event Inbox table, unique `event_id` constraint, per-execution cursor, or callback handler is evidenced in the inspected source. The existing MCP Run tools also remain lease-token-based; they are a separate Harness business channel and cannot substitute for this callback.
