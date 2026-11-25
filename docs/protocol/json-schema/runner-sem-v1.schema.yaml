@@ -1,0 +1,183 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://schemas.internal.example/sem/runner/v1/message.schema.json
+title: Runner–SEM WSS application message
+description: >-
+  Application frames after authentication use this envelope. The pre-session
+  challenge/proof exchange is separately described in the WSS protocol draft.
+type: object
+required: [protocol, schema_version, message_id, message_type, runner_id, connection_id, session_generation, message_sequence, occurred_at, payload]
+properties:
+  protocol: { const: sem.runner.v1 }
+  schema_version: { const: 1 }
+  message_id: { type: string, format: uuid }
+  message_type:
+    enum: [runner.session.ack, runner.heartbeat, runner.health_probe, runner.health_report, runner.resources.report, runner.admission.changed, execution.deliver, execution.delivery_received, harness.starting, harness.started, harness.start_failed, harness.process_exited, execution.release, execution.release_applied, protocol.ack, protocol.error, runner.session.superseded, runner.replay.request, runner.replay.snapshot]
+  runner_id: { type: string, format: uuid }
+  connection_id: { type: string, format: uuid }
+  session_generation: { type: integer, minimum: 1 }
+  message_sequence: { type: integer, minimum: 1 }
+  occurred_at: { type: string, format: date-time }
+  in_reply_to: { type: string, format: uuid }
+  replayed: { type: boolean, default: false }
+  payload: { type: object }
+allOf:
+  - if: { properties: { message_type: { const: runner.heartbeat } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [boot_id, supervisor_state, accepting_work, draining, active_execution_count, process_registry_state]
+          properties:
+            boot_id: { type: string, minLength: 1 }
+            supervisor_state: { enum: [healthy, degraded, failed, unknown] }
+            accepting_work: { type: boolean }
+            draining: { type: boolean }
+            active_execution_count: { type: integer, minimum: 0 }
+            process_registry_state: { enum: [consistent, inconsistent, recovering, unknown] }
+            resource_report_id: { type: string, format: uuid }
+            runner_monotonic_uptime_ms: { type: integer, minimum: 0 }
+          additionalProperties: false
+  - if: { properties: { message_type: { const: runner.resources.report } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [boot_id, resource_report_id, observed_at, cpu, memory, workspace_volume, execution_capacity]
+          properties:
+            boot_id: { type: string, minLength: 1 }
+            resource_report_id: { type: string, format: uuid }
+            observed_at: { type: string, format: date-time }
+            cpu:
+              type: object
+              required: [logical_cores, utilization_ratio, available_millicores]
+              properties:
+                logical_cores: { type: integer, minimum: 1 }
+                utilization_ratio: { type: number, minimum: 0, maximum: 1 }
+                available_millicores: { type: integer, minimum: 0 }
+              additionalProperties: false
+            memory:
+              type: object
+              required: [total_bytes, available_bytes]
+              properties:
+                total_bytes: { type: integer, minimum: 1 }
+                available_bytes: { type: integer, minimum: 0 }
+              additionalProperties: false
+            workspace_volume:
+              type: object
+              required: [volume_id, total_bytes, available_bytes, reserved_bytes]
+              properties:
+                volume_id: { type: string, minLength: 1 }
+                total_bytes: { type: integer, minimum: 1 }
+                available_bytes: { type: integer, minimum: 0 }
+                reserved_bytes: { type: integer, minimum: 0 }
+              additionalProperties: false
+            execution_capacity:
+              type: object
+              required: [max_concurrent, active, accepting]
+              properties:
+                max_concurrent: { type: integer, minimum: 0 }
+                active: { type: integer, minimum: 0 }
+                accepting: { type: boolean }
+              additionalProperties: false
+          additionalProperties: false
+  - if: { properties: { message_type: { const: execution.delivery_received } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [execution_id, delivery_id, binding_epoch, receipt, local_record_id, boot_id]
+          properties:
+            execution_id: { type: string, format: uuid }
+            delivery_id: { type: string, format: uuid }
+            binding_epoch: { type: integer, minimum: 1 }
+            receipt: { const: durably_recorded }
+            local_record_id: { type: string, format: uuid }
+            boot_id: { type: string, minLength: 1 }
+          additionalProperties: false
+  - if: { properties: { message_type: { const: harness.started } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [execution_id, binding_epoch, launch_id, containment_id, process_identity, supervisor_instance_id, boot_id]
+          properties:
+            execution_id: { type: string, format: uuid }
+            binding_epoch: { type: integer, minimum: 1 }
+            launch_id: { type: string, format: uuid }
+            containment_id: { type: string, minLength: 1 }
+            supervisor_instance_id: { type: string, format: uuid }
+            boot_id: { type: string, minLength: 1 }
+            process_identity:
+              type: object
+              required: [pid, process_start_identity, cgroup_path, systemd_invocation_id]
+              properties:
+                pid: { type: integer, minimum: 1 }
+                process_start_identity: { type: string, minLength: 1 }
+                cgroup_path: { type: string, minLength: 1 }
+                systemd_invocation_id: { type: string, minLength: 1 }
+              additionalProperties: false
+          additionalProperties: false
+  - if: { properties: { message_type: { const: harness.process_exited } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [execution_id, binding_epoch, launch_id, containment_id, boot_id, systemd_invocation_id, cgroup_populated, evidence_id, exit_status]
+          properties:
+            execution_id: { type: string, format: uuid }
+            binding_epoch: { type: integer, minimum: 1 }
+            launch_id: { type: string, format: uuid }
+            containment_id: { type: string, minLength: 1 }
+            boot_id: { type: string, minLength: 1 }
+            systemd_invocation_id: { type: string, minLength: 1 }
+            cgroup_populated: { const: 0 }
+            evidence_id: { type: string, format: uuid }
+            exit_status:
+              oneOf:
+                - type: object
+                  required: [kind, code]
+                  properties: { kind: { const: code }, code: { type: integer } }
+                  additionalProperties: false
+                - type: object
+                  required: [kind]
+                  properties: { kind: { const: unknown } }
+                  additionalProperties: false
+          additionalProperties: false
+  - if: { properties: { message_type: { const: execution.deliver } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [execution_id, delivery_id, binding_epoch, harness_profile, prompt]
+          properties:
+            execution_id: { type: string, format: uuid }
+            delivery_id: { type: string, format: uuid }
+            binding_epoch: { type: integer, minimum: 1 }
+            harness_profile: { type: string, minLength: 1 }
+            prompt:
+              type: object
+              required: [content_type, body]
+              properties:
+                content_type: { type: string, minLength: 1 }
+                body: { type: string, minLength: 1 }
+              additionalProperties: false
+          additionalProperties: false
+  - if: { properties: { message_type: { const: execution.release } }, required: [message_type] }
+    then:
+      properties:
+        payload:
+          type: object
+          required: [execution_id, release_id, expected_binding_epoch, stop_policy]
+          properties:
+            execution_id: { type: string, format: uuid }
+            release_id: { type: string, format: uuid }
+            expected_binding_epoch: { type: integer, minimum: 1 }
+            stop_policy:
+              type: object
+              required: [mode, grace_period_seconds]
+              properties:
+                mode: { enum: [graceful_then_force, force] }
+                grace_period_seconds: { type: integer, minimum: 0, maximum: 3600 }
+              additionalProperties: false
+          additionalProperties: false
+additionalProperties: false
