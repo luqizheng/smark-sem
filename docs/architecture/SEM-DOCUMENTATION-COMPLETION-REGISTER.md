@@ -106,7 +106,7 @@ Define which evidence is trusted, who can issue it, how it is signed/audited, an
 
 ### D-04 — Complete bilateral protocol
 
-A detailed Runner↔SEM WSS candidate is now recorded in [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md). It defines the authenticated long-lived session, connection-generation fencing, heartbeat/health separation, telemetry, durable delivery ACK, reconnect/replay, backpressure and dispatch eligibility. It remains Draft; exact crypto canonicalization, timers, resource policy and machine-readable schemas remain open.
+Narrative candidates now exist for both directions: [Platform–SEM Execution Message Protocol](../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) and [Runner–SEM WSS Protocol](../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md). Initial machine-readable Draft artifacts have been added: [OpenAPI 3.1](../protocol/openapi/platform-sem-v1-draft.yaml), [Platform–SEM JSON Schema](../protocol/json-schema/platform-sem-v1.schema.yaml), [Runner–SEM WSS JSON Schema](../protocol/json-schema/runner-sem-v1.schema.yaml), and [D-04 acceptance matrix](../protocol/D04-PROTOCOL-ACCEPTANCE-MATRIX.md). They define initial HTTP execution/release/reconciliation routes, SEM event callback, common envelopes, key payload shapes, error envelope and separate transport/journal cursors. These are validation baselines only, not frozen contracts. D-04 remains P0 OPEN: request-signature/canonicalization, full event payloads, full WSS message branches, challenge transcript, replay snapshot/cursors, endpoint ownership alignment, size/timer/error registry and cross-repository fixtures remain unresolved.
 
 Publish machine-readable OpenAPI/JSON Schema and examples for:
 - execution.requested / accepted / rejected;
@@ -191,7 +191,7 @@ No item becomes Normative / Frozen solely because it is written in a draft or li
 - [ ] D-01 Runner identity trust chain approved.
 - [ ] D-02 Delegated grant/bootstrap approved.
 - [ ] D-03 Permanent Runner loss/process isolation approved.
-- [ ] D-04 Both wire protocols machine-readable and approved.
+- [ ] D-04 Both wire protocols fully machine-readable, independently validated, cross-repository compatible and approved (initial Draft artifacts exist; not complete).
 - [ ] D-05 All lifecycle/state machines and crash races closed (detailed draft exists; open decisions and cross-contract ratification remain).
 - [ ] D-06 MCP operation/resource authorization contract approved.
 - [ ] D-07 Remote Git evidence and credentials approved.
