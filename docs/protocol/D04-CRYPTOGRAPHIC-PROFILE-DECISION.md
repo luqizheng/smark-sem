@@ -26,7 +26,7 @@ The Platform and SEM service keys MUST NOT be reused as Runner identity keys. Ru
 - Algorithm: Ed25519.
 - Both requests and responses are signed by the sending service.
 - Request signatures bind the HTTP method, authority, path, query, Content-Digest (RFC 9421 `sf` component parameter), content type and applicable message/idempotency headers.
-- Response signatures bind response `@status`, response `content-digest;sf`, response content type and the response correlation identifier. Request-target context is bound with RFC 9421 request-derived components (`@method;req`, `@authority;req`, `@path;req`, and `content-digest;req;sf`); a bare response-derived `@authority` is not used. Exact operation-specific coverage remains in the signed-response addendum.
+- Response signatures bind response `@status`, response `content-digest;sf`, response content type and the direction-specific response correlation identifier: Platform→SEM `X-SEM-Request-Id` equals request `request_id` (not `message_id`); SEM→AI-PM `X-SEM-Event-Id` equals callback `event_id`. Request-target context is bound with RFC 9421 request-derived components (`@method;req`, `@authority;req`, `@path;req`, and `content-digest;req;sf`); a bare response-derived `@authority` is not used. Exact operation-specific coverage remains in the signed-response addendum.
 - Signature parameters include created, expires, nonce, keyid and alg.
 - Receivers verify signature and digest before parsing or persisting the message, then atomically enforce nonce replay prevention and message/idempotency deduplication.
 - Invalid, unknown, expired or revoked keys, stale signatures, replayed nonces, digest mismatch and unsigned requests fail closed.
