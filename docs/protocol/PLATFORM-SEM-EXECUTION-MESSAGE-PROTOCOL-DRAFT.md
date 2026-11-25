@@ -208,7 +208,8 @@ Rules:
 
 ## 8. SEM → AI-PM: infrastructure result
 
-Distinct infrastructure event types:
+Distinct infrastructure event types (the normative set is the five-way discriminated union in `json-schema/platform-sem-v1.schema.yaml`):
+- execution.binding_established
 - execution.delivery_status
 - harness.process_observed
 - execution.release_status
