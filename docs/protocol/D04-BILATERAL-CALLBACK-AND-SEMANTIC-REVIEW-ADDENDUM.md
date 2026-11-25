@@ -233,3 +233,6 @@ These are documentation and deterministic contract-test improvements only. The A
 The Platform–SEM `EventBase` schema permits an optional top-level `correlation_id`. The first full-envelope hash field list omitted it, leaving an authenticated metadata mutation outside replay identity. The shared fixture now includes `correlation_id`; Python and Node verify its presence in canonical bytes and assert that changing it changes `event_envelope_hash`. The canonical fixture is pinned at `smark-sem@ad09195d44d557b5a5d174d6bdfdef687dcef4b5`.
 
 The AI-PM contract now states that the hash covers every schema-defined envelope field present, including optional correlation_id; absent optional fields are omitted and unknown fields are rejected before hashing. This closes the design-level field-list omission only. Production Rust implementation, PostgreSQL replay/concurrency evidence and bilateral live callback tests remain open.
+
+
+CI evidence update: latest PR head `cda9912d106cd0bb90f67da42c3f971f9147b8b7` passed SEM Protocol Contract Validation runs #226 and #227, including the callback envelope's optional `correlation_id` changed-value and omission hash assertions.
