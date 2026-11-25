@@ -245,7 +245,7 @@ assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").dige
 
 
 # Deterministic response-signature vectors bind the exact associated request.
-for name in ("http_response", "http_error_409", "http_304", "http_callback_ack"):
+for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304", "http_callback_ack"):
     vector = data[name]
     request = vector["request"]
     response = vector["response"]
@@ -268,22 +268,38 @@ for name in ("http_response", "http_error_409", "http_304", "http_callback_ack")
             ('"@path";req', request["path"]),
             ('"content-digest";req;sf', request["content_digest"]),
         ]
-    elif name in ("http_response", "http_error_409"):
+    elif name in ("http_response", "http_error_409", "http_snapshot_200"):
         if name == "http_error_409":
             error_body = json.loads(response["body"])
             assert response["status"] == 409 and error_body["error"]["code"] == "IDEMPOTENCY_CONFLICT", "signed 409 fixture must be a structured idempotency conflict"
         assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
+        if name == "http_snapshot_200":
+            assert response["status"] == 200 and response["etag"], "snapshot 200 must carry a signed ETag"
+        
         assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
-        pairs = [
-            ('"@status"', str(response["status"])),
-            ('"content-digest";sf', response["content_digest"]),
-            ('"x-sem-request-id"', response["request_id"]),
-            ('"content-type"', response["content_type"]),
-            ('"@method";req', request["method"]),
-            ('"@authority";req', request["authority"]),
-            ('"@path";req', request["path"]),
-            ('"content-digest";req;sf', request["content_digest"]),
-        ]
+        if name == "http_snapshot_200":
+            pairs = [
+                ('"@status"', str(response["status"])),
+                ('"content-digest";sf', response["content_digest"]),
+                ('"x-sem-request-id"', response["request_id"]),
+                ('"etag"', response["etag"]),
+                ('"content-type"', response["content_type"]),
+                ('"@method";req', request["method"]),
+                ('"@authority";req', request["authority"]),
+                ('"@path";req', request["path"]),
+                ('"content-digest";req;sf', request["content_digest"]),
+            ]
+        else:
+            pairs = [
+                ('"@status"', str(response["status"])),
+                ('"content-digest";sf', response["content_digest"]),
+                ('"x-sem-request-id"', response["request_id"]),
+                ('"content-type"', response["content_type"]),
+                ('"@method";req', request["method"]),
+                ('"@authority";req', request["authority"]),
+                ('"@path";req', request["path"]),
+                ('"content-digest";req;sf', request["content_digest"]),
+            ]
     else:
         assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
         assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
@@ -308,13 +324,14 @@ for name in ("http_response", "http_error_409", "http_304", "http_callback_ack")
     assert verify(response_pub, response_sig, response_base.encode("ascii")), name + " Ed25519 response signature failed"
 
     # A signed response is bound to the exact originating request context.
-    for component_index, wrong_value in (
-        (4, "PATCH"),
-        (5, "other.internal.example"),
-        (6, request["path"] + "/different"),
-        (7, "sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:"),
+    for component_name, wrong_value in (
+        ('"@method";req', "PATCH"),
+        ('"@authority";req', "other.internal.example"),
+        ('"@path";req', request["path"] + "/different"),
+        ('"content-digest";req;sf', "sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:"),
     ):
         wrong_context_pairs = list(pairs)
+        component_index = next(i for i, pair in enumerate(wrong_context_pairs) if pair[0] == component_name)
         wrong_context_pairs[component_index] = (wrong_context_pairs[component_index][0], wrong_value)
         wrong_context_base = "\n".join(f"{component}: {value}" for component, value in wrong_context_pairs)
         wrong_context_base += f'\n"@signature-params": {vector["signature_params"]}'
