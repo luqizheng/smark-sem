@@ -123,3 +123,15 @@ Review of `scripts/validate_sem_crypto_vectors.py` confirms the current Python W
 Added [D-04 RFC 8785 Full JCS Conformance Addendum](./D04-RFC8785-FULL-JCS-CONFORMANCE-ADDENDUM.md) and D04-W52..W63 cases covering UTF-16 ordering, escaping, number formatting, negative zero, non-finite values, duplicate object members, invalid surrogates, nested structures, challenge/proof binding, replay, expiry and downgrade rejection.
 
 This is a review/specification correction. No validator implementation was changed and these new cases have not been executed. P0-02 remains **OPEN / CHANGES REQUIRED** until independent RFC 8785 implementations produce matching reference bytes and handshake lifecycle tests prove no session is created on rejection.
+
+
+## 5.3 Follow-up: cross-protocol process-exit and uncertainty invariants — 2026-11-25
+
+A further source-to-schema comparison found two contract gaps:
+
+1. Runner WSS `harness.process_exited.payload.exit_status` originally represented only `code` and `unknown`, while the Platform event schema already represented exactly one of `exit_code` or `exit_signal`. Signal-terminated processes therefore had no lossless Runner wire representation. The Runner schema now adds a tagged `signal` variant. The protocol catalogue defines lossless mapping: code → `exit_code`; signal → `exit_signal`; unknown → neither numeric field. Unknown with a numeric value is rejected.
+2. `InfrastructureUncertainPayload` declared `reservation_retained: true` as a const property but did not require the property, so omission passed JSON Schema. It is now required. The lifecycle meaning is that the durable capacity reservation remains held while the execution/process state is uncertain.
+
+The Platform process observation schema now rejects numeric exit fields when `observation=exit_status_unknown`. Fixtures add a signal-terminated Runner message, an exited Platform event with `exit_signal`, and an unknown-status event with exact containment-empty evidence but no numeric status. The validator adds negative checks for contradictory unknown status and missing reservation retention. Acceptance IDs D04-H63..H67 record these requirements.
+
+This is a Draft contract/fixture hardening change. The latest commit at the time of this review update has not yet produced a CI run. It does not prove the production Runner Supervisor emits signal termination correctly, SEM maps it losslessly, or AI-PM persists the observation. P0-04 remains OPEN until producer/receiver semantic mapping and bilateral runtime tests are complete.
