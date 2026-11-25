@@ -23,7 +23,7 @@
 
 The OpenAPI initially had a placeholder signature scheme. The narrative contract now proposes asymmetric Ed25519 HTTP Message Signatures (RFC 9421) plus Content-Digest (RFC 9530), with request/response signing, method/authority/path/query/body binding, key IDs, timestamp/expiry/nonce replay defense and key rotation. The algorithm-family decision is now approved in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md): Ed25519 + RFC 9421 + RFC 9530. The OpenAPI does not yet fully model covered components, signed response headers, key identifiers or test vectors. This remains a blocker for both HTTP and HTTPS; HTTPS is optional in V1 and therefore cannot be the sole integrity/authentication mechanism.
 
-A deterministic HTTP Ed25519/RFC 9421/RFC 9530 request vector and negative covered-component mutation checks now exist in [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json). The vector verifier reproduces the signature from a TEST-ONLY seed. This is a fixed Draft example, not a complete RFC 9421 implementation or a ratified operation-wide covered-component profile.
+A deterministic HTTP Ed25519/RFC 9421/RFC 9530 request vector and negative covered-component mutation checks now exist in [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json). The verifier reproduces the signature from a TEST-ONLY seed. The official RFC 9421 Appendix B.2.6 Ed25519 vector is also verified by independent Python and Node implementations. These vectors do not constitute a complete RFC 9421 implementation or ratify an operation-wide covered-component profile.
 
 Required closure: fully model signed responses and every HTTP operation in OpenAPI; freeze exact covered components and key distribution/rotation/overlap/revocation and timestamp/nonce bounds; add independent implementation vectors and replay-store tests.
 
@@ -31,9 +31,9 @@ Required closure: fully model signed responses and every HTTP operation in OpenA
 
 A separate WSS handshake JSON Schema now defines challenge, proof-of-possession, session establishment, acknowledgement and supersession envelopes. The narrative proposes Ed25519 over a domain-separated RFC 8785 JCS transcript, with 32-byte server/client nonces and a single-use 30-second challenge. The algorithm/canonicalization family is approved in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md): Ed25519 over a domain-separated RFC 8785 JCS transcript. Exact transcript field schema, cross-language test vectors, TLS audience/authority binding, key-version overlap and full implementation semantics remain open.
 
-A deterministic Ed25519/JCS WSS transcript vector now exists with exact transcript bytes, domain separation and negative mutations of runner_id, audience, authority, challenge_id, protocol version and missing prefix. This is still one Draft transcript example; it does not prove independent cross-language JCS implementations or production challenge lifecycle.
+A deterministic Ed25519/JCS WSS transcript vector now exists with exact transcript bytes, domain separation and negative mutations of runner_id, audience, authority, challenge_id, protocol version and missing prefix. Python and Node independently serialize, verify and reproduce the fixed transcript signature. This proves cross-language agreement for the fixture's ASCII/integer subset only; it does not prove all RFC 8785 edge cases or production challenge lifecycle.
 
-Required closure: freeze the exact Ed25519/JCS transcript fields; add at least two independent language implementations, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
+Required closure: freeze the exact Ed25519/JCS transcript fields; expand cross-language JCS tests to RFC 8785 string/number/UTF-16 ordering edge cases; add nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
 ### P0-03 — WSS strict payload schemas and positive/negative branch fixtures are validated
 
