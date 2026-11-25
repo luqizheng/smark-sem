@@ -105,3 +105,10 @@ CI evidence update: Python/Node JCS edge tests, including the additional quote/r
 
 
 Latest PR head `2cbb991571e58bc6076754428840a6b2800a9401` passed CI runs #317 (push) and #318 (pull_request), including the expanded Python/Node JCS string-escaping, nested duplicate-member and unpaired-surrogate-property-name vectors.
+
+
+## 10. Production Rust canonicalizer candidate (not selected)
+
+AI-PM's separate dependency evaluation identifies `canonprims-json 0.1.4` as the leading technical candidate for the callback Inbox because it canonicalizes raw UTF-8 bytes in one pass, rejects duplicate decoded member names and invalid I-JSON inputs, enforces explicit resource limits, and is gated by a shared Rust/Go/Python/TypeScript conformance corpus. The published candidate requires Rust 1.88.0; SEM's current candidate workspace declares Rust 1.85. The dependency is proposed for AI-PM only, so SEM's MSRV need not change unless SEM later computes these JCS hashes.
+
+The project is very new and 0.x, with limited external adoption; this is a test-only spike candidate, not an approved production dependency. AI-PM's builder/toolchain floor must be pinned and ratified before adoption. See AI-PM's `docs/architecture/server-execution-management/sem-jcs-canonicalizer-dependency-evaluation.md`. No production Rust JCS implementation has been selected.
