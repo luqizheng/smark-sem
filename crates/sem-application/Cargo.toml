@@ -10,3 +10,4 @@ async-trait.workspace = true
 thiserror.workspace = true
 sem-domain = { path = "../sem-domain" }
 sem-protocol = { path = "../sem-protocol" }
+uuid.workspace = true
