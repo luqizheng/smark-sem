@@ -107,10 +107,10 @@ $defs:
       binding_epoch: { type: integer, minimum: 1 }
       runner:
         type: object
-        required: [runner_id, key_version, boot_id, supervisor_instance_id]
+        required: [runner_id, runner_key_version, boot_id, supervisor_instance_id]
         properties:
           runner_id: { type: string, format: uuid }
-          key_version: { type: integer, minimum: 1 }
+          runner_key_version: { type: integer, minimum: 1 }
           boot_id: { type: string, minLength: 1 }
           supervisor_instance_id: { type: string, format: uuid }
         additionalProperties: false
