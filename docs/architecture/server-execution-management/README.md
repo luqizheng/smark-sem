@@ -49,7 +49,7 @@ These documents are the active design-review set. They are still drafts and must
 1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — process containment, independent host fencing and quarantine.
 1.6. [Delegated Harness Grant and Credential Broker Draft](../delegated-harness-grant-and-credential-broker-draft.md) — exact attempt grant, one-time bootstrap, short-lived MCP token and local broker.
 1.5. [Runner Enrollment and Cryptographic Identity Draft](../runner-enrollment-and-cryptographic-identity-draft.md) — Runner proof of possession, AI-PM trust record and WSS identity.
-2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.
+2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.\n2.1. [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md) — WSS authentication, heartbeat, resource telemetry, delivery ACK, reconnect/replay and dispatch readiness.
 3. [Execution Identity, Lifecycle, Fencing and Delivery Contract Draft](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) — delegated Harness identity, three lifecycles, process fencing and Git evidence.
 4. [Consistency Review](./consistency-review.md) — source-audit findings and cross-document invariants.
 5. [Code Contract Mapping](./code-contract-mapping.md) — current source responsibilities and candidate adapter boundaries.
