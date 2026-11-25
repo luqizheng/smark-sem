@@ -12,7 +12,7 @@ properties:
   schema_version: { const: 1 }
   message_id: { type: string, format: uuid }
   message_type:
-    enum: [runner.session.ack, runner.heartbeat, runner.health_probe, runner.health_report, runner.resources.report, runner.admission.changed, execution.deliver, execution.credential_bootstrap, execution.delivery_received, harness.starting, harness.started, harness.start_failed, harness.process_exited, execution.release, execution.release_applied, protocol.ack, protocol.error, runner.session.superseded, runner.replay.request, runner.replay.snapshot]
+    enum: [runner.heartbeat, runner.health_probe, runner.health_report, runner.resources.report, runner.admission.changed, execution.deliver, execution.credential_bootstrap, execution.delivery_received, harness.starting, harness.started, harness.start_failed, harness.process_exited, execution.release, execution.release_applied, protocol.ack, protocol.error, runner.session.superseded, runner.replay.request, runner.replay.snapshot]
   runner_id: { type: string, format: uuid }
   connection_id: { type: string, format: uuid }
   session_generation: { type: integer, minimum: 1 }
@@ -26,8 +26,6 @@ properties:
 allOf:
   - if: { properties: { message_type: { enum: [execution.delivery_received, harness.starting, harness.started, harness.start_failed, harness.process_exited, execution.release_applied, runner.admission.changed] } }, required: [message_type] }
     then: { required: [journal_id, event_sequence] }
-  - if: { properties: { message_type: { const: runner.session.ack } }, required: [message_type] }
-    then: { properties: { payload: { $ref: '#/$defs/SessionAck' } } }
   - if: { properties: { message_type: { const: runner.heartbeat } }, required: [message_type] }
     then: { properties: { payload: { $ref: '#/$defs/Heartbeat' } } }
   - if: { properties: { message_type: { const: runner.health_probe } }, required: [message_type] }
@@ -72,13 +70,6 @@ allOf:
       required: [message_type]
 additionalProperties: false
 $defs:
-  SessionAck:
-    type: object
-    required: [acknowledged_connection_id, acknowledged_session_generation]
-    properties:
-      acknowledged_connection_id: { type: string, format: uuid }
-      acknowledged_session_generation: { type: integer, minimum: 1 }
-    additionalProperties: false
   Heartbeat:
     type: object
     required: [boot_id, supervisor_state, accepting_work, draining, active_execution_count, process_registry_state]
