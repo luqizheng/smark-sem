@@ -367,7 +367,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 - Exact resource units, admission weights, safety margins, reservation expiry and fairness (D-08).
 - Local Runner event journal implementation, fsync guarantees, retention and disk-full behavior (D-10).
 - Whether a Runner may maintain more than one WSS session or endpoint for HA (default: one current session).
-- Exact event replay snapshot schema and retention window (D-05/D-10).
+- Exact event replay snapshot schema and retention window (D-05/D-10); process-exit evidence identity/digest/ACK semantics are specified in §9.2.
 - TLS termination topology, enterprise/self-signed certificate trust provisioning, pinning, hostname validation, renewal/rotation/revocation, rate limits and ingress protection (D-09).
 - Whether SEM sends an explicit server-side delivery cancellation before release or only the fenced release instruction (D-05).
 
@@ -375,6 +375,25 @@ The JSON Schema is a validation baseline, not a ratified wire contract. It inten
 
 Until these are resolved and accepted, this document remains Draft / Review. It is not an implementation authorization.
 
+
+## 9.2 Process-exit evidence identity, digest and acknowledgement
+
+The `evidence_id` in `harness.process_exited` is an opaque, immutable identifier for the complete evidence record in the Runner Supervisor's durable local journal. It is not a URL, remote fetch token or permission for SEM to access the Runner filesystem. V1 does not introduce a separate evidence-fetch endpoint or second transport.
+
+The event payload MUST include:
+
+- `evidence_id`: UUID identifying the immutable local evidence record;
+- `evidence_schema_version`: currently constant `1`;
+- `evidence_digest`: lowercase hexadecimal SHA-256 digest of the complete evidence record serialized using RFC 8785 JCS;
+- the identity and minimum exit-proof summary already required by `HarnessProcessExited` (execution/binding/launch/containment, boot ID, systemd InvocationID, cgroup populated=0, exit status, Supervisor instance and observation time).
+
+The canonical evidence record is the structured record described in D-05 Linux launch/release/exit-proof addendum §5.1, including both cgroup observation values, the exact unit/ControlGroup/InvocationID, relevant start/stop job identities and terminal results, unit state/result, available ExecMain status, host boot ID and local journal sequence. The digest is calculated over the complete record, not over the event envelope and not over a partial display summary. The exact JCS byte sequence is persisted with the immutable record before the event is emitted.
+
+The authenticated current WSS session and durable Runner journal are the V1 source authority for this evidence. SEM MUST persist the complete `harness.process_exited` event envelope, including its digest and summary, before acknowledging its durable `event_sequence`. On reconnect, Runner replays the same immutable event with the same `journal_id`, `event_sequence`, `evidence_id`, schema version, digest and payload; only connection-scoped envelope fields (`message_id`, `message_sequence`, current connection/session identifiers and replay marker) may be reframed according to the replay rules. SEM deduplicates by durable stream cursor and rejects a repeated evidence_id with a different digest or payload as an integrity conflict.
+
+Runner MUST NOT delete or mutate the evidence record before receiving an acknowledgement that confirms durable acceptance of the corresponding event sequence. After that acknowledgement, the record remains subject to the configured local audit-retention policy; the retention policy, minimum period and disk-pressure behavior are D-10 operational decisions and MUST be documented before implementation. If the raw local record has expired, SEM's persisted event summary and digest remain the durable audit copy; V1 does not promise on-demand retrieval of expired raw evidence. A retention expiry MUST never delete the SEM event or change the already acknowledged process-exit fact.
+
+The digest detects record mismatch/corruption when the record is available; it is not a standalone digital signature and does not replace authenticated WSS provenance, host trust or the Supervisor's authority. SEM does not independently re-run systemd/cgroup observations. A future requirement for independent evidence verification would require a separately versioned evidence format and authenticated retrieval/signature contract, not an implicit interpretation of `evidence_id`.
 
 ## 9.1 Process exit status representation and Platform mapping
 
