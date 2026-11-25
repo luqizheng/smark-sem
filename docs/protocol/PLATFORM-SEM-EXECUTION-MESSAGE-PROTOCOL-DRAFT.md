@@ -1,10 +1,12 @@
 # Platform–SEM–Runner Execution Message Protocol Draft
 
-- Version: Draft 0.1
+- Version: Draft 0.2
 - Status: Architecture review only; not normative and not implementation-authorizing.
 - Replaces: the superseded Platform–SEM–Runner Protocol V1.
 - Authority baseline: [SEM Authority Boundary and Execution Message Model](../architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 - Detailed companion contract: [Execution Identity, Lifecycle, Fencing and Delivery Contract](./EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+- Machine-readable HTTP contract: [OpenAPI 3.1 draft](./openapi/platform-sem-v1-draft.yaml).
+- Reusable HTTP message schemas: [Platform–SEM v1 JSON Schema](./json-schema/platform-sem-v1.schema.yaml).
 
 ## Transport deployment profile (V1)
 
@@ -28,7 +30,7 @@ This is a deployment/transport choice, not two business protocols. Endpoint conf
 5. AI-PM decides business completion/cancellation and sends SEM an explicit release/stop instruction.
 6. Task lifecycle and SEM Execution lifecycle are independent.
 7. No shared database, distributed transaction, SEM access to Platform PostgreSQL, or business-state mirror.
-8. Every message is authenticated, versioned, idempotent and correlated. Stale release messages must not stop a newer execution.
+8. Every message is authenticated, versioned, idempotent and correlated. Stale release messages must not stop a newer execution. HTTP message IDs and idempotency keys are carried in both the envelope and headers where defined; the receiver rejects disagreement.
 
 ## 2. Identifiers
 
@@ -296,6 +298,8 @@ SEM release is triggered when AI-PM decides that the corresponding Run/attempt n
 7. Whether infrastructure reporting is pushed to an AI-PM endpoint, returned synchronously, or both.
 8. Retention policy for prompt bodies, process observations and infrastructure logs.
 
+The OpenAPI and JSON Schema files are Draft validation artifacts. They do not resolve the open questions above or authorize implementation.
+
 No implementation or migration is authorized until these questions are reviewed and the bilateral contract is approved.
 
 
@@ -486,4 +490,4 @@ If AI-PM does not know the current binding_epoch, it must first query/reconcile 
 - Runner observations carry a monotonically increasing event_sequence within the execution/binding stream. SEM persists the last accepted sequence and deduplicates message_id.
 - A duplicate message with the same identity and canonical payload returns the original acknowledgement. Reuse with a different payload is a conflict.
 - A sequence gap, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
-- SEM→AI-PM events are at-least-once. AI-PM deduplicates and applies infrastructure facts without changing Task status automatically.
+- SEM→AI-PM events are at-least-once. Each durable SEM event carries `journal_id` and `event_sequence` scoped to the Runner event stream (`runner_id + journal_id`); AI-PM deduplicates by `event_id` and stores the stream cursor. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
