@@ -47,6 +47,22 @@ for item in data["runner_messages"]:
     empty_payload["payload"] = {}
     expect_invalid(runner_validator, empty_payload, label + " missing required payload fields")
 
+    if item["message_type"] in {
+        "execution.delivery_received",
+        "harness.starting",
+        "harness.started",
+        "harness.start_failed",
+        "harness.process_exited",
+        "execution.release_applied",
+        "runner.admission.changed",
+    }:
+        missing_journal = dict(item)
+        missing_journal.pop("journal_id", None)
+        expect_invalid(runner_validator, missing_journal, label + " missing durable journal_id")
+        missing_sequence = dict(item)
+        missing_sequence.pop("event_sequence", None)
+        expect_invalid(runner_validator, missing_sequence, label + " missing durable event_sequence")
+
 for item in data["platform_requests"]:
     label = f"Platform request {item['message_type']}"
     expect_valid(platform_validator, item, label)
