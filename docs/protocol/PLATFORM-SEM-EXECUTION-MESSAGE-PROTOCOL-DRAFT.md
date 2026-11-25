@@ -75,7 +75,6 @@ Rules:
   "request_id": "uuid",
   "execution_id": "uuid",
   "acceptance": "accepted",
-  "sem_binding_epoch": 1,
   "accepted_at": "RFC3339 UTC"
 }
 ~~~
