@@ -28,7 +28,7 @@ SEM must not connect to or share the AI-PM PostgreSQL database. SEM has its own 
 
 ## 3. Confirmed deployment and operating constraints
 
-- AI-PM ↔ SEM: versioned HTTPS service contract with durable Outbox/Inbox and idempotent reconciliation.
+- AI-PM ↔ SEM: versioned internal HTTP service contract over the company private network; no V1 HTTPS or public internet ingress. Durable Outbox/Inbox and idempotent reconciliation remain mandatory.
 - Runner ↔ SEM: authenticated persistent WSS connection for delivery and infrastructure observations.
 - The two services use independent databases; no cross-database transaction is assumed.
 - Platform Outbox has one authoritative consumer in AI-PM. SEM does not consume the Platform database directly.
@@ -63,7 +63,7 @@ These documents are the active design-review set. They are still drafts and must
 - Lifecycle and recovery: durable state machines, duplicate/out-of-order messages, process start/exit, uncertain Runner quarantine, release/start races and host isolation.
 - Resource admission: telemetry freshness, reservations, concurrency model, disk pressure and starvation/fairness policy.
 - Git delivery: execution-scoped ref, credential provisioning, verification, cleanup and trust boundaries.
-- Operations: deployment topology, secrets, TLS, health/readiness, observability, retention, disaster recovery and operator procedures.
+- Operations: deployment topology, secrets, network isolation, service identity/authentication, health/readiness, observability, retention, disaster recovery and operator procedures.
 - Implementation plan: repo ownership, module/port boundaries, dependency graph, ordered milestones and measurable acceptance tests.
 
 ## 6. Historical documents
