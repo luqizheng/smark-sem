@@ -261,3 +261,6 @@ The Python and Node response verifiers now mutate the originating request method
 
 
 Latest response-context validation: PR head `16cf8432c7dc8642370e763f92c2539ced446b75` passed CI runs #299/#300. The executable Python/Node negative vectors now cover method, authority, path, request Content-Digest and 304 If-None-Match mutations in addition to callback/request correlation mismatches.
+
+
+Latest Python/Node JCS cross-check evidence: PR head `2cbb991571e58bc6076754428840a6b2800a9401` passed CI runs #317/#318, including the expanded RFC 8785 edge corpus.
