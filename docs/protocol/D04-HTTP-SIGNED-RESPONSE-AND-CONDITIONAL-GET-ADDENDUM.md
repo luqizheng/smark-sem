@@ -47,7 +47,7 @@ The OpenAPI draft now proposes the following behavior for getExecutionInfrastruc
 - ETag is required and MUST echo the current validator for the selected representation.
 - Content-Digest is required and is calculated over zero response-content bytes.
 - Signature-Input and Signature are required and use the same signed-response profile as 200.
-- X-SEM-Request-Id is required and echoes the authenticated request identity.
+- X-SEM-Request-Id is required and echoes the authenticated request `request_id` (the Idempotency-Key), not the transport `message_id`.
 - The response signature covers the request's `If-None-Match` using `if-none-match;req`, and the response's `ETag` as a response field, in addition to the common response/request component set above.
 - The client must verify the response before returning NotModified; an unsigned or mismatched 304 is an authentication error, not a cache hit.
 - A 304 must not carry an execution snapshot body. A body-present 304 is rejected as a protocol violation.
@@ -65,7 +65,7 @@ Add these cases to the D-04 executable suite:
 | D04-H53 | Signed structured 4xx/5xx response | Client accepts typed error only after response verification |
 | D04-H54 | Missing response Signature or Signature-Input | Client fails closed; no typed result |
 | D04-H55 | Response Content-Digest mismatch | Client rejects before decoding/trusting body |
-| D04-H56 | Response correlation header does not match request message_id/event_id | Client rejects as response-confusion/replay |
+| D04-H56 | Response correlation header does not match request request_id/callback event_id | Client rejects as response-confusion/replay |
 | D04-H57 | Valid 304 with ETag echo, empty-content digest and valid signature | Client returns NotModified only after all checks |
 | D04-H58 | 304 missing ETag, signature, digest or correlation header | Client rejects; must not treat as cache hit |
 | D04-H59 | 304 contains a response body | Client rejects as protocol violation |
