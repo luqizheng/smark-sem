@@ -6,6 +6,7 @@ on:
       - "docs/protocol/**"
       - "scripts/validate_sem_contracts.py"
       - "scripts/validate_sem_crypto_vectors.py"
+      - "scripts/validate_sem_payload_fixtures.py"
       - "tests/protocol/**"
       - ".github/workflows/sem-contracts.yml"
   push:
@@ -40,3 +41,5 @@ jobs:
         run: python scripts/validate_sem_contracts.py
       - name: Verify D-04 cryptographic vectors and negative cases
         run: python scripts/validate_sem_crypto_vectors.py
+      - name: Validate positive and negative payload fixtures
+        run: python scripts/validate_sem_payload_fixtures.py
