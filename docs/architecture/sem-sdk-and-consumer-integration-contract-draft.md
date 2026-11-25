@@ -41,10 +41,10 @@ The SDK should expose a small typed surface:
 - `Events`: typed SEM event envelope/model support and callback contract utilities where safe to share.
 - `Models`: canonical request, response, event and error types.
 - `Error`: stable typed categories preserving HTTP status, SEM error code, retryability and correlation identifiers.
-- `RetryPolicy`: bounded retry/backoff helpers for transient outcomes; business retry decisions remain with AI-PM.
+- `RetryPolicy`: optional bounded per-call retry helper for explicitly safe transient outcomes only; durable retry scheduling and business retry decisions remain with AI-PM. The SDK must not own a background scheduler.
 - `Config`: explicit connect/request timeouts, private-network endpoint, HTTP/HTTPS selection, trust roots or explicit certificate/public-key pin.
 
-The SDK should provide async APIs compatible with the SEM service's Rust ecosystem. The exact async runtime and HTTP implementation must be selected after inspecting the existing workspace and dependency policy; do not force AI-PM to adopt a second async runtime.
+The SDK should provide async APIs compatible with the SEM service and AI-PM Rust workspaces. The source compatibility audit recommends Tokio 1 + reqwest 0.12/native-tls as the initial candidate: AI-PM already pins Tokio 1.54.1 and reqwest 0.12.28/native-tls 0.2.18, while SEM PR #1 uses Tokio 1 and has not yet selected an outbound HTTP client. This remains a candidate, not a frozen dependency choice. The integrated workspace must resolve and test the exact dependency graph before implementation.
 
 ## 4. AI-PM usage pattern
 
@@ -81,7 +81,7 @@ The final method names, generic parameters and ownership ergonomics are to be fr
 The SDK supports the confirmed internal deployment transports:
 
 - HTTP is allowed only on the restricted company network. It does not provide wire confidentiality. Authentication, message integrity, replay defense, idempotency and audit remain mandatory.
-- HTTPS is optional and supports enterprise CA trust or an explicitly configured self-signed certificate/public-key pin.
+- HTTPS is optional and must support enterprise CA trust or an explicitly configured self-signed certificate/public-key pin. CA-chain validation and explicit pin validation are separate acceptance requirements; the selected HTTP/TLS stack must prove both. Do not infer pinning support from ordinary certificate validation.
 - TLS certificate/hostname/identity verification must never be disabled. No production `insecure`, `verify=false` or equivalent escape hatch.
 - The same API schemas, message semantics and error contract apply to HTTP and HTTPS.
 - Endpoint, trust roots/pins and credentials are explicit configuration; no public internet dependency is assumed.
@@ -92,7 +92,7 @@ The SDK must not conflate TLS server authentication, SEM service request signing
 
 - Mutating calls require caller-supplied stable idempotency identity derived from the durable AI-PM Outbox operation.
 - Retries reuse the same idempotency identity and semantically identical request body.
-- The SDK may retry only explicitly classified transient transport/service failures, and only within caller-configured bounds.
+- The SDK may perform only bounded, caller-requested in-call retries for explicitly classified transient transport/service failures, reusing the exact same idempotency key and semantic request body. Durable retry scheduling, attempt timing and reconciliation ownership remain with AI-PM.
 - Authentication/authorization failures, schema/version errors, stale fencing tokens and idempotency conflicts are not silently retried.
 - A timeout after request transmission is an uncertain outcome, not proof of rejection. The SDK returns an outcome that lets AI-PM reconcile/retry the same operation.
 - SDK retries must never generate a new execution ID or a new business attempt.
@@ -111,7 +111,7 @@ SEM → AI-PM is a callback initiated by SEM against an AI-PM-owned service endp
 - atomic Inbox + infrastructure Run observation + cursor transaction;
 - response ACK only after commit.
 
-The SEM SDK may publish shared Rust protocol types or verification primitives if they are transport-neutral and do not force AI-PM to embed a SEM server or SEM database. Whether a separate protocol-types crate is needed is an implementation architecture decision, not a reason to duplicate schemas.
+The existing SEM `sem-protocol` crate is the recommended owner of transport-neutral canonical Rust request/response/event types, re-exported by the SDK. Do not create a companion types crate without a demonstrated need. Do not include an AI-PM callback HTTP server in the SDK. Any shared signature-verification primitive remains undecided until D-04's final signed-message contract and AI-PM verifier ownership are closed.
 
 The callback receiver is not an AI-PM SEM SDK client call. It remains an AI-PM-owned HTTP server boundary.
 
@@ -146,12 +146,17 @@ Before SDK implementation is approved, define executable tests for:
 
 ## 10. Open decisions
 
-- Final crate name, workspace placement and publication/distribution channel.
-- Async runtime and HTTP stack compatibility with AI-PM.
-- Whether protocol models live in the SDK crate or a small companion types crate.
+- Ratify in-workspace crate name `sem-sdk` and published package name `smark-sem-sdk`.
+- Confirm the internal Kellnr registry as distribution channel and prove SEM CI publish/read access; AI-PM already consumes internal Rust packages from this registry. Do not use a floating Git branch or unbounded version.
+- Final workspace placement and release permissions.
+- Confirm Tokio 1 + reqwest 0.12/native-tls after integrated workspace dependency resolution; the source compatibility audit recommends this candidate based on the current AI-PM and SEM manifests.
+- Confirm `sem-protocol` as the canonical model crate and SDK re-export boundary; avoid speculative companion crates.
+- Prove CA trust, hostname validation, explicit certificate/public-key pinning and fail-closed behavior with the selected TLS stack. If pinning cannot be implemented safely, stop for a bilateral transport decision; never disable verification.
 - Exact public method signatures and builder/configuration ergonomics.
 - Whether SEM provides a reusable callback-verification helper crate, and the boundary of that helper.
 - SDK support window, semantic-versioning policy and release automation.
 - Exact mapping of existing D-04 OpenAPI endpoints to SDK methods.
 
-**Disposition: DRAFT / REVIEW.** The provider/consumer direction is fixed: smark-sem provides; AI-PM consumes. All detailed SDK API, release and conformance decisions remain open. No code, migration, runtime configuration or merge is authorized.
+Source compatibility findings are recorded in [SEM SDK Source Compatibility Audit](./sem-sdk-source-compatibility-audit.md). The recommended shape is an isolated `sem-sdk` crate depending on canonical `sem-protocol`, using Tokio 1 + reqwest 0.12/native-tls as a candidate, with internal Kellnr distribution subject to CI access verification. The audit is source inspection only; no integrated build, TLS pinning proof or registry publish was run.
+
+**Disposition: DRAFT / REVIEW.** The provider/consumer direction is fixed: smark-sem provides; AI-PM consumes. Detailed SDK API, release and conformance decisions remain open. No code, migration, runtime configuration or merge is authorized.
