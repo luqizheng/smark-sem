@@ -64,7 +64,7 @@ The SEM-to-AI-PM infrastructure callback is not the Harness-to-AI-PM MCP busines
 - Existing lease-token tools cannot be assumed to accept the future delegated grant without a separately reviewed D-06 application-service design.
 - Formal review, approval and acceptance remain human-only.
 
-## 7. Bilateral receiver design proposal
+## 6. Bilateral receiver design proposal
 
 A downstream draft has now been added to the AI-PM documentation branch:
 [AI-PM SEM Callback and Inbox Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/ai-pm-sem-callback-inbox-design-draft.md).
@@ -79,7 +79,7 @@ It proposes (not ratifies) the following:
 
 This proposal is Draft and requires bilateral review against the canonical SEM D-04 contract. It does not close P0-05 or authorize implementation.
 
-## 6. Disposition
+## 7. Disposition
 
 **P0-05 remains OPEN.** The OpenAPI callback route is not source-aligned with current AI-PM because it does not yet exist. The strict SEM event payload schemas are now drafted in `platform-sem-v1.schema.yaml`, but this does not close receiver ownership, Inbox transaction, ACK cursor or retry semantics.
 
