@@ -267,6 +267,8 @@ See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-R
 | D04-H60 | 304 ETag differs from requested/current validator | Client rejects or performs unconditional reconciliation; never silently accepts |
 | D04-H61 | Replay a previously accepted signed response nonce | Client rejects replay according to the ratified response replay scope |
 | D04-H62 | Signed response uses unknown/revoked keyid | Client fails closed |
+| D04-H68 | SEM→AI-PM callback ACK 200 has a valid response signature and `X-SEM-Event-Id = event_id` | Python and Node independently verify response digest/signature and associated request context |
+| D04-H69 | Callback ACK response signs an `X-SEM-Event-Id` different from the request's authenticated `event_id` | Client rejects response-confusion/replay; signature verification fails; no ACK is accepted |
 
 These cases do not close P0-01 until they are represented in executable independent vectors and live request/response/replay integration tests.
 
