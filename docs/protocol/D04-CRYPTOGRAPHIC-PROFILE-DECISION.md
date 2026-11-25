@@ -75,15 +75,19 @@ The earlier candidate values (HTTP created tolerance 30 seconds future / 60 seco
 
 ## 6. Deterministic test-vector baseline (Draft)
 
-A deterministic, TEST-ONLY vector set is maintained at [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json), with verifier [validate_sem_crypto_vectors.py](../../scripts/validate_sem_crypto_vectors.py). It contains:
+A deterministic, TEST-ONLY vector set is maintained at [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json), with independent Python and Node validators [validate_sem_crypto_vectors.py](../../scripts/validate_sem_crypto_vectors.py) and [validate_sem_jcs_vectors.mjs](../../scripts/validate_sem_jcs_vectors.mjs). It currently contains:
 
 - Platform→SEM HTTP request body, RFC 9530 SHA-256 Content-Digest, RFC 9421 signature base and Ed25519 signature.
+- Signed HTTP response vectors for Platform→SEM 202 acceptance, 409 idempotency conflict, GET snapshot 200 with signed ETag, conditional 304, authenticated GET 404, SEM→AI-PM callback ACK 200, and authenticated callback 404. Every response vector binds the exact originating method, authority, path and request Content-Digest; conditional 304 additionally binds If-None-Match and response ETag.
+- Unsigned pre-authentication 401 and early-413 fixtures. Python and Node assert that these have no protocol signature/correlation headers and no message_id, in_reply_to, request_id or event_id in the minimal error body.
 - Runner→SEM WSS transcript, RFC 8785 JCS bytes, domain-separation prefix and Ed25519 proof.
-- Negative mutations for HTTP method, authority, path, content type, idempotency key and digest; WSS runner identity, audience, authority, challenge, protocol version and missing domain prefix.
-- The official RFC 9421 Appendix B.2.6 Ed25519 vector is verified by both Python and Node; the fixed WSS JCS transcript/signature is independently serialized, verified and reproduced by Python and Node. The Node verifier now additionally exercises RFC 8785 UTF-16 property ordering (including a supplementary-plane key), recursive object sorting/array-order preservation, Unicode/control escaping, representative Appendix B IEEE-754 number encodings, negative zero, exponent-format boundaries, malformed JSON, lone-surrogate rejection and non-finite-number rejection. The Python verifier still independently checks only the fixed ASCII/integer transcript; the expanded edge vectors are not yet cross-verified by a second language. Duplicate JSON object member detection before object materialization also remains an explicit gap.
-- Deterministic TEST-ONLY private seeds to permit exact reproduction. These seeds MUST NOT be used in any deployed environment.
+- Negative mutations for HTTP method, authority, path, content type, idempotency key, request/response digest, direction-specific correlation, ETag, If-None-Match and signed response request-context association; WSS runner identity, audience, authority, challenge, protocol version and missing domain prefix.
+- The official RFC 9421 Appendix B.2.6 Ed25519 vector is verified by both Python and Node. Python and Node independently exercise the same RFC 8785 edge corpus: UTF-16 property ordering (including supplementary-plane keys), representative Appendix B IEEE-754 values, negative zero, subnormals, exponent thresholds, recursive object sorting/array preservation, control escaping, malformed JSON, duplicate decoded members (including nested/escaped-equivalent names), unpaired surrogates and non-finite values.
+- Deterministic TEST-ONLY private seeds permit exact reproduction. These seeds MUST NOT be used in any deployed environment.
 
-These vectors prove the selected algorithm primitives and the specific Draft serialization examples. They do not ratify the final HTTP covered-component profile, time bounds, nonce retention, full JCS edge-case behavior, key rotation policy or production implementation. Those remain open until broader cross-language edge-case fixtures and the full RFC 9421 verifier behavior are independently tested.
+Latest SEM Protocol Contract Validation run #411 passed all ten workflow steps on PR #3 head `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362`, including OpenAPI/external references, JSON Schema coverage, crypto vectors, positive/negative payload fixtures and independent Node JCS/Ed25519 verification.
+
+These vectors prove deterministic fixture serialization, digest/signature arithmetic and the listed negative mutations. They do not prove live HTTP middleware ordering, request/response context association through an actual HTTP stack, proxy/header normalization, durable nonce replay storage, key rotation/revocation behavior, WSS session lifecycle, production Rust interoperability or bilateral AI-PM runtime behavior. They do not ratify freshness/nonce bounds or authorize implementation.
 
 ## 7. Acceptance requirements
 
