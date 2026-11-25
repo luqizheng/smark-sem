@@ -3,7 +3,7 @@
 - Status: **DRAFT / ARCHITECTURE REVIEW — NOT IMPLEMENTATION-AUTHORIZING**
 - Owner: `smark-sem`
 - Consumer: `ai-pm`
-- Protocol baseline reviewed: SEM PR #3, commit `d3e5d4eefacf91aee533ed51be7d16baf9bffe03` (Draft, not ratified; includes D04-H78..H85 response boundary)
+- Protocol baseline reviewed: SEM PR #3, commit `e1812557ab9c17a83ff7201db614dd4d04887534` (Draft, not ratified; includes D04-H78..H88 response boundary and signed 404 fixtures)
 - Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `61ff5faddff751fa0a0df8e01a73bf18ba791e33` (Draft only, not runtime source)
 - Companion: [SEM SDK source compatibility audit](./sem-sdk-source-compatibility-audit.md)
 - Protocol source: [Platform–SEM execution message protocol](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
@@ -278,7 +278,7 @@ This matrix maps the proposed API to the current D-04 candidate. It is intention
 | SDK method | OpenAPI operation | Request / response model | Required headers / identity | Status and typed outcome | D-04 evidence required |
 |---|---|---|---|---|---|
 | `submit_execution` | `submitExecutionRequest` — `POST /internal/sem/v1/executions` | `ExecutionRequestedEnvelope` → `ExecutionAcceptanceEnvelope` | `Signature`, `Signature-Input`, `Content-Digest`, `Idempotency-Key == request_id`, `X-SEM-Message-Id == message_id`; authenticated responses use `X-SEM-Request-Id == Idempotency-Key` | 202 accepted/duplicate; authenticated signed 400 validation, 409 idempotency conflict, 422 invariant, 429 rate limit, 500 service failure; unsigned pre-auth 401/early 413 → `UnverifiedPreAuthentication`; ambiguous transport/signature result → `OutcomeUnknown` | D-04 request signature/digest/replay; request identity equality; signed error coverage/correlation; unsigned pre-auth no-ID behavior; same-key duplicate; changed-body conflict; signed 429 Retry-After |
-| `get_execution` | `getExecutionInfrastructureState` — `GET /internal/sem/v1/executions/{execution_id}` | 200 `ExecutionSnapshotEnvelope`; 304 no body; 404 structured error | Request: `X-SEM-Message-Id == message_id`, `Idempotency-Key == request_id`, optional `If-None-Match`; authenticated response: `X-SEM-Request-Id == Idempotency-Key`, signed `ETag` on 200/304 | 200 → `Modified(snapshot, etag)`; 304 → `NotModified { etag }`; authenticated signed 404 → `NotFound`; unsigned pre-auth 401 → `UnverifiedPreAuthentication`; signed 500 or unverified transport failure remains typed distinctly | Signed GET response; ETag/If-None-Match binding; 304 empty-body proof; request-context replay negatives; H72–H76; pre-auth H79; authenticated 404 signature coverage |
+| `get_execution` | `getExecutionInfrastructureState` — `GET /internal/sem/v1/executions/{execution_id}` | 200 `ExecutionSnapshotEnvelope`; 304 no body; 404 structured error | Request: `X-SEM-Message-Id == message_id`, `Idempotency-Key == request_id`, optional `If-None-Match`; authenticated response: `X-SEM-Request-Id == Idempotency-Key`, signed `ETag` on 200/304 | 200 → `Modified(snapshot, etag)`; 304 → `NotModified { etag }`; authenticated signed 404 → `NotFound`; unsigned pre-auth 401 → `UnverifiedPreAuthentication`; signed 500 or unverified transport failure remains typed distinctly | Signed GET response; ETag/If-None-Match binding; 304 empty-body proof; request-context replay negatives; H72–H76 and H86–H88; pre-auth H79/H80/H88; signed Platform/callback 404 vectors |
 | `request_release` | `requestExecutionRelease` — `POST /internal/sem/v1/executions/{execution_id}/release` | `ExecutionReleaseRequestedEnvelope` → `ReleaseAcceptanceEnvelope` | `Signature`, `Signature-Input`, `Content-Digest`, `Idempotency-Key == request_id`, `X-SEM-Message-Id == message_id`; path `execution_id` must equal body; authenticated response `X-SEM-Request-Id == Idempotency-Key` | 202 accepted/duplicate; signed 400 validation, 404 unknown execution, 409 idempotency conflict, 412 fencing conflict, 422 invariant, 500 service failure; unsigned pre-auth 401/early 413 → `UnverifiedPreAuthentication`; ambiguous result → `OutcomeUnknown` | Signed request/response; path/body identity; same-key duplicate; changed-body conflict; signed 404/412; pre-auth H79/H80; stale binding_epoch non-retryable |
 
 ### 12.1 Cross-cutting rules
@@ -286,7 +286,7 @@ This matrix maps the proposed API to the current D-04 candidate. It is intention
 - All authenticated responses, including error responses and 304, must have a precisely defined verification/correlation contract before a typed response is exposed as trusted.
 - The table's header names reflect the current OpenAPI draft. Candidate signed components and response-header names are specified in D-04; ratification and live middleware proof remain open.
 - SDK default remains **no automatic retry**. AI-PM owns durable retry scheduling. A future per-call helper must be explicitly invoked and bounded; no hidden retry may mask an ambiguous result.
-- The D-04 acceptance matrix currently includes H78–H85 for authenticated/pre-authentication error boundaries. The SDK-specific mapping must be reconciled to the final case IDs after D-04 ratification; do not treat Draft IDs as normative.
+- The D-04 acceptance matrix currently includes H78–H88 for authenticated/pre-authentication error boundaries and signed 404 vectors. The SDK-specific mapping must be reconciled to the final case IDs after D-04 ratification; do not treat Draft IDs as normative.
 - The SDK API, package version and implementation remain Draft / NOT RATIFIED until all blockers and bilateral consumer tests pass.
 
 
@@ -300,3 +300,10 @@ This document was rechecked against:
 The D-04 candidate now specifies authenticated signed application errors and unsigned pre-authentication 401/early-413 responses. The SDK error taxonomy and traceability table were updated to include `UnverifiedPreAuthentication`, direction-specific signed correlation, signed application 404/409/412/429/500, and the no-downgrade rule when response signing fails.
 
 This remains a design-only cross-reference refresh. The updated SDK document branch itself is not a consumer build, D-04 is not ratified, and no SDK implementation or TLS pinning proof exists.
+
+
+## 14. Signed 404 and pre-authentication fixture refresh — 2026-11-25
+
+The current D-04 protocol candidate now includes deterministic signed 404 vectors for both Platform GET and SEM callback directions, plus unsigned 401/early-413 fixtures. Python and Node independently verify the 404 response signatures, request-context binding and correlation headers, and structurally reject pre-auth error bodies containing protocol IDs. See D04-H86..H88.
+
+The SDK contract must preserve this distinction: authenticated 404 is a trusted signed NotFound result; unsigned pre-authentication 401/413 is UnverifiedPreAuthentication, not a signed protocol disposition. The live HTTP middleware, nonce replay and transport association gates remain open.
