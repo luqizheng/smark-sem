@@ -5,6 +5,7 @@ This is documentation-contract validation only; it does not run SEM or AI-PM.
 """
 from pathlib import Path
 import sys
+import re
 import yaml
 from jsonschema import Draft202012Validator
 
@@ -26,6 +27,39 @@ def load(name):
 runner = load("runner-sem-v1.schema.yaml")
 handshake = load("runner-sem-handshake-v1.schema.yaml")
 platform = load("platform-sem-v1.schema.yaml")
+
+# The application schema is intentionally bidirectional. Validate that the
+# normative WSS catalogue assigns exactly one sender set to every app message.
+wss_protocol = (ROOT / "docs/protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md").read_text(encoding="utf-8")
+direction_map = {}
+for line in wss_protocol.splitlines():
+    if not line.startswith("|"):
+        continue
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    if len(cells) != 3:
+        continue
+    direction, message_cell, _purpose = cells
+    if direction not in {"SEM → Runner", "Runner → SEM", "Either direction"}:
+        continue
+    message_types = re.findall(r"`([^`]+)`", message_cell)
+    allowed_senders = (
+        {"SEM"} if direction == "SEM → Runner"
+        else {"Runner"} if direction == "Runner → SEM"
+        else {"SEM", "Runner"}
+    )
+    for message_type in message_types:
+        if message_type in direction_map:
+            raise SystemExit(f"duplicate WSS direction entry: {message_type}")
+        direction_map[message_type] = allowed_senders
+
+runner_types = set(runner["properties"]["message_type"]["enum"])
+if set(direction_map) != runner_types:
+    missing = sorted(runner_types - set(direction_map))
+    extra = sorted(set(direction_map) - runner_types)
+    raise SystemExit(f"WSS direction catalogue mismatch; missing={missing}, extra={extra}")
+for message_type, allowed_senders in direction_map.items():
+    if not allowed_senders or not allowed_senders <= {"SEM", "Runner"}:
+        raise SystemExit(f"invalid WSS sender set for {message_type}: {allowed_senders}")
 
 runner_types = set(runner["properties"]["message_type"]["enum"])
 runner_branches = {
