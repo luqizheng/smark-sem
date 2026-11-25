@@ -119,7 +119,7 @@ def jcs_canonicalize(value) -> str:
     raise TypeError("value is not representable as a JSON value")
 
 try:
-    json.loads('{"a":1,"\\u0061":2}', object_pairs_hook=reject_duplicate_object_members)
+    json.loads('{"a":1,"\u0061":2}', object_pairs_hook=reject_duplicate_object_members)
 except ValueError:
     pass
 else:
@@ -128,8 +128,8 @@ else:
 
 # Independent Python RFC 8785 edge vectors. These intentionally mirror the
 # Node verifier's UTF-16 ordering and Appendix B IEEE-754 cases.
-unicode_input = r'{"\\u20ac":"Euro Sign","\\r":"Carriage Return","\\ufb33":"Hebrew Letter Dalet With Dagesh","1":"One","\\ud83d\\ude00":"Emoji: Grinning Face","\\u0080":"Control","\\u00f6":"Latin Small Letter O With Diaeresis"}'
-unicode_expected = r'{"\\r":"Carriage Return","1":"One","":"Control","ö":"Latin Small Letter O With Diaeresis","€":"Euro Sign","😀":"Emoji: Grinning Face","דּ":"Hebrew Letter Dalet With Dagesh"}'
+unicode_input = r'{"\u20ac":"Euro Sign","\r":"Carriage Return","\ufb33":"Hebrew Letter Dalet With Dagesh","1":"One","\ud83d\ude00":"Emoji: Grinning Face","\u0080":"Control","\u00f6":"Latin Small Letter O With Diaeresis"}'
+unicode_expected = r'{"\r":"Carriage Return","1":"One","":"Control","ö":"Latin Small Letter O With Diaeresis","€":"Euro Sign","😀":"Emoji: Grinning Face","דּ":"Hebrew Letter Dalet With Dagesh"}'
 assert jcs_canonicalize(json.loads(unicode_input, object_pairs_hook=reject_duplicate_object_members)) == unicode_expected, "RFC 8785 UTF-16 property ordering mismatch"
 
 number_vectors = [
@@ -162,8 +162,8 @@ for number_text, expected_number in [
 ]:
     assert jcs_canonicalize(json.loads(number_text)) == expected_number, "RFC 8785 exponent boundary mismatch: " + number_text
 
-nested_input = r'{"z":[{"b":2,"a":1},3],"a":"\\u000f\\nplain"}'
-nested_expected = r'{"a":"\\u000f\\nplain","z":[{"a":1,"b":2},3]}'
+nested_input = r'{"z":[{"b":2,"a":1},3],"a":"\u000f\nplain"}'
+nested_expected = r'{"a":"\u000f\nplain","z":[{"a":1,"b":2},3]}'
 assert jcs_canonicalize(json.loads(nested_input, object_pairs_hook=reject_duplicate_object_members)) == nested_expected, "RFC 8785 recursive sorting/array order/control escaping mismatch"
 
 for invalid_json in ("{",):
@@ -173,7 +173,7 @@ for invalid_json in ("{",):
         pass
     else:
         raise AssertionError("malformed JSON was accepted")
-for invalid_json in (r'{"x":"\\ud800"}', r'{"x":"\\udc00"}'):
+for invalid_json in (r'{"x":"\ud800"}', r'{"x":"\udc00"}'):
     try:
         jcs_canonicalize(json.loads(invalid_json, object_pairs_hook=reject_duplicate_object_members))
     except ValueError:
@@ -298,28 +298,28 @@ for name in ("http_response", "http_error_409", "http_304", "http_callback_ack")
     ):
         wrong_context_pairs = list(pairs)
         wrong_context_pairs[component_index] = (wrong_context_pairs[component_index][0], wrong_value)
-        wrong_context_base = "\\n".join(f"{component}: {value}" for component, value in wrong_context_pairs)
-        wrong_context_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        wrong_context_base = "\n".join(f"{component}: {value}" for component, value in wrong_context_pairs)
+        wrong_context_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_context_base.encode("ascii")), name + " response accepted a different request context"
     if name == "http_304":
         wrong_validator_pairs = list(pairs)
         wrong_validator_pairs[8] = ('"if-none-match";req', '"different-validator"')
-        wrong_validator_base = "\\n".join(f"{component}: {value}" for component, value in wrong_validator_pairs)
-        wrong_validator_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        wrong_validator_base = "\n".join(f"{component}: {value}" for component, value in wrong_validator_pairs)
+        wrong_validator_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_validator_base.encode("ascii")), "304 response accepted a different If-None-Match context"
 
     if name in ("http_response", "http_error_409"):
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-request-id"', request["message_id"])
-        wrong_base = "\\n".join(f"{component}: {value}" for component, value in wrong_pairs)
-        wrong_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        wrong_base = "\n".join(f"{component}: {value}" for component, value in wrong_pairs)
+        wrong_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), name + " signature unexpectedly accepted message_id as request correlation"
 
     if name == "http_callback_ack":
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-event-id"', request["message_id"])
-        wrong_base = "\\n".join(f"{component}: {value}" for component, value in wrong_pairs)
-        wrong_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        wrong_base = "\n".join(f"{component}: {value}" for component, value in wrong_pairs)
+        wrong_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), "callback ACK signature unexpectedly accepted wrong event correlation"
     response_seed = base64.b64decode(vector["test_private_seed_base64"])
     response_private = Ed25519PrivateKey.from_private_bytes(response_seed)
