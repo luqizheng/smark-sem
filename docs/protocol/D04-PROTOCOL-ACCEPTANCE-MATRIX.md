@@ -7,6 +7,7 @@
   - [Platform–SEM OpenAPI 3.1](./openapi/platform-sem-v1-draft.yaml)
   - [Platform–SEM JSON Schema](./json-schema/platform-sem-v1.schema.yaml)
   - [Runner–SEM WSS JSON Schema](./json-schema/runner-sem-v1.schema.yaml)
+  - [Runner–SEM handshake JSON Schema](./json-schema/runner-sem-handshake-v1.schema.yaml)
 - Narrative contracts:
   - [Platform–SEM execution protocol](./PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
   - [Runner–SEM WSS protocol](./RUNNER-SEM-WSS-PROTOCOL-DRAFT.md)
@@ -57,6 +58,10 @@
 |---|---|---|
 | D04-W01 | Unknown, revoked or superseded Runner key | Authentication rejected |
 | D04-W02 | Expired, replayed or wrong-audience challenge proof | Authentication rejected |
+| D04-W31 | Challenge/proof transcript has a changed field, wrong domain prefix or non-canonical JSON | Ed25519 verification fails; no session is created |
+| D04-W32 | Runner submits a second proof for the same challenge_id | Single-use challenge rejects replay |
+| D04-W33 | Runner selects a protocol version not offered in challenge | Authentication/negotiation rejected; no downgrade |
+| D04-W34 | server_nonce/client_nonce has wrong length or malformed base64url | Schema/authentication rejects before session establishment |
 | D04-W03 | Valid key proof but invalid TLS server identity | Connection rejected before application authentication |
 | D04-W04 | Second session authenticates for same Runner | Atomic session-generation winner; old session fenced |
 | D04-W05 | Message runner_id/connection_id/session_generation mismatches authenticated session | Reject and audit |
@@ -116,7 +121,7 @@
 1. HTTP request authentication/signature algorithm, canonicalization, timestamp/nonce replay window, key ID and rotation.
 2. Exact endpoint ownership and route prefix alignment with the AI-PM server; callback URL registration and delivery authentication.
 3. Complete event payload schemas for binding, delivery status, process observation, release status and uncertainty.
-4. WSS challenge transcript encoding, signature domain separation, challenge TTL and key-rotation overlap.
+4. WSS challenge transcript candidate (Ed25519 + JCS domain-separated bytes) requires ratification, signature test vectors, challenge TTL and key-rotation overlap.
 5. Full payload definitions for every WSS message, including replay snapshot, health probe/report, admission changes and release-applied evidence.
 6. Exact event-journal ACK/cursor request and response, retention, compaction and recovery behavior.
 7. Maximum prompt/frame sizes, content-reference alternative, compression and retention.
