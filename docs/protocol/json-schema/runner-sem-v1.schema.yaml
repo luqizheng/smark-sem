@@ -260,6 +260,10 @@ $defs:
           - type: object
             required: [kind]
             properties: { kind: { const: unknown } }
+            not:
+              anyOf:
+                - required: [code]
+                - required: [signal]
             additionalProperties: false
       supervisor_instance_id: { type: string, format: uuid }
       exit_observed_at: { type: string, format: date-time }
