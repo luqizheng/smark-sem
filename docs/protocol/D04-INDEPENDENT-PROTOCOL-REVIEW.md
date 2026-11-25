@@ -21,9 +21,9 @@
 
 ### P0-01 — HTTP service authentication and request-integrity profile is not specified
 
-The OpenAPI currently has a placeholder X-SEM-Signature API-key scheme. It does not define the canonical request representation, signed components, key identifier, timestamp, nonce, replay window, body digest, key rotation or error behavior. This is a blocker for both HTTP and HTTPS; HTTPS is optional in V1 and therefore cannot be the sole integrity/authentication mechanism.
+The OpenAPI initially had a placeholder signature scheme. The narrative contract now proposes asymmetric Ed25519 HTTP Message Signatures (RFC 9421) plus Content-Digest (RFC 9530), with request/response signing, method/authority/path/query/body binding, key IDs, timestamp/expiry/nonce replay defense and key rotation. The proposal is not yet ratified and the OpenAPI does not yet fully model all signed headers/response signatures or include test vectors. This remains a blocker for both HTTP and HTTPS; HTTPS is optional in V1 and therefore cannot be the sole integrity/authentication mechanism.
 
-Required closure: select and document a bilateral service-authentication profile that works over restricted internal HTTP and HTTPS, binds method/authority/path/query/content digest/timestamp/nonce/key ID, rejects replay and supports rotation/overlap. Add positive/negative canonicalization fixtures.
+Required closure: ratify or revise the Ed25519 + RFC 9421 + RFC 9530 candidate; fully model request and response signature headers in OpenAPI; define key distribution/rotation/overlap/revocation and timestamp/nonce bounds; add positive/negative canonicalization and replay test vectors.
 
 ### P0-02 — WSS authentication transcript is still prose-only
 
