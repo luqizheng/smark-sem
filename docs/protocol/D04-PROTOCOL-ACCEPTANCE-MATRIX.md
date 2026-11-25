@@ -333,5 +333,8 @@ These are protocol/fixture requirements. They do not prove that the production R
 | D04-H83 | Callback Idempotency-Key differs from envelope event_id or event_id is absent after request signature verification | Signed 400 correlated only to the authenticated Idempotency-Key header; do not echo the untrusted body event_id; no Inbox/cursor writes |
 | D04-H84 | HTTP framing/parser rejects request before API handler | Outside application protocol; no protocol correlation identifiers are reflected |
 | D04-H85 | Network-edge/WAF rate limit rejects before API authentication | Outside application protocol; no protocol correlation identifiers are reflected; application-level 429 remains signed |
+| D04-H86 | Authenticated callback references an unknown/wrong-scope execution | Signed 404 with X-SEM-Event-Id equal to authenticated Idempotency-Key; Python and Node verify response signature and exact originating request context |
+| D04-H87 | Authenticated Platform GET references an unknown execution | Signed 404 with X-SEM-Request-Id equal to authenticated Idempotency-Key; Python and Node verify response signature and exact originating request context |
+| D04-H88 | Pre-authentication 401/early-413 response fixture | Python and Node assert no signature/correlation headers and a minimal error body with no message_id/in_reply_to/request_id/event_id |
 
 These cases define response-authentication classes only. They do not close D-04 P0-01 until deterministic signed-error vectors, OpenAPI validation, middleware ordering tests, and live HTTP/replay integration pass.
