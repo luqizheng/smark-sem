@@ -172,5 +172,54 @@
     "test_private_seed_base64": "ECEyQ1RldoeYqbrL3O3+DxAhMkNUZXaHmKm6y9zt/g8=",
     "public_key_base64": "Div31gXVZQXm91pGO94GP7V2JcxHAJx0BWvrAZ0z910=",
     "signature_base64": "Pa8ile6oZnO6LtHiEij62PXJ9NxlkmqGilCxVH6kUFLpKH7/2q6oWG/czObCc3GjLcYxOPQkFWHL99+5mPfhCQ=="
+  },
+  "http_error_404": {
+    "source": "D-04 deterministic TEST-ONLY authenticated GET 404 response vector; unknown execution is a signed structured error",
+    "request": {
+      "method": "GET",
+      "authority": "sem.internal.example",
+      "path": "/internal/sem/v1/executions/11111111-1111-4111-8111-111111111111",
+      "content_digest": "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:",
+      "message_id": "22222222-2222-4222-8222-222222222222",
+      "request_id": "33333333-3333-4333-8333-333333333333",
+      "body": ""
+    },
+    "response": {
+      "status": 404,
+      "content_type": "application/json",
+      "request_id": "33333333-3333-4333-8333-333333333333",
+      "body": "{\"error\":{\"class\":\"protocol\",\"code\":\"EXECUTION_NOT_FOUND\",\"detail\":\"Execution not found\",\"retryable\":false},\"in_reply_to\":\"22222222-2222-4222-8222-222222222222\",\"message_id\":\"77777777-7777-4777-8777-777777777777\"}",
+      "content_digest": "sha-256=:GU08kWt2FrHpxMzAgvw1rLKPCE3gxpWiKccRgRtQ908=:"
+    },
+    "signature_params": "(\"@status\" \"content-digest\";sf \"x-sem-request-id\" \"content-type\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req;sf);created=1795608000;expires=1795608060;nonce=\"c2VtLWdldC00MDQtZXJyb3Itbm9uY2UtMDE\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "signature_base": "\"@status\": 404\n\"content-digest\";sf: sha-256=:GU08kWt2FrHpxMzAgvw1rLKPCE3gxpWiKccRgRtQ908=:\n\"x-sem-request-id\": 33333333-3333-4333-8333-333333333333\n\"content-type\": application/json\n\"@method\";req: GET\n\"@authority\";req: sem.internal.example\n\"@path\";req: /internal/sem/v1/executions/11111111-1111-4111-8111-111111111111\n\"content-digest\";req;sf: sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:\n\"@signature-params\": (\"@status\" \"content-digest\";sf \"x-sem-request-id\" \"content-type\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req;sf);created=1795608000;expires=1795608060;nonce=\"c2VtLWdldC00MDQtZXJyb3Itbm9uY2UtMDE\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "test_private_seed_base64": "ECEyQ1RldoeYqbrL3O3+DxAhMkNUZXaHmKm6y9zt/g8=",
+    "public_key_base64": "Div31gXVZQXm91pGO94GP7V2JcxHAJx0BWvrAZ0z910=",
+    "signature_base64": "nRZMc+nxutVsUhTsMAj2t111xfBM56vkUb1QBaB5ZIOh7AUhxrv7mJjLNpbVKnsq2Dr/hq/Gi9BqCKZa7ZOCDA=="
+  },
+  "http_callback_error_404": {
+    "source": "D-04 deterministic TEST-ONLY authenticated SEM callback 404 response vector; callback event identity is the signed Idempotency-Key",
+    "request": {
+      "method": "POST",
+      "authority": "ai-pm.internal.example",
+      "path": "/internal/ai-pm/v1/sem-events",
+      "content_digest": "sha-256=:OVXG4kMe4PmuSjSFV3HyvcBvBht7Xjhm7OmfOeETUKg=:",
+      "message_id": "99999999-9999-4999-8999-999999999999",
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "idempotency_key": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "body": "{\"correlation_id\":\"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee\",\"event_id\":\"cccccccc-cccc-4ccc-8ccc-cccccccccccc\",\"event_type\":\"execution.infrastructure_uncertain\",\"execution_event_sequence\":7,\"execution_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"occurred_at\":\"2026-11-25T10:15:31Z\",\"payload\":{\"binding_epoch\":3,\"boot_id\":\"boot-2026-11-25T10:00:00Z\",\"operator_action_required\":true,\"reconciliation_required\":true,\"reservation_retained\":true,\"runner_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"runner_key_version\":2,\"since\":\"2026-11-25T10:15:30Z\",\"supervisor_instance_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"uncertainty_code\":\"host_unreachable\",\"uncertainty_scope\":\"runner_host\"},\"schema_version\":1}"
+    },
+    "response": {
+      "status": 404,
+      "content_type": "application/json",
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "body": "{\"error\":{\"class\":\"protocol\",\"code\":\"EXECUTION_NOT_FOUND\",\"detail\":\"Execution not found\",\"retryable\":false},\"message_id\":\"88888888-8888-4888-8888-888888888888\"}",
+      "content_digest": "sha-256=:3E6GyI6gILNgxhOQQkjlzmitcZ3XcGaCDXBaWWn2TkY=:"
+    },
+    "signature_params": "(\"@status\" \"content-digest\";sf \"x-sem-event-id\" \"content-type\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req;sf);created=1795608000;expires=1795608060;nonce=\"c2VtLWNhbGxiYWNrLTQwNC1ub25jZS0wMQ\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "signature_base": "\"@status\": 404\n\"content-digest\";sf: sha-256=:3E6GyI6gILNgxhOQQkjlzmitcZ3XcGaCDXBaWWn2TkY=:\n\"x-sem-event-id\": cccccccc-cccc-4ccc-8ccc-cccccccccccc\n\"content-type\": application/json\n\"@method\";req: POST\n\"@authority\";req: ai-pm.internal.example\n\"@path\";req: /internal/ai-pm/v1/sem-events\n\"content-digest\";req;sf: sha-256=:OVXG4kMe4PmuSjSFV3HyvcBvBht7Xjhm7OmfOeETUKg=:\n\"@signature-params\": (\"@status\" \"content-digest\";sf \"x-sem-event-id\" \"content-type\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req;sf);created=1795608000;expires=1795608060;nonce=\"c2VtLWNhbGxiYWNrLTQwNC1ub25jZS0wMQ\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "test_private_seed_base64": "ECEyQ1RldoeYqbrL3O3+DxAhMkNUZXaHmKm6y9zt/g8=",
+    "public_key_base64": "Div31gXVZQXm91pGO94GP7V2JcxHAJx0BWvrAZ0z910=",
+    "signature_base64": "9npB1Kri/aeAfE+OCHIK8x2r95vRGv01Ws+ToveMvTYAkUpaqf38LfXWdnjrVwEOY3h0EYVqUlDAk9D8ccEtCQ=="
   }
 }
