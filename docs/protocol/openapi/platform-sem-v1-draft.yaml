@@ -180,6 +180,7 @@ paths:
         - name: Idempotency-Key
           in: header
           required: true
+          description: MUST be covered by the request signature and equal the event_id in a valid callback envelope. Error correlation uses this authenticated header value, never an unverified body field.
           schema: { type: string, format: uuid }
       requestBody:
         required: true
@@ -258,7 +259,7 @@ components:
     SignedCallbackError:
       description: >-
         Authenticated callback response. MUST carry Content-Digest, Signature-Input,
-        Signature and exactly one X-SEM-Event-Id equal to the authenticated Idempotency-Key/event_id.
+        Signature and exactly one X-SEM-Event-Id equal to the authenticated Idempotency-Key. A valid event has the same event_id; on a signed validation error the header value remains the sole correlation source.
         The body is ProtocolErrorEnvelope and the response signature is bound to the exact originating request context.
       headers:
         Content-Digest: { required: true, schema: { type: string } }
@@ -266,7 +267,7 @@ components:
         Signature: { required: true, schema: { type: string } }
         X-SEM-Event-Id:
           required: true
-          description: Exact authenticated event_id (Idempotency-Key); never an unverified body/header value.
+          description: Exact authenticated Idempotency-Key; never an unverified body event_id.
           schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     PreAuthenticationError:
