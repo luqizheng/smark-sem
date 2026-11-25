@@ -90,6 +90,8 @@ Explicitly prohibit reuse of human JWT/API keys, SEM service JWT, Runner WSS cre
 
 ### D-03 — Permanent Runner loss and process isolation
 
+A safety proposal is now recorded in [Runner Host Isolation and Permanent-Loss Recovery Draft](./runner-host-isolation-and-permanent-loss-recovery-draft.md). It distinguishes local process containment from independent host fencing and defines three deployment profiles: managed VM, bare metal with BMC/IPMI, and unmanaged bare metal. Until the actual deployment profile is selected, safe behavior is quarantine plus operator intervention; automatic failover is not claimable.
+
 Specify what constitutes independently verifiable host fencing:
 - cloud/VM power-off or revoke compute lease;
 - container/VM runtime isolation;
