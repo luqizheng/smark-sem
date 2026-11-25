@@ -215,7 +215,7 @@ AI-PM PR #9 now carries a two-hash callback identity contract:
 - `payload_hash`: JCS SHA-256 of the payload object.
 - `event_envelope_hash`: JCS SHA-256 of the complete authenticated event envelope (`event_id`, `event_type`, `schema_version`, `occurred_at`, `execution_id`, `execution_event_sequence`, `payload`).
 
-The SEM repository added the shared vector `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` at commit `f9edbe42c596b29eb10eea2b0801049659d77cb8`. SEM Python and Node independently verify exact canonical bytes and both hashes, and prove that changing `event_type` or `occurred_at` changes the envelope hash while member reordering does not. CI runs #208 and #209 passed all ten validation steps.
+The SEM repository added the shared vector `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` at commit `ad09195d44d557b5a5d174d6bdfdef687dcef4b5`. SEM Python and Node independently verify exact canonical bytes and both hashes, and prove that changing `event_type`, `occurred_at` or optional `correlation_id` changes the envelope hash while member reordering does not. CI runs #208 and #209 passed all ten validation steps.
 
 AI-PM PR #9 pins this fixture and adds INBOX-35, requiring the eventual Rust implementation to match it exactly. The vector is ASCII/integer-only and does not close full RFC 8785 Unicode/numeric edge coverage or production Rust parser behavior.
 
@@ -226,3 +226,10 @@ The latest AI-PM DDL review found that the SEM source CHECK needed explicit `IS 
 AI-PM PR #9 adds INBOX-36..38 for NULL payload_hash, NULL event_envelope_hash and the complete SQL parse/three-valued-logic truth table. Its bilateral review addendum now records 38 acceptance cases. Latest observed AI-PM PR #9 head: `4eaaca0005f29547f07e6b4a9a7e438aac25e84b`.
 
 These are documentation and deterministic contract-test improvements only. The AI-PM DDL remains unratified pending actual PostgreSQL parse/replay, catalog inspection, two-connection concurrency and crash-atomicity evidence. No runtime implementation or migration has been added; no PR has been merged. D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
+
+
+## 12. Optional correlation_id correction
+
+The Platform–SEM `EventBase` schema permits an optional top-level `correlation_id`. The first full-envelope hash field list omitted it, leaving an authenticated metadata mutation outside replay identity. The shared fixture now includes `correlation_id`; Python and Node verify its presence in canonical bytes and assert that changing it changes `event_envelope_hash`. The canonical fixture is pinned at `smark-sem@ad09195d44d557b5a5d174d6bdfdef687dcef4b5`.
+
+The AI-PM contract now states that the hash covers every schema-defined envelope field present, including optional correlation_id; absent optional fields are omitted and unknown fields are rejected before hashing. This closes the design-level field-list omission only. Production Rust implementation, PostgreSQL replay/concurrency evidence and bilateral live callback tests remain open.
