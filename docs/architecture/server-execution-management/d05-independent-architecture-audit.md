@@ -411,14 +411,14 @@ The Runner–SEM WSS protocol §9.2 now freezes the V1 model:
 
 - `evidence_id` is an immutable opaque reference to the full Runner local-journal record; no HTTP fetch endpoint or second transport is introduced.
 - `evidence_schema_version=1` and `evidence_digest` (SHA-256 over RFC 8785 JCS of the complete evidence record) accompany the process-exit event.
-- The event carries the minimum exit-proof summary; SEM persists the complete event envelope before ACKing its durable Runner event sequence.
+- The event carries the minimum exit-proof summary; SEM persists the complete event envelope before ACKing its durable Runner event sequence. The ACK echoes `acknowledged_journal_id + acknowledged_event_sequence` with `disposition=durably_recorded`; schema conditionals require the cursor pair together, and negative fixtures reject either missing field.
 - Runner retains the full record until that durable ACK; post-ACK local retention is a D-10 operational policy. SEM's stored summary and digest remain the durable audit copy after local raw-record expiry.
 - The digest is an integrity binding, not a digital signature. V1 trusts authenticated WSS provenance and the Runner Supervisor authority; independent remote verification of the full raw record is explicitly out of scope.
 
 **Disposition: CONTRACT SEMANTICS CLOSED AT DRAFT LEVEL.** D-10 must still prove immutable journal commit/fsync, digest generation over exact JCS bytes, replay identity preservation, ACK gating and configured post-ACK retention under disk pressure and Supervisor restart. These are implementation acceptance requirements, not reasons to invent a second V1 evidence transport.
 
 
-The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format and supported evidence schema version. They do not prove runtime digest calculation, event replay persistence or retention; latest CI and later D-10 failure-injection evidence are required.
+The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format, supported evidence schema version and complete durable ACK cursor. They do not prove runtime digest calculation, event replay persistence or retention; latest CI and later D-10 failure-injection evidence are required.
 
 
 ## 15. D-03 manual host-loss disposition challenge
