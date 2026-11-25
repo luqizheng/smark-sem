@@ -55,6 +55,9 @@ for (const name of ["http_response", "http_304"]) {
   const vector = fixture[name];
   const request = vector.request;
   const response = vector.response;
+  const requestBody = Buffer.from(request.body, "utf8");
+  const requestDigest = "sha-256=:" + crypto.createHash("sha256").update(requestBody).digest("base64") + ":";
+  if (requestDigest !== request.content_digest) throw new Error(name + " associated request Content-Digest mismatch");
   const responseBody = Buffer.from(response.body, "utf8");
   const responseDigest = "sha-256=:" + crypto.createHash("sha256").update(responseBody).digest("base64") + ":";
   if (responseDigest !== response.content_digest) throw new Error(name + " Content-Digest mismatch");
