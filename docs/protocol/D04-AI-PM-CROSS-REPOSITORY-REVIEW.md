@@ -138,3 +138,8 @@ Before ratification, specify the request union (for example, an explicit expecte
 ### 6.6 Required acceptance coverage for P0-07
 
 Added D04-H91/H92/H93 to make the unbound-release race explicit: cancel-before-dispatch must atomically fence future dispatch; dispatch-wins must return the actual bound epoch and require normal fenced release; release-wins must reject any delayed assignment and remain replayable/idempotent. These are required future contract behaviors, not passing implementation tests; P0-07 remains open until the request/event schema and SEM dispatch sequencer define them.
+
+
+### 6.7 P0-07 proposed resolution: tagged unbound release with a SEM dispatch tombstone
+
+The bilateral proposal is now documented in Platform protocol §7.1 and AI-PM exact DDL/concurrency design §12. It uses expected_binding={state:unbound} versus {state:bound,binding_epoch:N}, one SEM per-execution sequencer shared by dispatch and release, and a distinct execution.unbound_release_applied event with dispatch_fence_id but no Runner/process fields. Dispatch-wins returns BINDING_ALREADY_ESTABLISHED and requires normal bound release; release-wins permanently prevents late assignment. D04-H94..H100 define the race/replay cases. This is a proposed sixth event; the existing five-event JSON Schema has not been changed and P0-07 remains open pending schema/OpenAPI/fixture and runtime proof.
