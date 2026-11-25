@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Validate positive and negative fixtures for every D-04 payload branch."""
+from __future__ import annotations
+import json
+from pathlib import Path
+import yaml
+from jsonschema import Draft202012Validator, FormatChecker
+
+ROOT = Path(__file__).resolve().parents[1]
+SCHEMAS = ROOT / "docs/protocol/json-schema"
+FIXTURE = ROOT / "tests/protocol/fixtures/payload-fixtures-v1.json"
+FORMAT = FormatChecker()
+
+def load_schema(name):
+    return yaml.safe_load((SCHEMAS / name).read_text(encoding="utf-8"))
+
+def expect_valid(validator, value, label):
+    errors = list(validator.iter_errors(value))
+    if errors:
+        raise AssertionError(f"{label}: expected valid, got: {errors[0].message}")
+
+def expect_invalid(validator, value, label):
+    errors = list(validator.iter_errors(value))
+    if not errors:
+        raise AssertionError(f"{label}: invalid mutation unexpectedly validated")
+
+data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+runner_schema = load_schema("runner-sem-v1.schema.yaml")
+platform_schema = load_schema("platform-sem-v1.schema.yaml")
+runner_validator = Draft202012Validator(runner_schema, format_checker=FORMAT)
+platform_validator = Draft202012Validator(platform_schema, format_checker=FORMAT)
+
+runner_types = set(runner_schema["properties"]["message_type"]["enum"])
+fixture_types = {item["message_type"] for item in data["runner_messages"]}
+assert runner_types == fixture_types, f"Runner fixture coverage mismatch: missing={runner_types-fixture_types}, extra={fixture_types-runner_types}"
+
+for item in data["runner_messages"]:
+    label = f"Runner {item['message_type']}"
+    expect_valid(runner_validator, item, label)
+    extra_top = dict(item)
+    extra_top["unexpected_top_level"] = True
+    expect_invalid(runner_validator, extra_top, label + " unknown top-level field")
+    extra_payload = json.loads(json.dumps(item))
+    extra_payload["payload"]["unexpected_payload_field"] = True
+    expect_invalid(runner_validator, extra_payload, label + " unknown payload field")
+    empty_payload = json.loads(json.dumps(item))
+    empty_payload["payload"] = {}
+    expect_invalid(runner_validator, empty_payload, label + " missing required payload fields")
+
+for item in data["platform_requests"]:
+    label = f"Platform request {item['message_type']}"
+    expect_valid(platform_validator, item, label)
+    extra_top = dict(item)
+    extra_top["unexpected_top_level"] = True
+    expect_invalid(platform_validator, extra_top, label + " unknown top-level field")
+    extra_payload = json.loads(json.dumps(item))
+    extra_payload["payload"]["unexpected_payload_field"] = True
+    expect_invalid(platform_validator, extra_payload, label + " unknown payload field")
+    empty_payload = json.loads(json.dumps(item))
+    empty_payload["payload"] = {}
+    expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
+
+event_types = set(platform_schema["$defs"]["EventBase"]["properties"]["event_type"]["enum"])
+fixture_event_types = {item["event_type"] for item in data["sem_events"]}
+assert event_types == fixture_event_types, f"SEM event fixture coverage mismatch: missing={event_types-fixture_event_types}, extra={fixture_event_types-event_types}"
+
+for item in data["sem_events"]:
+    label = f"SEM event {item['event_type']}"
+    expect_valid(platform_validator, item, label)
+    extra_top = dict(item)
+    extra_top["unexpected_top_level"] = True
+    expect_invalid(platform_validator, extra_top, label + " unknown top-level field")
+    extra_payload = json.loads(json.dumps(item))
+    extra_payload["payload"]["unexpected_payload_field"] = True
+    expect_invalid(platform_validator, extra_payload, label + " unknown payload field")
+    empty_payload = json.loads(json.dumps(item))
+    empty_payload["payload"] = {}
+    expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
+
+print(f"payload-fixtures-ok: {len(runner_types)} Runner messages, {len(data['platform_requests'])} Platform requests, {len(event_types)} SEM events")
+print(f"negative-fixtures-ok: unknown top-level, unknown payload and missing required payload fields for every branch")
