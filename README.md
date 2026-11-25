@@ -13,14 +13,14 @@ This repository owns the execution infrastructure:
 - SEM-local persistence and recovery
 - Platform–SEM integration contracts and SEM architecture documentation
 
-The AI-PM Platform remains authoritative for Project, Task, Run, Lease, Generation, Human Intervention/Consultation, business commands, and audit state. SEM must not connect to or share the Platform PostgreSQL database.
+The AI-PM Platform remains authoritative for Project, Task, Run/business execution state, approvals, HIR/Barrier, business commands, business results and audit state. SEM is an execution-message transport and runtime manager: it routes opaque prompts, supervises Runner/Harness processes, records infrastructure observations and releases execution resources when instructed by AI-PM. SEM must not connect to or share the Platform PostgreSQL database, mirror business state, or interpret prompt content.
 
 ## Integration
 
-- Platform Outbox → authenticated, versioned HTTPS → SEM Inbox
-- SEM → authenticated Platform HTTPS APIs for claim, lease renewal, and other authorized operations
-- Runner ↔ SEM over authenticated WSS
-- Harness → Platform MCP for project/task context and business operations
+- AI-PM Platform Outbox → authenticated, versioned HTTPS → SEM Inbox (execution request, opaque prompt body, release instruction)
+- SEM ↔ Runner over authenticated WSS (opaque prompt delivery, runtime control, process/resource observations)
+- Harness → AI-PM MCP for all project/task context, business state transitions and business results
+- SEM → AI-PM reports infrastructure delivery, process and cleanup facts only; it does not call business Claim/Lease/Task/HIR/Barrier APIs
 
 No distributed transaction and no shared database. Cross-service delivery is idempotent and reconciled.
 
@@ -28,7 +28,7 @@ No distributed transaction and no shared database. Cross-service delivery is ide
 
 **Architecture migration in progress. No production SEM implementation is declared complete.**
 
-The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md), [cross-repository code ownership](docs/architecture/CROSS-REPOSITORY-CODE-OWNERSHIP.md), and [Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md) for current boundaries and contracts.
+The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md), [cross-repository code ownership](docs/architecture/CROSS-REPOSITORY-CODE-OWNERSHIP.md), and [the authority-boundary decision](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). The previous [Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md) is superseded and retained only as historical material pending replacement wire schemas.
 
 ## Implementation status
 
