@@ -321,7 +321,7 @@ Remaining blockers:
 
 - The event sequence scope is now explicit in D-05 §5.4 as `runner_id + journal_id`, with execution_id + binding_epoch validated separately. Confirm every state-changing WSS message branch carries journal_id + event_sequence and that replay snapshots/cursors use the same scope.
 - D-05 now has explicit uncertainty-resolution edges and a separate process-capacity vs workspace-cleanup distinction. The D-05 transition table and the D-04 wire schemas still need a mechanical cross-reference check.
-- The selected systemd profile remains an architecture candidate, not an implementation proof. No runtime work should start until D-10 integration/failure-injection evidence and D-03 host-loss profile are complete.
+- The selected systemd profile remains an architecture candidate, not an implementation proof. No runtime work should start until Linux systemd integration/failure-injection evidence and D-03 host-loss profile are complete.
 
 ## 10. Updated disposition
 
@@ -378,7 +378,7 @@ The addendum now makes the safety rule explicit: once a StartTransientUnit reque
 
 It also makes the sole-broker privilege boundary mandatory: Harness cannot access systemd/D-Bus/cgroup controls, and no ordinary competing actor may create or replace units in the reserved namespace.
 
-**Disposition: DESIGN CONSTRAINTS CLARIFIED; P0 remains OPEN pending D-10 implementation and systemd >=250 failure injection.**
+**Disposition: DESIGN CONSTRAINTS CLARIFIED; P0 remains OPEN pending implementation plus Linux systemd integration test plan and systemd >=250 failure injection.**
 
 ### P0-03 — Start/release linearization
 
@@ -412,13 +412,13 @@ The Runner–SEM WSS protocol §9.2 now freezes the V1 model:
 - `evidence_id` is an immutable opaque reference to the full Runner local-journal record; no HTTP fetch endpoint or second transport is introduced.
 - `evidence_schema_version=1` and `evidence_digest` (SHA-256 over RFC 8785 JCS of the complete evidence record) accompany the process-exit event.
 - The event carries the minimum exit-proof summary; SEM persists the complete event envelope before ACKing its durable Runner event sequence. The ACK echoes `acknowledged_journal_id + acknowledged_event_sequence` with `disposition=durably_recorded`; schema conditionals require the cursor pair together, and negative fixtures reject either missing field.
-- Runner retains the full record until that durable ACK; post-ACK local retention is a D-10 operational policy. SEM's stored summary and digest remain the durable audit copy after local raw-record expiry.
+- Runner retains the full record until that durable ACK; post-ACK local retention is a deployment/operations policy. SEM's stored summary and digest remain the durable audit copy after local raw-record expiry.
 - The digest is an integrity binding, not a digital signature. V1 trusts authenticated WSS provenance and the Runner Supervisor authority; independent remote verification of the full raw record is explicitly out of scope.
 
-**Disposition: CONTRACT SEMANTICS CLOSED AT DRAFT LEVEL.** D-10 must still prove immutable journal commit/fsync, digest generation over exact JCS bytes, replay identity preservation, ACK gating and configured post-ACK retention under disk pressure and Supervisor restart. These are implementation acceptance requirements, not reasons to invent a second V1 evidence transport.
+**Disposition: CONTRACT SEMANTICS CLOSED AT DRAFT LEVEL.** The Linux systemd integration test plan must still prove immutable journal commit/fsync, digest generation over exact JCS bytes, replay identity preservation, ACK gating and configured post-ACK retention under disk pressure and Supervisor restart. These are implementation acceptance requirements, not reasons to invent a second V1 evidence transport.
 
 
-The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format, supported evidence schema version and complete durable ACK cursor. They do not prove runtime digest calculation, event replay persistence or retention. GitHub Actions Run #477 passed all 10 contract-validation steps (OpenAPI, JSON Schema/message coverage, crypto vectors, payload fixtures including the new negative cases, and independent Node JCS/Ed25519 vectors); D-10 failure-injection evidence remains mandatory.
+The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format, supported evidence schema version and complete durable ACK cursor. They do not prove runtime digest calculation, event replay persistence or retention. GitHub Actions Run #477 passed all 10 contract-validation steps (OpenAPI, JSON Schema/message coverage, crypto vectors, payload fixtures including the new negative cases, and independent Node JCS/Ed25519 vectors); Linux systemd failure-injection evidence remains mandatory.
 
 
 ## 15. D-03 manual host-loss disposition challenge
@@ -432,6 +432,6 @@ The user-confirmed V1 deployment model remains visible unreachable status + quar
 - physical isolation closes only the old execution reservations; it does not make the old host capacity schedulable. A rebuilt/re-enrolled host must receive a fresh trusted identity and telemetry;
 - manual disposition is never represented as process-exited evidence and never makes an AI-PM business decision.
 
-V1 does not require dual approval; the dedicated capability, on-site attestation, append-only audit and no-capacity-reuse rule are the selected minimum controls. This is a Draft contract, not implementation evidence. D-10 must test authorization, idempotency, audit durability, no-capacity-reuse and AI-PM authority separation.
+V1 does not require dual approval; the dedicated capability, on-site attestation, append-only audit and no-capacity-reuse rule are the selected minimum controls. This is a Draft contract, not implementation evidence. The Linux systemd integration test plan must test authorization, idempotency, audit durability, no-capacity-reuse and AI-PM authority separation.
 
 **Disposition: D-03 operator-action semantics clarified at Draft level; implementation and authorization tests remain open.**
