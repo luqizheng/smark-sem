@@ -42,8 +42,8 @@ components = [
     ('"idempotency-key"', http["idempotency_key"]),
     ('"x-sem-message-id"', http["message_id"]),
 ]
-signature_base = "\\n".join(f"{name}: {value}" for name, value in components)
-signature_base += f'\\n"@signature-params": {http["signature_params"]}'
+signature_base = "\n".join(f"{name}: {value}" for name, value in components)
+signature_base += f'\n"@signature-params": {http["signature_params"]}'
 assert signature_base == http["signature_base"], "HTTP signature-base canonicalization mismatch"
 
 http_pub = b64d(http["public_key_base64"])
