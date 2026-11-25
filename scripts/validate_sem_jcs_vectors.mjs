@@ -371,8 +371,8 @@ expectCanonical(
   "recursive sort, array order and control escaping"
 );
 expectCanonical(
-  String.raw`{"text":"quote:\\" slash:/ reverse:\\\\ unicode:é"}`,
-  String.raw`{"text":"quote:\\" slash:/ reverse:\\\\ unicode:é"}`,
+  String.raw`{"text":"quote:\" slash:/ reverse:\\ unicode:é"}`,
+  String.raw`{"text":"quote:\" slash:/ reverse:\\ unicode:é"}`,
   "quote, reverse solidus, slash and non-ASCII escaping"
 );
 expectReject(() => JSON.parse("{"), "malformed JSON");
