@@ -27,6 +27,22 @@ def verify(public: bytes, signature: bytes, message: bytes) -> bool:
     except InvalidSignature:
         return False
 
+
+def reject_duplicate_object_members(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object member: " + key)
+        result[key] = value
+    return result
+
+try:
+    json.loads('{"a":1,"\\u0061":2}', object_pairs_hook=reject_duplicate_object_members)
+except ValueError:
+    pass
+else:
+    raise AssertionError("duplicate JSON member with escaped-equivalent name was accepted")
+
 data = json.loads(FIXTURE.read_text(encoding="utf-8"))
 http = data["http"]
 body = http["body"].encode("utf-8")
