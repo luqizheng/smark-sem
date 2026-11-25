@@ -28,7 +28,7 @@ No distributed transaction and no shared database. Cross-service delivery is ide
 
 **Architecture migration in progress. No production SEM implementation is declared complete.**
 
-The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md), [cross-repository code ownership](docs/architecture/CROSS-REPOSITORY-CODE-OWNERSHIP.md), and [the authority-boundary decision](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). The previous [Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md) is superseded and retained only as historical material pending replacement wire schemas.
+The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md), [cross-repository code ownership](docs/architecture/CROSS-REPOSITORY-CODE-OWNERSHIP.md), [the authority-boundary decision](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), and the [replacement execution-message protocol draft](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md). The previous [Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md) is superseded and retained only as historical material pending replacement wire schemas.
 
 ## Implementation status
 
