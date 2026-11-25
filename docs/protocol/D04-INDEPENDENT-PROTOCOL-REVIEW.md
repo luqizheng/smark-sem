@@ -198,3 +198,8 @@ The Python and Node validators independently recompute exact request/response Co
 Unsigned pre-authentication 401 and early-413 fixtures were added. Python/Node assert no signature/correlation headers and a minimal body structurally excluding message_id, in_reply_to, request_id and event_id. Acceptance cases D04-H86..H88 record this coverage.
 
 This is deterministic fixture evidence only. It does not prove live authentication-before-JSON-parse ordering, callback database non-enumeration behavior, edge body-limit handling, nonce replay persistence or real HTTP server/client association. Signed 400/412/422/429/500 vectors remain open. P0-01 remains **OPEN / CHANGES REQUIRED**.
+
+
+### CI evidence update for §5.7 — 2026-11-25
+
+The signed Platform GET 404, signed SEM callback 404 and unsigned pre-authentication 401/early-413 fixture changes passed SEM Protocol Contract Validation run #413 on commit `dfe00314c65b3899c65da495e8f866678d2b2739`. All ten steps succeeded, including OpenAPI/external references, JSON Schema, cryptographic vectors, payload fixtures and independent Node JCS/Ed25519 verification. This remains deterministic contract CI; live HTTP middleware and replay behavior remain open.
