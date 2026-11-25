@@ -71,14 +71,14 @@ $defs:
     additionalProperties: false
   SemInfrastructureEventEnvelope:
     type: object
-    required: [event_id, event_type, schema_version, occurred_at, event_sequence, journal_id, payload]
+    required: [event_id, event_type, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
       event_id: { type: string, format: uuid }
       event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
-      event_sequence: { type: integer, minimum: 1 }
-      journal_id: { type: string, format: uuid }
+      execution_id: { type: string, format: uuid }
+      execution_event_sequence: { type: integer, minimum: 1 }
       correlation_id: { type: string, format: uuid }
       payload: { type: object, minProperties: 1 }
     additionalProperties: false
