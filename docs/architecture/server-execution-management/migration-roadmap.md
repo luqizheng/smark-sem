@@ -1,5 +1,8 @@
 # 迁移路线图：Phase 0–5（migration-roadmap）
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document describes the superseded SEM V1 Platform Claim/Lease/Run/Task/HIR/Barrier control-plane model. Preserve it as historical design and audit evidence only. Do not implement its business orchestration, database ownership, state machines or API flows. The current review baseline is the [SEM authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [Platform–SEM execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 - 性质：架构设计（实施计划定稿），本阶段不实施。
 - Greenfield 前提（`engineering-lifecycle-policy.md`）：Phase 序号是**架构实施阶段**，不是「必须保留旧架构」的约束；允许直接重构 Schema/接口；每个 Phase 后全新库必须可完整初始化；**Phase 0 不做数据迁移**（无历史生产数据，活跃中的开发库按项目惯例处理）。
 
