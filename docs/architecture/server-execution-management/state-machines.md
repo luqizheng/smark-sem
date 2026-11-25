@@ -1,5 +1,8 @@
 # SEM V1 State Machines
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 > **Authority-boundary revision (2026-11-25):** Run/Lease/Barrier/Task state machines here describe AI-PM-owned business state, not SEM-local state. SEM must not implement or mirror them. SEM has a separate infrastructure Execution lifecycle; see [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 
 > **Authority-boundary revision (2026-11-25):** Run/Lease/Barrier/Task state machines here describe AI-PM-owned business state, not SEM-local state. SEM must not implement or mirror them. SEM has a separate infrastructure Execution lifecycle; see [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
