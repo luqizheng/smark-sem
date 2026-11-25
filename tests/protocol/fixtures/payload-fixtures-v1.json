@@ -325,7 +325,9 @@
       "message_sequence": 15,
       "occurred_at": "2026-11-25T12:00:00Z",
       "payload": {
-        "acknowledged_message_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "acknowledged_message_id": "10000000-0000-4000-8000-000000000012",
+        "acknowledged_journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "acknowledged_event_sequence": 12,
         "disposition": "durably_recorded"
       }
     },
