@@ -236,3 +236,10 @@ The AI-PM contract now states that the hash covers every schema-defined envelope
 
 
 CI evidence update: latest PR head `cda9912d106cd0bb90f67da42c3f971f9147b8b7` passed SEM Protocol Contract Validation runs #226 and #227, including the callback envelope's optional `correlation_id` changed-value and omission hash assertions.
+
+
+## 13. Signed callback ACK response vector
+
+The deterministic HTTP response suite now includes `http_callback_ack`: a SEM→AI-PM POST request carrying the shared `execution.infrastructure_uncertain` event and a signed 200 ACK response. The response `X-SEM-Event-Id` is bound to the authenticated `event_id`. Python and Node independently verify exact request/response Content-Digest values, RFC 9421 signature-base bytes, Ed25519 signature verification and reproducibility. Both also reject a response signature if the event correlation header is mutated to the transport `message_id`.
+
+D04-H68/H69 cover the valid callback ACK and mismatched event-correlation cases. This closes the deterministic fixture gap for one successful callback response class only; signed 409 errors, all other signed error classes, a third independent implementation, live HTTP middleware and bilateral request/response association tests remain open.
