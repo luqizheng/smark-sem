@@ -244,3 +244,20 @@ This is schema and Draft semantic alignment only. The schema cannot prove that t
 ### CI evidence update for §5.9 — 2026-11-25
 
 SEM Protocol Contract Validation run #513 (`45619646503`) passed all 10 steps on commit `eceec9e0ef7ba7a31865f9e779e4a73a0be8f8b3`, including JSON Schema meta-validation and the new positive/negative ReleaseApplied evidence fixtures. This validates the Draft contract shape only; it does not prove SEM's cross-message identity join or live Runner process-exit evidence behavior.
+
+
+## 5.10 Follow-up: distinguish no-start release from process-exit release — 2026-11-25
+
+The D-05 release race table permits an effective no-start ACK when StartTransientUnit is provably not sent or an in-flight start is reconciled to no accepted invocation, no pending start/restart job and empty/absent exact containment. The WSS disposition stop_fenced had previously been described only as a durable fence, leaving ambiguity about whether it could also represent that positive no-start result.
+
+Aligned the Draft contracts:
+- stop_fenced now means durable fence **plus positive no-start proof**, with stop_fence_id referencing the immutable local journal record. It is not a process-exit claim.
+- If a Harness invocation existed, the only terminal release dispositions are process_stopped/already_exited with the exact earlier process-exit evidence reference.
+- If neither no-start nor positive process-exit proof is available, the disposition is local_uncertain and reservation/quarantine remain.
+- Added D04-W49 and mapped the wire dispositions into the Linux systemd failure-injection test plan.
+
+This clarifies the Draft contract; it does not close P0-03. The systemd >=250 integration suite must prove each no-start/start/release schedule and the identity-bound evidence ordering before ratification.
+
+### CI evidence boundary
+
+Protocol Contract Validation run #527 (`45620243425`) passed all 10 steps on executable contract head `bf2a1ec300a9afc96d06a60b25c75568121b1177`, including ReleaseApplied schema semantics, cross-message evidence-link fixture assertions and the Platform event schema/fixture suite. The subsequent commits through this §5.10 update changed only protocol/architecture/test-plan prose; no executable schema, validator or fixture changed after run #527. The run does not prove the Linux no-start or process-exit runtime behavior.
