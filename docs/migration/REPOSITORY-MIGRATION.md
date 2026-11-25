@@ -6,6 +6,8 @@
 - Migration type: controlled repository-boundary extraction
 - Status: **Documentation baseline migrated; runtime implementation not yet migrated**
 
+> **Authority-boundary revision (2026-11-25):** The user-confirmed [SEM Authority Boundary and Execution Message Model](../architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md) supersedes earlier ownership statements in this migration record. SEM transports opaque execution messages and manages Runner/Harness runtime resources; AI-PM MCP remains the sole business context and Task mutation channel. The former SEM→Platform Claim/Lease/business-command proxy model is no longer normative.
+
 ## Ownership after migration
 
 ### Owned by smark-sem
@@ -14,20 +16,20 @@
 - SEM service API and Runner WSS protocol specifications
 - SEM database schema design (SEM-local database only)
 - Runner connection/session lifecycle
-- Dispatch coordination and resource-aware scheduling
-- Harness process supervision and process observations
-- SEM recovery, delivery ledgers, and SEM integration tests
+- Infrastructure-level Runner selection/capacity admission and opaque prompt delivery
+- Harness process supervision, process observations and resource cleanup
+- SEM recovery, message delivery ledgers, resource reservations and SEM integration tests
 
 ### Remains owned by ai-pm
 
-- Platform Project, Task, Run, Lease, Generation and HIR state machines
+- Platform Project, Task, business Run state, approvals, HIR, Barrier and business lifecycle
 - Platform PostgreSQL schema and migrations
 - Platform MCP business tools
 - Platform Outbox producer and Platform HTTPS API implementation
 - Platform-side transaction/locking changes required to make the new contract safe
 - Platform-side removal or fail-closed treatment of legacy Runner MCP claim/command paths
 
-SEM must not copy or reimplement Platform authority. It must call the Platform's versioned HTTPS APIs.
+SEM must not copy or reimplement Platform business authority. SEM receives execution requests and release instructions from AI-PM, and reports infrastructure delivery/process/cleanup facts through narrowly scoped infrastructure contracts. It must not call Platform Claim, Lease Renewal, business command ACK, Task transition, HIR or Barrier mutation operations.
 
 ## Documents migrated in this initial pass
 
@@ -55,17 +57,17 @@ Do not mechanically move `apps/ai-pm-worker`, `crates/pm-application`, `crates/p
 ## Required next migration work
 
 1. Finish SEM-02J's complete Platform transaction and execution-path audit in `ai-pm`; the Platform lock protocol and state-machine repairs remain Platform work.
-2. Finalize the cross-repository HTTPS, Outbox/Inbox, WSS and process-observation contracts. Promote only reviewed contracts to normative protocol documents.
+2. Replace the superseded Protocol V1 with opaque execution-request/delivery/release/runtime-observation HTTPS, Outbox/Inbox and WSS contracts. Promote only reviewed contracts to normative protocol documents.
 3. Inventory all SEM-01 deployment audit and SEM-specific design documents, then migrate the remaining relevant material with source provenance.
-4. Establish a Rust modular-monolith service skeleton in this repository only after the contracts are approved.
-5. Implement SEM-local persistence and control plane here; implement Platform API/outbox and legacy-path cutover in `ai-pm`.
+4. Continue the Rust modular-monolith skeleton, but do not implement old Claim/Lease/business-command proxy semantics; implementation waits for replacement contract review.
+5. Implement SEM-local message transport, Runner runtime/process/resource management here; implement Platform business decisions, Outbox production, Harness MCP authorization and infrastructure reporting endpoints in `ai-pm`.
 6. Add bilateral contract tests and end-to-end tests across the two repositories.
 
 ## Safety constraints
 
 - No shared database and no SEM direct Platform PostgreSQL connection.
-- Platform remains the only authority for Run/Lease/Generation/HIR.
-- SEM is the sole Runner control-plane coordinator after cutover.
+- AI-PM remains the only authority for Task/business Run state, approvals, HIR/Barrier and business completion.
+- SEM owns Runner connectivity, opaque prompt delivery, process/runtime/resource management and infrastructure observations only.
 - Runner WSS is the only Runner control channel; Harness retains Platform MCP for business operations.
 - No distributed transaction.
 - RabbitMQ is an existing independent single instance, not a required safety dependency or authority.
@@ -150,7 +152,7 @@ These are new boundary artifacts, not copies. Protocol V1 is the implementation 
 
 - Historical and design document extraction: **complete for the two inventoried source directories**.
 - Code ownership inventory: **documented**.
-- Cross-repository protocol V1: **documented; implementation and bilateral review pending**.
+- Previous Protocol V1: **superseded; replacement opaque execution-message protocol under design/review**.
 - Rust SEM service skeleton: **not created**.
 - Runtime code migration: **not started by design**; current Platform-coupled code remains in ai-pm.
 - SEM-02J Platform transaction audit: **still Changes Required / Audit In Progress**.
