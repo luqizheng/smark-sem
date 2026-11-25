@@ -410,6 +410,35 @@
         ],
         "generated_at": "2026-11-25T12:00:00Z"
       }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000020",
+      "message_type": "harness.process_exited",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 20,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "binding_epoch": 1,
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "boot_id": "boot-01",
+        "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "cgroup_populated": 0,
+        "evidence_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "exit_status": {
+          "kind": "signal",
+          "signal": 9
+        },
+        "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "exit_observed_at": "2026-11-25T12:00:00Z"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 20
     }
   ],
   "platform_requests": [
@@ -561,6 +590,67 @@
         ],
         "runner_key_version": 1,
         "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999991",
+      "event_type": "harness.process_observed",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 6,
+      "payload": {
+        "binding_epoch": 1,
+        "runner_id": "55555555-5555-4555-8555-555555555555",
+        "runner_key_version": 1,
+        "boot_id": "boot-01",
+        "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "observation": "exited",
+        "process_identity": {
+          "pid": 4312,
+          "process_start_identity": "proc-start-4312",
+          "cgroup_path": "/system.slice/sem-exec-111",
+          "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        },
+        "observed_at": "2026-11-25T12:00:00Z",
+        "exit_evidence": {
+          "evidence_id": "99999999-9999-4999-8999-999999999992",
+          "cgroup_populated": 0,
+          "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+          "exit_signal": 9
+        }
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999993",
+      "event_type": "harness.process_observed",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 7,
+      "payload": {
+        "binding_epoch": 1,
+        "runner_id": "55555555-5555-4555-8555-555555555555",
+        "runner_key_version": 1,
+        "boot_id": "boot-01",
+        "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "observation": "exit_status_unknown",
+        "process_identity": {
+          "pid": 4312,
+          "process_start_identity": "proc-start-4312",
+          "cgroup_path": "/system.slice/sem-exec-111",
+          "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        },
+        "observed_at": "2026-11-25T12:00:00Z",
+        "exit_evidence": {
+          "evidence_id": "99999999-9999-4999-8999-999999999994",
+          "cgroup_populated": 0,
+          "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        }
       }
     }
   ],
