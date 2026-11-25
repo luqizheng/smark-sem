@@ -44,7 +44,7 @@ paths:
             X-SEM-Request-Id:
               required: true
               description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
-              schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExecutionAcceptanceEnvelope' }
@@ -85,7 +85,7 @@ paths:
             X-SEM-Request-Id:
               required: true
               description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
-              schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExecutionSnapshotEnvelope' }
@@ -117,7 +117,7 @@ paths:
             X-SEM-Request-Id:
               required: true
               description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
-              schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+              schema: { type: string, format: uuid }
         '401': { $ref: '#/components/responses/PreAuthenticationError' }
         '404': { $ref: '#/components/responses/SignedPlatformError' }
         '500': { $ref: '#/components/responses/SignedPlatformError' }
@@ -152,7 +152,7 @@ paths:
             X-SEM-Request-Id:
               required: true
               description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
-              schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReleaseAcceptanceEnvelope' }
@@ -197,7 +197,7 @@ paths:
             X-SEM-Event-Id:
               required: true
               description: Echo of the authenticated callback event_id.
-              schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EventAcknowledgementEnvelope' }
@@ -240,8 +240,8 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Canonical lowercase hyphenated UUID; MUST be covered by the request signature and equal request_id (Platform request) or event_id (valid callback envelope).
-      schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+      description: UUID value MUST be covered by the request signature and byte-for-byte equal the canonical lowercase request_id (Platform request) or event_id (valid callback envelope). Signed error correlation echoes this exact authenticated header value.
+      schema: { type: string, format: uuid }
   responses:
     SignedPlatformError:
       description: >-
@@ -255,7 +255,7 @@ components:
         X-SEM-Request-Id:
           required: true
           description: Exact authenticated request_id (Idempotency-Key); never message_id.
-          schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+          schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     SignedCallbackError:
       description: >-
@@ -269,7 +269,7 @@ components:
         X-SEM-Event-Id:
           required: true
           description: Exact authenticated Idempotency-Key; never an unverified body event_id.
-          schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+          schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     PreAuthenticationError:
       description: >-
@@ -308,7 +308,7 @@ components:
       required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         schema_version: { const: 1 }
         message_type: { type: string }
         occurred_at: { type: string, format: date-time }
@@ -343,7 +343,7 @@ components:
       required: [message_id, request_id, execution_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
         accepted_at: { type: string, format: date-time }
@@ -370,7 +370,7 @@ components:
       required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         release_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
@@ -438,7 +438,7 @@ components:
         X-SEM-Request-Id:
           required: true
           description: Exact authenticated request_id (Idempotency-Key); never message_id.
-          schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+          schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     SignedCallbackError:
       description: >-
@@ -452,7 +452,7 @@ components:
         X-SEM-Event-Id:
           required: true
           description: Exact authenticated Idempotency-Key; never an unverified body event_id.
-          schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+          schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     PreAuthenticationError:
       description: >-
@@ -491,7 +491,7 @@ components:
       required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         schema_version: { const: 1 }
         message_type: { type: string }
         occurred_at: { type: string, format: date-time }
@@ -526,7 +526,7 @@ components:
       required: [message_id, request_id, execution_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
         accepted_at: { type: string, format: date-time }
@@ -553,7 +553,7 @@ components:
       required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         release_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
@@ -642,7 +642,7 @@ components:
       required: [message_id, request_id, execution_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
         accepted_at: { type: string, format: date-time }
@@ -669,7 +669,7 @@ components:
       required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         release_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
@@ -737,7 +737,7 @@ components:
         X-SEM-Request-Id:
           required: true
           description: Exact authenticated request_id (Idempotency-Key); never message_id.
-          schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+          schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     SignedCallbackError:
       description: >-
@@ -751,7 +751,7 @@ components:
         X-SEM-Event-Id:
           required: true
           description: Exact authenticated Idempotency-Key; never an unverified body event_id.
-          schema: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} }
+          schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     PreAuthenticationError:
       description: >-
@@ -790,7 +790,7 @@ components:
       required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         schema_version: { const: 1 }
         message_type: { type: string }
         occurred_at: { type: string, format: date-time }
@@ -825,7 +825,7 @@ components:
       required: [message_id, request_id, execution_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
         accepted_at: { type: string, format: date-time }
@@ -852,7 +852,7 @@ components:
       required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
-        request_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         release_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
