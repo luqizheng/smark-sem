@@ -283,7 +283,7 @@ Runner serializes start and release commands per execution/binding under one dur
 
 ## 8. Reconciliation API responsibilities (logical contract)
 
-Exact internal HTTP paths and WSS schema are D-04, not defined here. Platform↔SEM uses plain HTTP only on the company private network in V1; it has no public ingress and does not require HTTPS. Authentication, request integrity, replay protection, idempotency and audit remain mandatory. HTTP does not provide confidentiality, so network isolation and the handling of sensitive payload material must be explicitly covered by D-09. The following logical operations are required:
+Exact internal HTTP paths and WSS schema are D-04, not defined here. Platform↔SEM uses HTTP or HTTPS on the company private network in V1; it has no public ingress. HTTPS is optional and supports enterprise CA or explicitly trusted self-signed certificates, with mandatory certificate/hostname validation and no verification bypass. HTTP is allowed only on a restricted internal network and does not provide confidentiality; authentication, request integrity, timestamp/nonce replay protection, idempotency and audit remain mandatory. Sensitive payload protection, trust-material distribution and certificate lifecycle must be covered by D-09. The following logical operations are required:
 
 **Platform ↔ SEM**
 - `execution.requested`: idempotent create/accept using stable request and execution IDs.
