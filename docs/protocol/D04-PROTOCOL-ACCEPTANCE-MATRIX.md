@@ -56,7 +56,7 @@
 
 ## 2.1 Approved cryptographic profile acceptance cases
 
-The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cryptographic cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases below add 12 cases, for 92 total. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
+The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cryptographic cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases add 12 cases, for 92. The executable crypto-vector cases add 10, for 102 total. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
 
 | ID | Scenario | Expected result |
 |---|---|---|
@@ -73,6 +73,23 @@ The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decisio
 | D04-W38 | Runner key is rotated with an explicitly configured overlap window | Only keys in the active/overlap set authenticate |
 | D04-W39 | Runner key is revoked | Authentication rejected even if the signature is otherwise valid |
 | D04-W40 | TLS hostname/chain/pin validation fails while Runner proof is valid | Connection rejected before application authentication |
+
+### 2.2 Executable cryptographic vector cases
+
+The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json). The verifier script checks the expected digest, RFC 9421 signature base, Ed25519 signature, RFC 8785 transcript serialization, WSS domain separation, deterministic key derivation and negative mutations. The fixture private seeds MUST never be used outside tests.
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-H41 | Verify the fixed HTTP request Content-Digest and Ed25519 signature-base vector | Exact digest, canonical base and signature verify |
+| D04-H42 | Change the body while retaining the original Content-Digest | Digest mismatch; reject before persistence |
+| D04-H43 | Change HTTP method or authority | Signature verification fails |
+| D04-H44 | Change path or Content-Type | Signature verification fails |
+| D04-H45 | Change Idempotency-Key or Content-Digest | Signature verification fails |
+| D04-W46 | Verify the fixed WSS transcript after RFC 8785 JCS serialization and domain separation | Exact transcript signature verifies |
+| D04-W47 | Change runner_id, audience or endpoint authority | Signature verification fails |
+| D04-W48 | Change challenge_id or protocol version | Signature verification fails |
+| D04-W49 | Remove the domain-separation prefix | Signature verification fails |
+| D04-W50 | Derive public key and signature again from the TEST-ONLY seed | Derived key and deterministic signature exactly match fixture |
 
 ## 3. Runner↔SEM WSS contract cases
 
