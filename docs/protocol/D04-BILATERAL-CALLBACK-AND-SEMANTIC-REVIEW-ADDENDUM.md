@@ -274,3 +274,8 @@ Added `http_snapshot_200` to the deterministic response vectors. Python and Node
 
 
 Latest GET snapshot ETag vector evidence: PR head `1b81fb2cc5f92ef43ae09e46547587fd681359b4` passed CI runs #349/#350, including the 200 signed ETag vector and both 200/304 ETag tamper negatives.
+
+
+## 17. Authenticated GET 404 response shape
+
+The OpenAPI draft now models an authenticated unknown-execution 404 as a structured `ProtocolErrorEnvelope` with Content-Digest, Signature-Input, Signature and `X-SEM-Request-Id = request_id`. This is distinct from pre-authentication or unparseable-request failures, whose safe signed/unsigned correlation policy remains open. A deterministic signed 404 response vector and live not-found interoperability test have not yet been added; the broader signed-error coverage gate remains open.
