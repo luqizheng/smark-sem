@@ -61,19 +61,21 @@ These are the current user-confirmed constraints and must not be reopened casual
 
 ### D-01 — Runner identity trust chain
 
-A concrete proposal is now recorded in [Runner Enrollment and Cryptographic Identity Draft](./runner-enrollment-and-cryptographic-identity-draft.md). It recommends a Runner-local keypair, human-approved enrollment intent, AI-PM-owned trust record, AI-PM-signed identity attestation, challenge-response WSS authentication and AI-PM-side proof verification during delegated bootstrap. It remains Draft / Review, not frozen.
+The current proposal is recorded in [Runner Enrollment and Cryptographic Identity Draft](./runner-enrollment-and-cryptographic-identity-draft.md). It adopts the GitLab-Runner-style operator workflow:
 
-Current AI-PM source has a reusable `cpk_` device credential that authenticates as the device owner's HumanActor; device enrollment currently records device metadata and `is_runner`, not an independently trusted public key. It is not suitable as a per-execution Harness grant.
+1. An SEM administrator creates a scoped, short-lived, single-use registration credential in SEM.
+2. The operator runs `sem-runner register --registry https://sem.example.com --registration-token <TOKEN>` on the Runner host.
+3. Runner generates its own Ed25519 keypair locally; only the public key is sent to SEM.
+4. SEM atomically consumes the registration credential, assigns immutable `runner_id`, and binds the public key.
+5. The installed Runner authenticates its long-lived outbound WSS connection with challenge-response proof of possession. The registration token is never reused for WSS or MCP.
 
-The final design must choose and specify:
-- Runner keypair generation and private-key storage (OS keystore, TPM, file-protected fallback, or other);
-- registration proof of possession and binding to an owner-approved device record;
-- how AI-PM independently validates the key (direct enrollment authority, signed enrollment certificate/CA, or another explicit trust chain);
-- how SEM can route to the Runner without being able to substitute its identity;
-- key rotation overlap, revocation propagation, lost-key recovery, host reinstall and device re-enrollment;
-- compromise response and audit.
+Authority is split deliberately: SEM owns infrastructure enrollment, Runner identity, key versions, connection/admission state and revocation. AI-PM owns business grants and exact Task/Run authorization. SEM-issued Runner identity is not business authorization.
 
-**Required invariant:** a public-key thumbprint supplied only by SEM is insufficient. SEM must not be able to redeem or impersonate the Runner-bound bootstrap ticket.
+The same WSS connection is the dispatch channel; SEM must not open a fresh connection or poll Runner for every task. Dispatch eligibility is a derived predicate, not a socket-open boolean. It requires an authenticated current WSS session, fresh application heartbeat, fresh same-boot resource telemetry, healthy Supervisor, accepting-work admission state and sufficient capacity after durable reservations. Transport ping/pong alone is insufficient. A delivery is sent only after reservation and binding epoch are durable; missing ACK or WSS loss causes reconciliation, not blind reassignment.
+
+The proposal remains pending ratification and D-04/D-09 contract closure. Open details include exact API/CLI schemas, token hashing and idempotency, key storage, WSS challenge canonicalization, heartbeat intervals/deadlines, identity assertion/key distribution, and rotation/recovery procedures.
+
+**Required invariants:** registration token is bootstrap-only; Runner private key never leaves the host; WSS online does not prove process exit; disconnect does not prove process death; SEM cannot issue AI-PM grants; and no replacement Runner may start the same logical execution until the old binding/process is safely fenced.
 
 ### D-02 — Delegated grant and bootstrap protocol
 
