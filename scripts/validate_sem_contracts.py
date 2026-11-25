@@ -42,6 +42,31 @@ if runner_types != runner_branches:
     extra = sorted(runner_branches - runner_types)
     raise SystemExit(f"Runner WSS message branch mismatch; missing={missing}, extra={extra}")
 
+# Durable Runner observations share one journal stream across reconnects.
+# Keep this allow-list aligned with the WSS protocol and D-05 event model.
+durable_runner_types = {
+    "execution.delivery_received",
+    "harness.starting",
+    "harness.started",
+    "harness.start_failed",
+    "harness.process_exited",
+    "execution.release_applied",
+    "runner.admission.changed",
+}
+journal_required_types = set()
+for item in runner.get("allOf", []):
+    condition = item.get("if", {}).get("properties", {}).get("message_type", {})
+    required = item.get("then", {}).get("required", [])
+    if "journal_id" in required and "event_sequence" in required:
+        values = condition.get("enum", [])
+        journal_required_types.update(values)
+if durable_runner_types != journal_required_types:
+    missing = sorted(durable_runner_types - journal_required_types)
+    extra = sorted(journal_required_types - durable_runner_types)
+    raise SystemExit(
+        f"Runner durable journal coverage mismatch; missing={missing}, extra={extra}"
+    )
+
 event_defs = platform["$defs"]["SemInfrastructureEventEnvelope"]["oneOf"]
 event_names = set(platform["$defs"]["EventBase"]["properties"]["event_type"]["enum"])
 event_branches = set()
