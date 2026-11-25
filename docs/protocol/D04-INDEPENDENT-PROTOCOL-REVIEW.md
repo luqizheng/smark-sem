@@ -35,18 +35,18 @@ A deterministic Ed25519/JCS WSS transcript vector now exists with exact transcri
 
 Required closure: freeze the exact Ed25519/JCS transcript fields; add at least two independent language implementations, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
-### P0-03 — WSS strict payload schemas and discriminator coverage are validated; payload fixtures remain incomplete
+### P0-03 — WSS strict payload schemas and positive/negative branch fixtures are validated
 
 The Runner WSS schema now defines a dedicated strict payload schema for every post-handshake message type: heartbeat/health, resource telemetry, admission, delivery, credential bootstrap, process lifecycle, release, ACK/error, superseded session and replay request/snapshot. State-changing payloads reject undeclared fields. The session-ack frame is defined only in the pre-application handshake schema to avoid duplicate ownership.
 
-The GitHub Actions validator confirms that all 19 application message enum values have exactly one corresponding conditional schema branch, and all five event types map to a discriminated payload branch. OpenAPI and JSON Schema meta-schema validation also pass. This verifies structural branch coverage, but not semantic direction correctness or positive/negative payload fixtures for every branch.
+The GitHub Actions workflow validates OpenAPI 3.1/external references and all JSON Schema Draft 2020-12 meta-schemas. Its discriminator checker confirms all 19 application message enum values map to conditional payload branches. A fixture suite then validates one positive sample for each of the 19 Runner message types, 2 Platform request types and 5 SEM event types; for every sample it rejects an unknown top-level field, an unknown payload field and an empty payload. Run #26 passed all these checks on commit `df0c527d89db099901ed6cd9e9a215c2f4fd31c7`.
 
-Required closure: compare each branch's sender direction to the narrative catalogue; add positive/negative fixtures for every branch; validate cross-field conditions and D-05 identity requirements.
+Schema-shape and basic strict-field fixture closure: **CLOSED**. Remaining: independently verify message direction against the narrative catalogue, add cross-field and D-05 identity invariants, and validate lifecycle evidence semantics rather than only JSON shape.
 ### P0-04 — SEM→AI-PM event payloads are discriminated; producer/receiver mapping remains open
 
 The Platform–SEM schema now defines five discriminated event payloads: binding-established, delivery-status, process-observed, release-status and infrastructure-uncertain. They carry binding_epoch, Runner identity/key version, delivery/process/release evidence references and explicit uncertainty semantics. The schema deliberately excludes AI-PM Task/Requirement/Approval status fields.
 
-The schema definitions are not yet mapped field-by-field to the SEM durable ledger and Runner event evidence, nor to an AI-PM receiver application service.
+The five event payloads now have valid positive fixtures and reject unknown/missing payload fields in CI run #26. However, the schema definitions are not yet mapped field-by-field to the SEM durable ledger and Runner event evidence, nor to an AI-PM receiver application service.
 
 Required closure: source-map every event field to SEM durable ledger and Runner evidence; verify event sequence/outbox producer; define AI-PM Inbox table/unique key, authorization, transaction and response cursor semantics; add cross-repository fixtures. Ensure infrastructure events cannot express TaskStatus or approval decisions.
 ### P0-05 — Proposed SEM callback route does not exist in current AI-PM source; bilateral Inbox contract is not implemented
@@ -75,11 +75,11 @@ Required closure: D-08/D-09 choose bounded values and the schema/OpenAPI expose 
 
 ### P1-04 — Reproducible schema-validation and cryptographic-vector CI is now present; full protocol fixtures remain incomplete
 
-A dedicated GitHub Actions workflow now validates the OpenAPI 3.1 document and external references with Redocly, checks each JSON Schema against the Draft 2020-12 meta-schema, mechanically verifies all 19 post-handshake Runner message types and five SEM event branches, and executes deterministic HTTP/WSS Ed25519 vector verification with negative mutation cases.
+A dedicated GitHub Actions workflow now validates the OpenAPI 3.1 document and external references with Redocly, checks each JSON Schema against the Draft 2020-12 meta-schema, mechanically verifies all 19 post-handshake Runner message types and five SEM event branches, executes deterministic HTTP/WSS Ed25519 vectors and negative mutations, and validates positive plus three classes of negative payload fixtures for all 26 message/event/request examples.
 
-The workflow completed successfully on commit `b25dcf79601e0c54bd53e48753ed88866a86e899` (run #2). This is schema/meta-schema and discriminator-coverage evidence only. It does not execute the 92 acceptance scenarios, validate positive/negative payload fixtures, verify cryptographic test vectors, or test the AI-PM callback receiver.
+The workflow completed successfully on commit `df0c527d89db099901ed6cd9e9a215c2f4fd31c7` (run #26). This is schema/meta-schema and discriminator-coverage evidence only. It does not execute the 92 acceptance scenarios, validate positive/negative payload fixtures, verify cryptographic test vectors, or test the AI-PM callback receiver.
 
-Required closure: add positive/negative fixtures for every WSS and HTTP/event payload branch; test full RFC 9421 parsing/covered-component canonicalization and replay storage; test JCS edge cases and independent cross-language WSS verification; add cross-repository receiver contract tests.
+Required closure: test full RFC 9421 parsing/covered-component canonicalization, signed responses and replay storage; test full RFC 8785 edge cases and independent cross-language WSS verification; add cross-repository receiver contract tests.
 ## 3. Cross-contract invariants that must remain
 
 1. Runner WSS transport message_sequence is per direction and connection generation.
