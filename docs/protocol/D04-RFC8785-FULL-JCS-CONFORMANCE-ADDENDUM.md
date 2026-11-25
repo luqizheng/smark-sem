@@ -102,3 +102,6 @@ This provides independent Python/Node deterministic coverage for the committed e
 
 
 CI evidence update: Python/Node JCS edge tests, including the additional quote/reverse-solidus, nested duplicate-member and unpaired-surrogate-property-name cases, passed in CI run #316 on commit `6ac2add731054b1f67e39c46d148476a1cdfa2be` (all ten workflow steps green).
+
+
+Latest PR head `2cbb991571e58bc6076754428840a6b2800a9401` passed CI runs #317 (push) and #318 (pull_request), including the expanded Python/Node JCS string-escaping, nested duplicate-member and unpaired-surrogate-property-name vectors.
