@@ -45,7 +45,7 @@ Each service direction has its own signing keypair: AI-PM signs Platform→SEM r
 Required signature coverage for every request:
 
 - `@method`, `@authority`, `@path`, `@query`;
-- `content-digest` and `content-type` (including the digest of an empty body for bodyless requests);
+- `content-digest;sf` and `content-type` (RFC 9530 Content-Digest is canonicalized using RFC 9421 Structured Field serialization, including the digest of an empty body for bodyless requests);
 - `x-sem-message-id` when the operation has a message ID;
 - `idempotency-key` for mutating/idempotent operations;
 - signature parameters `created`, `expires`, `nonce`, `keyid` and `alg=ed25519`.
