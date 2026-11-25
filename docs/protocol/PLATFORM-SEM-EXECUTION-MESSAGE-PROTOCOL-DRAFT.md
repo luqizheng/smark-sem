@@ -545,3 +545,27 @@ The success ACK is never returned before Inbox + permitted Run-observation commi
 - A duplicate message with the same identity and canonical payload returns the original acknowledgement. Reuse with a different payload is a conflict.
 - A gap in `execution_event_sequence` within one execution, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
 - SEM→AI-PM events are at-least-once. Each durable SEM→AI-PM event carries `execution_id` and `execution_event_sequence`, monotonic within that execution's SEM event stream. AI-PM deduplicates by `event_id` and stores the per-execution cursor. This is distinct from Runner→SEM `journal_id + event_sequence`, which is scoped by `runner_id + journal_id` and survives WSS reconnect. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
+
+
+## 6.1 SEM event callback acknowledgement
+
+The callback success acknowledgement echoes the exact event sequence field name from the event envelope. The field is `execution_event_sequence`; the ambiguous alias `event_sequence` is not accepted. This value is scoped to one SEM execution event stream and is distinct from Runner journal `event_sequence` and WSS `message_sequence`.
+
+```json
+{
+  "event_id": "uuid",
+  "execution_id": "uuid",
+  "execution_event_sequence": 12,
+  "contiguous_through_sequence": 12,
+  "disposition": "accepted",
+  "acknowledged_at": "RFC3339 UTC"
+}
+```
+
+A duplicate delivery with the same event_id and identical canonical body returns `disposition: duplicate` and echoes the same `execution_event_sequence`. The ACK is returned only after the AI-PM Inbox record, append-only Run observation and per-attempt cursor have committed atomically. A sequence gap or identity conflict is an error response, never a success ACK.
+
+## 6.2 Identity and evidence validation requirements
+
+The event schema requires `runner_key_version`, `boot_id` and `supervisor_instance_id` on delivery, process, release and uncertainty observations. The receiver must compare these fields to the currently known binding for the execution; schema validity alone is not authorization to apply an observation.
+
+For `harness.process_observed` with `observation=exited`, the payload must contain exact process identity and exit evidence with exactly one of `exit_code` or `exit_signal`. For `exit_status_unknown`, evidence may prove the containment is empty while the numeric status remains unknown. A `execution.release_status` event with `release_state=process_exited` must include `process_exit_evidence_id` referring to the exact accepted process-exit evidence. These references must resolve to the same execution, runner key version, boot, supervisor instance, binding epoch, launch and containment identity in the SEM durable ledger.
