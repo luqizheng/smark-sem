@@ -663,7 +663,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 6. Event sequence scope is proposed as a durable Runner event stream keyed by `runner_id + journal_id`, with `execution_id + binding_epoch` carried on each event. D-04 must freeze the stream/cursor schema and retention semantics and cross-check every state-changing WSS message.
 7. Snapshot/replay API exact schemas, cursor semantics and maximum journal retention.
 8. Reservation expiry/recovery rules and the minimal audited manual operator disposition under the user-confirmed D-03 host-loss profile.
-9. Whether a process exit event must carry signed evidence in addition to authenticated WSS provenance, and whether the current evidence_id reference is sufficient for SEM audit/reconciliation.
+9. D-04 now defines evidence_id as an immutable Runner journal reference, adds evidence_schema_version + JCS/SHA-256 evidence_digest to harness.process_exited, and requires SEM durable event persistence before journal-sequence ACK. D-10 must prove journal fsync, replay identity, ACK gating and post-ACK retention; independent cryptographic verification is not a V1 promise.
 10. Exact reconciliation deadlines are operational SLOs, not correctness shortcuts; timeout must never resolve uncertainty by assumption.
 
 ## 12. Readiness conclusion
