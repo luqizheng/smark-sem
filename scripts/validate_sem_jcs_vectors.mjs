@@ -51,7 +51,7 @@ if (!reproduced.equals(signature)) {
 
 // Cross-check the body-bearing response and conditional 304 vectors using
 // Node's independent Ed25519 implementation and exact request context.
-for (const name of ["http_response", "http_error_409", "http_304", "http_callback_ack"]) {
+for (const name of ["http_response", "http_error_409", "http_snapshot_200", "http_304", "http_callback_ack"]) {
   const vector = fixture[name];
   const request = vector.request;
   const response = vector.response;
@@ -77,7 +77,7 @@ for (const name of ["http_response", "http_error_409", "http_304", "http_callbac
       ['"@path";req', request.path],
       ['"content-digest";req;sf', request.content_digest],
     ];
-  } else if (name === "http_response" || name === "http_error_409") {
+  } else if (name === "http_response" || name === "http_error_409" || name === "http_snapshot_200") {
     if (name === "http_error_409") {
       const errorBody = parseStrictJson(response.body);
       if (response.status !== 409 || errorBody.error?.code !== "IDEMPOTENCY_CONFLICT") {
@@ -86,16 +86,33 @@ for (const name of ["http_response", "http_error_409", "http_304", "http_callbac
     }
     if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
     if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
-    pairs = [
-      ['"@status"', String(response.status)],
-      ['"content-digest";sf', response.content_digest],
-      ['"x-sem-request-id"', response.request_id],
-      ['"content-type"', response.content_type],
-      ['"@method";req', request.method],
-      ['"@authority";req', request.authority],
-      ['"@path";req', request.path],
-      ['"content-digest";req;sf', request.content_digest],
-    ];
+    if (name === "http_snapshot_200" && (response.status !== 200 || !response.etag)) {
+      throw new Error("Snapshot 200 must carry a signed ETag");
+    }
+    if (name === "http_snapshot_200") {
+      pairs = [
+        ['"@status"', String(response.status)],
+        ['"content-digest";sf', response.content_digest],
+        ['"x-sem-request-id"', response.request_id],
+        ['"etag"', response.etag],
+        ['"content-type"', response.content_type],
+        ['"@method";req', request.method],
+        ['"@authority";req', request.authority],
+        ['"@path";req', request.path],
+        ['"content-digest";req;sf', request.content_digest],
+      ];
+    } else {
+      pairs = [
+        ['"@status"', String(response.status)],
+        ['"content-digest";sf', response.content_digest],
+        ['"x-sem-request-id"', response.request_id],
+        ['"content-type"', response.content_type],
+        ['"@method";req', request.method],
+        ['"@authority";req', request.authority],
+        ['"@path";req', request.path],
+        ['"content-digest";req;sf', request.content_digest],
+      ];
+    }
   } else {
     if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
     if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
@@ -130,18 +147,29 @@ for (const name of ["http_response", "http_error_409", "http_304", "http_callbac
   }
 
   // A signed response is bound to the exact originating request context.
-  for (const [componentIndex, wrongValue] of [
-    [4, "PATCH"],
-    [5, "other.internal.example"],
-    [6, request.path + "/different"],
-    [7, "sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:"],
+  for (const [componentName, wrongValue] of [
+    ['"@method";req', "PATCH"],
+    ['"@authority";req', "other.internal.example"],
+    ['"@path";req', request.path + "/different"],
+    ['"content-digest";req;sf', "sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:"],
   ]) {
     const wrongContextPairs = pairs.map(pair => [...pair]);
+    const componentIndex = wrongContextPairs.findIndex(pair => pair[0] === componentName);
     wrongContextPairs[componentIndex][1] = wrongValue;
     const wrongContextBase = wrongContextPairs.map(([component, value]) => component + ": " + value).join("\\n")
       + '\\n"@signature-params": ' + vector.signature_params;
     if (crypto.verify(null, Buffer.from(wrongContextBase, "ascii"), responsePublicKey, responseSignature)) {
       throw new Error(name + " response accepted a different request context");
+    }
+  }
+  if (name === "http_snapshot_200") {
+    const wrongEtagPairs = pairs.map(pair => [...pair]);
+    const etagIndex = wrongEtagPairs.findIndex(pair => pair[0] === '"etag"');
+    wrongEtagPairs[etagIndex][1] = '"tampered-snapshot-v5"';
+    const wrongEtagBase = wrongEtagPairs.map(([component, value]) => component + ": " + value).join("\\n")
+      + '\\n"@signature-params": ' + vector.signature_params;
+    if (crypto.verify(null, Buffer.from(wrongEtagBase, "ascii"), responsePublicKey, responseSignature)) {
+      throw new Error("Snapshot 200 signature accepted a tampered ETag");
     }
   }
   if (name === "http_304") {
@@ -154,7 +182,7 @@ for (const name of ["http_response", "http_error_409", "http_304", "http_callbac
     }
   }
 
-  if (name === "http_response" || name === "http_error_409") {
+  if (name === "http_response" || name === "http_error_409" || name === "http_snapshot_200") {
     const wrongPairs = pairs.map(pair => [...pair]);
     wrongPairs[2][1] = request.message_id;
     const wrongBase = wrongPairs.map(([component, value]) => component + ": " + value).join("\\n")
