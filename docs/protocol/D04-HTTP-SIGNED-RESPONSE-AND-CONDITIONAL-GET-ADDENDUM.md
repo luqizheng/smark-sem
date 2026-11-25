@@ -115,13 +115,13 @@ For every non-304 response class currently defined by the operation matrix (incl
 The Structured Fields serialization template is therefore exactly one of:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "@method";req "@authority";req "@path";req "content-digest";req;sf);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "content-type" "@method";req "@authority";req "@path";req "content-digest";req;sf);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 or:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest";sf "x-sem-event-id" "@method";req "@authority";req "@path";req "content-digest";sf;req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-event-id" "content-type" "@method";req "@authority";req "@path";req "content-digest";req;sf);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 These are Structured Fields serialization templates, not literal valid header values until placeholders are replaced. There is no whitespace around separators. Component identifiers and signature parameters are serialized using RFC 9421 / RFC 8941 rules; implementations MUST NOT hand-roll ad-hoc quoting or parse the field with comma/semicolon splitting.
@@ -145,7 +145,7 @@ A 304 has no message content and uses this exact component order:
 Template:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "etag" "@method";req "@authority";req "@path";req "content-digest";sf;req "if-none-match";req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "etag" "@method";req "@authority";req "@path";req "content-digest";req;sf "if-none-match";req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 The response `Content-Digest` for a 304 MUST be SHA-256 over zero content octets:
