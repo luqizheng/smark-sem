@@ -93,3 +93,5 @@ The bilateral review compared the AI-PM callback/Inbox proposal against the cano
 The AI-PM PR #9 callback design had one stale response-field alias in §5.2 step 7 (`event_sequence`). It has been corrected on the AI-PM review branch to `execution_event_sequence`, with an explicit prohibition on the ambiguous alias. This is a documentation alignment only; no AI-PM route, Inbox, database or runtime behavior exists yet.
 
 P0-05 remains OPEN. The callback route, service authentication, shared-Inbox application port, transaction/cursor behavior, exact response schema, retry semantics and bilateral runtime tests still require ratification and separate implementation authorization.
+
+A second cross-document mismatch was found in the AI-PM PR #9 callback proposal: §5.2 and OI-02/OI-03 named the attempt cursor sem_last_event_sequence, while its exact DDL/concurrency proposal names the column delivery.task_run.execution_event_sequence. The callback proposal has been corrected to use execution_event_sequence consistently. This is the same per-execution SEM→AI-PM cursor defined by D-04 and is distinct from Runner journal event_sequence and WSS message_sequence.
