@@ -344,6 +344,12 @@ for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304",
         wrong_etag_base += f'\\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_etag_base.encode("ascii")), "snapshot 200 signature accepted a tampered ETag"
     if name == "http_304":
+        wrong_304_etag_pairs = list(pairs)
+        etag_index = next(i for i, pair in enumerate(wrong_304_etag_pairs) if pair[0] == '"etag"')
+        wrong_304_etag_pairs[etag_index] = ('"etag"', '"tampered-snapshot-v5"')
+        wrong_304_etag_base = "\\n".join(f"{component}: {value}" for component, value in wrong_304_etag_pairs)
+        wrong_304_etag_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        assert not verify(response_pub, response_sig, wrong_304_etag_base.encode("ascii")), "304 signature accepted a tampered ETag"
         wrong_validator_pairs = list(pairs)
         wrong_validator_pairs[8] = ('"if-none-match";req', '"different-validator"')
         wrong_validator_base = "\n".join(f"{component}: {value}" for component, value in wrong_validator_pairs)
