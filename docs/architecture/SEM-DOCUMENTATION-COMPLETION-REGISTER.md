@@ -230,11 +230,11 @@ No item becomes Normative / Frozen solely because it is written in a draft or li
 
 The SDK provider/consumer direction remains user-confirmed, but the API is **NOT RATIFIED / CHANGES REQUIRED**. The current D-12 review has identified the following hard closure gates:
 
-- D-04 signed HTTP responses, operation-specific covered components, response correlation, replay/freshness, key rotation and callback ACK verification must be normative and machine-readable.
+- D-04 now has a Draft authenticated/pre-authentication error split: authenticated application errors are signed and direction-correlated; pre-authentication 401/early-413 are unsigned and carry no protocol IDs. D04-H78..H85 record the boundary. Deterministic signed-error vectors, normative ratification, replay/freshness, key rotation and live middleware proof remain open.
 - Conditional GET 304 must define ETag behavior, signed response semantics and mandatory no-body behavior.
 - Tokio/reqwest/native-tls is a compatibility candidate only; integrated SEM workspace resolution and explicit CA/pin/hostname/expiry tests are absent.
 - Internal Kellnr is a distribution candidate only; SEM CI publish/read access and immutable release/rollback proof are absent.
-- SDK-to-OpenAPI/schema/header/idempotency/error mapping traceability and bilateral AI-PM compile/contract CI are required.
+- SDK-to-OpenAPI/schema/header/idempotency/error mapping traceability and bilateral AI-PM compile/contract CI are required. AI-PM PR #9's callback Inbox design currently has 44 acceptance cases, but no Rust JCS implementation, migration or PostgreSQL concurrency proof.
 - Source audit provenance must distinguish AI-PM master code/manifests from the separate, unmerged AI-PM PR #9 design branch.
 
 See [D-12 Public API Design](./sem-sdk-public-api-design-draft.md) and [SDK Source Compatibility Audit](./sem-sdk-source-compatibility-audit.md). The current reviewed API remains documentation only. No SDK implementation, migration, runtime configuration or merge is authorized.
