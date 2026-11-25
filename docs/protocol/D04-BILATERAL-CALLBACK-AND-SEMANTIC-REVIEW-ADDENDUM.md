@@ -253,3 +253,8 @@ Together with `http_callback_ack`, this provides deterministic fixtures for Plat
 
 
 CI evidence update: latest PR head `a81b83edf908cd9cec6a981cbec70024f89e5d0a` passed SEM Protocol Contract Validation runs #287 and #288, including the new callback ACK 200 and Platform→SEM 409 signature vectors.
+
+
+## 15. Response request-context replay negatives
+
+The Python and Node response verifiers now mutate the originating request method, authority, path and Content-Digest independently and assert that each mutation invalidates the response signature. For the 304 vector they also mutate `If-None-Match` and assert verification failure. D04-H72 records this deterministic negative coverage. This proves the signed base binds those exact request-derived components; it does not replace live HTTP transport association, redirect/proxy tests or durable nonce replay testing.
