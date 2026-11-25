@@ -236,3 +236,6 @@ The OpenAPI draft now requires MessageId and RequestId on conditional GET, decla
 
 
 CI evidence update: latest PR head `a81b83edf908cd9cec6a981cbec70024f89e5d0a` passed runs #287 (push) and #288 (pull_request), all ten protocol validation steps green, including the signed callback ACK, signed 409 and correlation-mutation negative vectors.
+
+
+Latest deterministic response-vector validation: PR head `16cf8432c7dc8642370e763f92c2539ced446b75` passed CI runs #299 and #300 (all ten steps). This includes the signed 409 and callback ACK fixtures, correlation mutations, and request-context mutations for method, authority, path, Content-Digest and 304 If-None-Match.
