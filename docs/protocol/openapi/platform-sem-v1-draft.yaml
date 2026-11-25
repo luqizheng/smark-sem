@@ -284,7 +284,10 @@ components:
         Signature-Input: { required: true, schema: { type: string } }
         Signature: { required: true, schema: { type: string } }
         X-SEM-Request-Id: { required: true, schema: { type: string, format: uuid } }
-        Retry-After: { required: true, schema: { type: integer, minimum: 0 } }
+        Retry-After:
+          required: true
+          description: HTTP-date or delay-seconds as defined by HTTP semantics.
+          schema: { type: string }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
     SignedCallbackRateLimitError:
       description: Authenticated SEM callback rate limit. Same signature/correlation requirements as SignedCallbackError; Retry-After is mandatory.
@@ -293,7 +296,10 @@ components:
         Signature-Input: { required: true, schema: { type: string } }
         Signature: { required: true, schema: { type: string } }
         X-SEM-Event-Id: { required: true, schema: { type: string, format: uuid } }
-        Retry-After: { required: true, schema: { type: integer, minimum: 0 } }
+        Retry-After:
+          required: true
+          description: HTTP-date or delay-seconds as defined by HTTP semantics.
+          schema: { type: string }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
   schemas:
     BaseEnvelope:
