@@ -231,3 +231,6 @@ The response correlation identity is now explicit:
 The earlier prose incorrectly named `message_id` for the Platform→SEM response correlation header, while the deterministic 202/304 fixtures and validators already used `request_id`. The prose and D04-H56 case have been corrected; Python and Node fixtures explicitly require response.request_id == request.request_id and prove it differs from message_id.
 
 The OpenAPI draft now requires MessageId and RequestId on conditional GET, declares the common signature/digest and direction-specific correlation headers on successful 202/200/304/callback-200 responses, and corrects the 304 correlation-header description. The OpenAPI now also declares the direction-specific signature/digest/correlation headers on Platform→SEM and callback 409 responses. Other signed error classes still need their direction-specific header declarations; shared error response components must not imply both correlation headers or omit the required one. D-04 remains Draft / Changes Required.
+
+
+CI evidence update: latest PR head `a81b83edf908cd9cec6a981cbec70024f89e5d0a` passed runs #287 (push) and #288 (pull_request), all ten protocol validation steps green, including the signed callback ACK, signed 409 and correlation-mutation negative vectors.
