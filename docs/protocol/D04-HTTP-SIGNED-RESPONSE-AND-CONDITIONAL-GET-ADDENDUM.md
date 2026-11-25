@@ -33,7 +33,7 @@ This proposed baseline is deliberately explicit about the empty-content digest a
 | Operation | Response classes | Correlation header | Additional response semantics |
 |---|---|---|---|
 | submitExecutionRequest | 202, 400, 401, 409, 413, 422, 429, 500 | X-SEM-Request-Id = request_id | Every response signed; 202 body binds message_id/request_id/execution_id and accepted/duplicate disposition |
-| getExecutionInfrastructureState | 200, 304, 401, 404, 500 | X-SEM-Request-Id = request_id | 200 carries ETag and signed snapshot; 304 has no content, echoes ETag, carries empty-content digest and signature; 404/error body signed |
+| getExecutionInfrastructureState | 200, 304, 401, 404, 500 | X-SEM-Request-Id = request_id; ETag signed on 200 and 304 | 200 carries ETag and signed snapshot; 304 has no content, echoes ETag, carries empty-content digest and signature; 404/error body signed |
 | requestExecutionRelease | 202, 400, 401, 404, 409, 412, 422, 500 | X-SEM-Request-Id = request_id | Every response signed; 412 is an authenticated fencing conflict, not a retryable transport failure |
 | receiveSemInfrastructureEvent | 200, 400, 401, 409, 422, 500 | X-SEM-Event-Id = event_id | Every response signed; 200 ACK only after Inbox + Run observation + cursor commit; ACK echoes event_id and execution_event_sequence |
 
@@ -124,9 +124,15 @@ or:
 Signature-Input: sig1=("@status" "content-digest";sf "x-sem-event-id" "content-type" "@method";req "@authority";req "@path";req "content-digest";req;sf);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
+For `getExecutionInfrastructureState` status 200, the response also carries an ETag validator. That ETag is security-relevant and MUST be covered by the signature immediately after the correlation component and before Content-Type:
+
+```http
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "etag" "content-type" "@method";req "@authority";req "@path";req "content-digest";req;sf);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+```
+
 These are Structured Fields serialization templates, not literal valid header values until placeholders are replaced. There is no whitespace around separators. Component identifiers and signature parameters are serialized using RFC 9421 / RFC 8941 rules; implementations MUST NOT hand-roll ad-hoc quoting or parse the field with comma/semicolon splitting.
 
-All non-304 response classes in the current operation matrix require Content-Type, placed immediately after the direction-specific correlation field. A future no-content non-304 status is out of this candidate profile and must define a separate exact component set before being added to OpenAPI.
+All non-304 response classes in the current operation matrix require Content-Type. For `getExecutionInfrastructureState` 200, ETag is placed immediately after the direction-specific correlation field and Content-Type follows ETag; for other current body-bearing response classes, Content-Type immediately follows the correlation field. A future no-content non-304 status is out of this candidate profile and must define a separate exact component set before being added to OpenAPI.
 
 ### 8.3 Conditional 304 Signature-Input
 
@@ -188,7 +194,7 @@ The acceptance suite MUST publish literal byte-for-byte fixtures containing the 
 
 The SEM→AI-PM callback 200 ACK case is now represented by `http_callback_ack` in `tests/protocol/fixtures/crypto-vectors-v1.json`. Python and Node independently recompute the request/response Content-Digest, reconstruct the RFC 9421 signature base, verify and reproduce the Ed25519 signature, and reject a mutated `X-SEM-Event-Id` that does not equal the authenticated `event_id`. D04-H68/H69 cover the positive and negative cases. This does not close the other fixture classes above or the third-implementation/live-stack requirement.
 
-The Platform→SEM signed 409 `IDEMPOTENCY_CONFLICT` case is now represented by `http_error_409` in the same fixture file. Python and Node verify the structured error body, exact request/response digests and signature, and reject a mutated `X-SEM-Request-Id` that substitutes `message_id` for `request_id`. D04-H70/H71 cover this positive and negative pair. The required 202, 409, callback ACK 200 and 304 deterministic response fixtures now exist; signed error classes beyond this 409, a third implementation and live HTTP-stack/replay-store tests remain open.
+The Platform→SEM signed 409 `IDEMPOTENCY_CONFLICT` case is now represented by `http_error_409` in the same fixture file. Python and Node verify the structured error body, exact request/response digests and signature, and reject a mutated `X-SEM-Request-Id` that substitutes `message_id` for `request_id`. D04-H70/H71 cover this positive and negative pair. The required 202, GET snapshot 200 (including signed ETag), 409, callback ACK 200 and 304 deterministic response fixtures now exist; signed error classes beyond this 409, a third implementation and live HTTP-stack/replay-store tests remain open.
 
 The request-association negative vector is also executable: Python and Node mutate method, authority, path and request Content-Digest one at a time and prove the response signature fails; for 304 they additionally mutate `If-None-Match`. D04-H72 records this. These are deterministic signature-base tests, not a live HTTP client's transport-response association proof.
 
