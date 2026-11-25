@@ -129,6 +129,31 @@ for (const name of ["http_response", "http_error_409", "http_304", "http_callbac
     throw new Error(name + " Ed25519 response signature failed");
   }
 
+  // A signed response is bound to the exact originating request context.
+  for (const [componentIndex, wrongValue] of [
+    [4, "PATCH"],
+    [5, "other.internal.example"],
+    [6, request.path + "/different"],
+    [7, "sha-256=:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=:"],
+  ]) {
+    const wrongContextPairs = pairs.map(pair => [...pair]);
+    wrongContextPairs[componentIndex][1] = wrongValue;
+    const wrongContextBase = wrongContextPairs.map(([component, value]) => component + ": " + value).join("\\n")
+      + '\\n"@signature-params": ' + vector.signature_params;
+    if (crypto.verify(null, Buffer.from(wrongContextBase, "ascii"), responsePublicKey, responseSignature)) {
+      throw new Error(name + " response accepted a different request context");
+    }
+  }
+  if (name === "http_304") {
+    const wrongValidatorPairs = pairs.map(pair => [...pair]);
+    wrongValidatorPairs[8][1] = '"different-validator"';
+    const wrongValidatorBase = wrongValidatorPairs.map(([component, value]) => component + ": " + value).join("\\n")
+      + '\\n"@signature-params": ' + vector.signature_params;
+    if (crypto.verify(null, Buffer.from(wrongValidatorBase, "ascii"), responsePublicKey, responseSignature)) {
+      throw new Error("304 response accepted a different If-None-Match context");
+    }
+  }
+
   if (name === "http_response" || name === "http_error_409") {
     const wrongPairs = pairs.map(pair => [...pair]);
     wrongPairs[2][1] = request.message_id;
