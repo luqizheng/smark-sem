@@ -73,7 +73,18 @@ This decision approves the cryptographic primitives and protocol families, not e
 
 The earlier candidate values (HTTP created tolerance 30 seconds future / 60 seconds old, expiry no later than created + 60 seconds, nonce >=128 bits retained >=10 minutes; WSS 32-byte nonces and 30-second challenge) remain **provisional test starting points**, not normative values.
 
-## 6. Acceptance requirements
+## 6. Deterministic test-vector baseline (Draft)
+
+A deterministic, TEST-ONLY vector set is maintained at [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json), with verifier [validate_sem_crypto_vectors.py](../../scripts/validate_sem_crypto_vectors.py). It contains:
+
+- Platform→SEM HTTP request body, RFC 9530 SHA-256 Content-Digest, RFC 9421 signature base and Ed25519 signature.
+- Runner→SEM WSS transcript, RFC 8785 JCS bytes, domain-separation prefix and Ed25519 proof.
+- Negative mutations for HTTP method, authority, path, content type, idempotency key and digest; WSS runner identity, audience, authority, challenge, protocol version and missing domain prefix.
+- Deterministic TEST-ONLY private seeds to permit exact reproduction. These seeds MUST NOT be used in any deployed environment.
+
+These vectors prove the selected algorithm primitives and the specific Draft serialization examples. They do not ratify the final HTTP covered-component profile, time bounds, nonce retention, full JCS edge-case behavior, key rotation policy or production implementation. Those remain open until cross-language fixtures and the full RFC 9421 verifier behavior are independently tested.
+
+## 7. Acceptance requirements
 
 - A known-good Ed25519 HTTP request and response verify in both AI-PM and SEM implementations.
 - Any mutation to a covered component or body fails verification.
