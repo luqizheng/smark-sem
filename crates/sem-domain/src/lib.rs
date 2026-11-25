@@ -41,7 +41,13 @@ mod tests {
 
     #[test]
     fn supervision_mode_uses_stable_wire_names() {
-        assert_eq!(serde_json::to_string(&SupervisionMode::Unattended).unwrap(), "\"unattended\"");
-        assert_eq!(serde_json::to_string(&SupervisionMode::Supervised).unwrap(), "\"supervised\"");
+        assert_eq!(
+            serde_json::to_string(&SupervisionMode::Unattended).unwrap(),
+            "\"unattended\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SupervisionMode::Supervised).unwrap(),
+            "\"supervised\""
+        );
     }
 }
