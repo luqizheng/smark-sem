@@ -28,7 +28,7 @@ No distributed transaction and no shared database. Cross-service delivery is ide
 
 **Architecture migration in progress. No production SEM implementation is declared complete.**
 
-SEM-02E–02J and the original V1 domain/state/security/recovery designs are historical source-audit material; they are not implementation contracts. The active review baseline is indexed in [SEM Architecture README](docs/architecture/server-execution-management/README.md). Start with the [authority-boundary model](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol draft](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract draft](docs/protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md). Platform-owned code and migrations remain in luqizheng/ai-pm.
+SEM-02E–02J and the original V1 domain/state/security/recovery designs are historical source-audit material; they are not implementation contracts. The active review baseline is indexed in [SEM Architecture README](docs/architecture/server-execution-management/README.md) and tracked by the [Bilateral Documentation Completion Register](docs/architecture/SEM-DOCUMENTATION-COMPLETION-REGISTER.md). Start with the [authority-boundary model](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol draft](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract draft](docs/protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md). Platform-owned code and migrations remain in luqizheng/ai-pm.
 
 ## Confirmed operating constraints
 
