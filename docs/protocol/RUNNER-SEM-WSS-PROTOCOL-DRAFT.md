@@ -238,7 +238,7 @@ The Runner's `execution.release_applied` is an infrastructure observation, not a
 - `stale_rejected`: the release targets a stale binding and is rejected without changing the current binding or process. It MUST NOT carry process-exit evidence.
 - `local_uncertain`: the Runner cannot prove safe stop/no-start completion. It MUST NOT carry positive process-exit evidence; SEM retains the reservation and quarantine and reconciles.
 
-The application JSON Schema requires the evidence reference for `process_stopped` and `already_exited`, and rejects it for `stop_fenced`, `stale_rejected` and `local_uncertain`. Cross-message identity equality remains a semantic receiver check and must be covered by bilateral fixtures/integration tests. No release disposition changes AI-PM Task/Run business state.
+The application JSON Schema requires the evidence reference for `process_stopped` and `already_exited`, and rejects it for `stop_fenced`, `stale_rejected` and `local_uncertain`. The referenced `harness.process_exited` event must precede the terminal `execution.release_applied` event in the same Runner journal, with matching execution_id and binding_epoch; SEM additionally checks the stored launch/containment/boot/process identity. No release disposition changes AI-PM Task/Run business state.
 
 
 ## 8. Disconnect, reconnect and replay
