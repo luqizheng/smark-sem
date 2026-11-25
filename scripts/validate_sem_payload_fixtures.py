@@ -143,6 +143,16 @@ runner_unknown_with_signal = json.loads(json.dumps(runner_exit))
 runner_unknown_with_signal["payload"]["exit_status"] = {"kind": "unknown", "signal": 9}
 expect_invalid(runner_validator, runner_unknown_with_signal, "Runner unknown exit status with numeric signal")
 
+runner_missing_digest = json.loads(json.dumps(runner_exit))
+del runner_missing_digest["payload"]["evidence_digest"]
+expect_invalid(runner_validator, runner_missing_digest, "Runner process exit without evidence digest")
+runner_bad_digest = json.loads(json.dumps(runner_exit))
+runner_bad_digest["payload"]["evidence_digest"] = "not-a-sha256"
+expect_invalid(runner_validator, runner_bad_digest, "Runner process exit with malformed evidence digest")
+runner_bad_evidence_version = json.loads(json.dumps(runner_exit))
+runner_bad_evidence_version["payload"]["evidence_schema_version"] = 2
+expect_invalid(runner_validator, runner_bad_evidence_version, "Runner process exit with unsupported evidence schema version")
+
 unknown_event = next(
     item for item in data["sem_events"]
     if item["event_type"] == "harness.process_observed"
