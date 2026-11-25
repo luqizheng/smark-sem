@@ -395,3 +395,22 @@ The addendum specifies an identity-bound evidence record and a conservative brac
 ### Overall
 
 No Linux integration harness or runtime code was added in this documentation-only step. D-05 remains **CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT**. P0-01 remains Draft-contract closed against the pinned AI-PM source revision and must be rechecked immediately before ratification. D-04 schema cross-reference and D-03 operator-resolution acceptance remain separate gates.
+
+
+## 14. D-05 ↔ D-04 durable-event cross-check
+
+A branch-level review of `runner-sem-v1.schema.yaml`, `RUNNER-SEM-WSS-PROTOCOL-DRAFT.md`, the D-05 event model and the contract validators found:
+
+- The schema currently requires `journal_id + event_sequence` for seven durable Runner message types: `execution.delivery_received`, `harness.starting`, `harness.started`, `harness.start_failed`, `harness.process_exited`, `execution.release_applied` and `runner.admission.changed`.
+- The WSS narrative states that durable Runner observations use the `runner_id + journal_id` stream and that transport `message_sequence` is not a substitute. The seven-branch list is now pinned in `validate_sem_contracts.py`; payload fixtures now reject missing `journal_id` and missing `event_sequence` independently for each durable message.
+- Replaceable heartbeat/health/resource snapshots remain outside the durable event stream. The schema/validator must be updated together if a new message becomes state-changing or replayable.
+
+### P1 — Exit evidence reference semantics are not yet frozen
+
+The new D-05 Linux proof addendum defines a complete local evidence record (boot, launch, unit, invocation, cgroup, job snapshots, unit state, exit status and observation sequence). The current Runner WSS `HarnessProcessExited` schema carries the key correlation fields and an `evidence_id`, but it does not carry the complete bracket observations or define a separate evidence-fetch/replay resource.
+
+This is not automatically a defect if the contract intentionally treats the authenticated Runner Supervisor as the authority and `evidence_id` as an opaque audit reference into its durable journal. However, D-04 must explicitly choose and define that model: evidence retention duration, replay/snapshot behavior, what SEM persists, and what happens when SEM asks for an evidence_id that Runner can no longer serve. If SEM is expected to independently validate the bracket, the wire schema needs a structured evidence summary or a defined authenticated evidence retrieval operation.
+
+**Disposition: P1 OPEN — do not silently assume that an evidence_id is self-describing or fetchable.**
+
+The added validator checks schema branch parity and required journal cursor fields; it does not prove the semantics of event production, replay persistence or evidence retention. Latest CI is required to validate the new checks.
