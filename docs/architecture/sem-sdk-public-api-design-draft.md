@@ -3,8 +3,8 @@
 - Status: **DRAFT / ARCHITECTURE REVIEW — NOT IMPLEMENTATION-AUTHORIZING**
 - Owner: `smark-sem`
 - Consumer: `ai-pm`
-- Protocol baseline reviewed: SEM PR #3, commit `e1812557ab9c17a83ff7201db614dd4d04887534` (Draft, not ratified; includes D04-H78..H88 response boundary and signed 404 fixtures)
-- Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `61ff5faddff751fa0a0df8e01a73bf18ba791e33` (Draft only, not runtime source)
+- Protocol baseline reviewed: SEM PR #3, commit `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362` (Draft, not ratified; CI #411 passed; includes D04-H78..H88 and signed 404 fixtures)
+- Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `ecfc6eaaa7a76fe52282946615f1182d629fdd4a` (Draft only, not runtime source)
 - Companion: [SEM SDK source compatibility audit](./sem-sdk-source-compatibility-audit.md)
 - Protocol source: [Platform–SEM execution message protocol](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
 - OpenAPI source: [Platform–SEM OpenAPI draft](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/openapi/platform-sem-v1-draft.yaml)
@@ -293,9 +293,9 @@ This matrix maps the proposed API to the current D-04 candidate. It is intention
 ## 13. Review snapshot refresh — 2026-11-25
 
 This document was rechecked against:
-- SEM PR #3 protocol/response-contract head: `d3e5d4eefacf91aee533ed51be7d16baf9bffe03`.
-- AI-PM PR #9 callback/Inbox contract head: `61ff5faddff751fa0a0df8e01a73bf18ba791e33`.
-- SEM PR #4 SDK document branch before this update: `9493a689c15db806f9d4aaa47d8191c19c8ba8a2`.
+- SEM PR #3 protocol/response-contract head: `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362` (CI #411 passed).
+- AI-PM PR #9 callback/Inbox contract head: `ecfc6eaaa7a76fe52282946615f1182d629fdd4a`.
+- SEM PR #4 SDK document branch before this update: `a51edf41b853e281e7b5214287692f6fea5b930c`.
 
 The D-04 candidate now specifies authenticated signed application errors and unsigned pre-authentication 401/early-413 responses. The SDK error taxonomy and traceability table were updated to include `UnverifiedPreAuthentication`, direction-specific signed correlation, signed application 404/409/412/429/500, and the no-downgrade rule when response signing fails.
 
@@ -307,3 +307,10 @@ This remains a design-only cross-reference refresh. The updated SDK document bra
 The current D-04 protocol candidate now includes deterministic signed 404 vectors for both Platform GET and SEM callback directions, plus unsigned 401/early-413 fixtures. Python and Node independently verify the 404 response signatures, request-context binding and correlation headers, and structurally reject pre-auth error bodies containing protocol IDs. See D04-H86..H88.
 
 The SDK contract must preserve this distinction: authenticated 404 is a trusted signed NotFound result; unsigned pre-authentication 401/413 is UnverifiedPreAuthentication, not a signed protocol disposition. The live HTTP middleware, nonce replay and transport association gates remain open.
+
+
+## 15. Latest D-04 fixture evidence — 2026-11-25
+
+The current D-04 branch has signed 404 response vectors for both Platform GET and SEM callback directions and unsigned pre-authentication 401/early-413 fixtures. CI run #411 passed the OpenAPI, schema, crypto-vector, payload-fixture and independent Node JCS/Ed25519 checks. The SDK traceability table and error taxonomy now reflect these cases.
+
+This is still fixture/contract evidence only. The SDK remains unimplemented; live HTTP request-context association, durable nonce replay, response signer behavior, TLS pinning, integrated workspace build, Kellnr publication and AI-PM consumer compilation remain open.
