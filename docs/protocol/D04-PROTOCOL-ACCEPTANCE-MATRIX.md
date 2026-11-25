@@ -271,6 +271,7 @@ See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-R
 | D04-H69 | Callback ACK response signs an `X-SEM-Event-Id` different from the request's authenticated `event_id` | Client rejects response-confusion/replay; signature verification fails; no ACK is accepted |
 | D04-H70 | Platform→SEM signed 409 structured `IDEMPOTENCY_CONFLICT` response with `X-SEM-Request-Id = request_id` | Python and Node independently verify exact response digest/signature and associated request context |
 | D04-H71 | Platform→SEM signed error response uses `message_id` instead of `request_id` in `X-SEM-Request-Id` | Client rejects; signature verification fails; transport message identity cannot substitute for operation/idempotency identity |
+| D04-H72 | Replay a valid signed response against a different method, authority, path, request Content-Digest or (304) If-None-Match | Python and Node independently reject every mutated request-context signature base; response cannot be detached from its originating request |
 
 These cases do not close P0-01 until they are represented in executable independent vectors and live request/response/replay integration tests.
 
