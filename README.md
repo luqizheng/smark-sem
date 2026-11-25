@@ -28,11 +28,12 @@ No distributed transaction and no shared database. Cross-service delivery is ide
 
 **Architecture migration in progress. No production SEM implementation is declared complete.**
 
-The source AI-PM repository contains the ongoing SEM-02J transaction and execution-path audit. Its findings are being migrated as design/audit material; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm.
+The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md) for ownership and provenance.
 
 ## Repository structure
 
 - docs/architecture/ — SEM architecture, contracts, audit, decisions
+- docs/migration/ — repository-boundary migration record
 - docs/protocol/ — versioned Platform–SEM and Runner–SEM protocol specifications (to be established)
 - src/ — SEM modular-monolith implementation (not yet migrated/created)
 - tests/ — SEM unit, integration, contract, and concurrency tests
