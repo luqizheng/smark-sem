@@ -135,11 +135,14 @@ $defs:
           payload: { $ref: '#/$defs/DeliveryStatusPayload' }
   DeliveryStatusPayload:
     type: object
-    required: [delivery_id, binding_epoch, runner_id, delivery_state, observed_at]
+    required: [delivery_id, binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, delivery_state, observed_at]
     properties:
       delivery_id: { type: string, format: uuid }
       binding_epoch: { type: integer, minimum: 1 }
       runner_id: { type: string, format: uuid }
+      runner_key_version: { type: integer, minimum: 1 }
+      boot_id: { type: string, minLength: 1 }
+      supervisor_instance_id: { type: string, format: uuid }
       delivery_state: { enum: [queued, sent, durably_received, delivery_failed, delivery_uncertain] }
       supervisor_receipt_id: { type: string, format: uuid }
       failure_code: { type: string, maxLength: 64 }
@@ -155,7 +158,7 @@ $defs:
           payload: { $ref: '#/$defs/ProcessObservedPayload' }
   ProcessObservedPayload:
     type: object
-    required: [binding_epoch, runner_id, boot_id, supervisor_instance_id, launch_id, containment_id, observation, observed_at]
+    required: [binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, launch_id, containment_id, observation, observed_at]
     properties:
       binding_epoch: { type: integer, minimum: 1 }
       runner_id: { type: string, format: uuid }
@@ -191,7 +194,15 @@ $defs:
       - if: { properties: { observation: { const: started } }, required: [observation] }
         then: { required: [process_identity] }
       - if: { properties: { observation: { const: exited } }, required: [observation] }
-        then: { required: [process_identity, exit_evidence] }
+        then:
+          required: [process_identity, exit_evidence]
+          properties:
+            exit_evidence:
+              oneOf:
+                - required: [exit_code]
+                  not: { required: [exit_signal] }
+                - required: [exit_signal]
+                  not: { required: [exit_code] }
       - if: { properties: { observation: { const: exit_status_unknown } }, required: [observation] }
         then: { required: [exit_evidence] }
       - if: { properties: { observation: { const: start_failed } }, required: [observation] }
@@ -207,16 +218,22 @@ $defs:
           payload: { $ref: '#/$defs/ReleaseStatusPayload' }
   ReleaseStatusPayload:
     type: object
-    required: [release_id, binding_epoch, runner_id, release_state, stop_fence_id, observed_at]
+    required: [release_id, binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, release_state, stop_fence_id, observed_at]
     properties:
       release_id: { type: string, format: uuid }
       binding_epoch: { type: integer, minimum: 1 }
       runner_id: { type: string, format: uuid }
+      runner_key_version: { type: integer, minimum: 1 }
+      boot_id: { type: string, minLength: 1 }
+      supervisor_instance_id: { type: string, format: uuid }
       release_state: { enum: [requested, stop_fenced, termination_requested, process_exited, released, cleanup_failed, release_uncertain, stale_rejected] }
       stop_fence_id: { type: string, format: uuid }
       process_exit_evidence_id: { type: string, format: uuid }
       observed_at: { type: string, format: date-time }
       failure_code: { type: string, maxLength: 64 }
+    allOf:
+      - if: { properties: { release_state: { const: process_exited } }, required: [release_state] }
+        then: { required: [process_exit_evidence_id] }
     additionalProperties: false
   InfrastructureUncertainEvent:
     allOf:
@@ -228,12 +245,13 @@ $defs:
           payload: { $ref: '#/$defs/InfrastructureUncertainPayload' }
   InfrastructureUncertainPayload:
     type: object
-    required: [binding_epoch, uncertainty_code, uncertainty_scope, runner_id, since, reconciliation_required]
+    required: [binding_epoch, uncertainty_code, uncertainty_scope, runner_id, runner_key_version, boot_id, supervisor_instance_id, since, reconciliation_required]
     properties:
       binding_epoch: { type: integer, minimum: 1 }
       uncertainty_code: { enum: [wss_disconnected, heartbeat_stale, supervisor_unavailable, delivery_ack_unknown, process_state_unknown, host_unreachable, journal_gap, evidence_conflict] }
       uncertainty_scope: { enum: [delivery, process, release, runner_host, event_stream] }
       runner_id: { type: string, format: uuid }
+      runner_key_version: { type: integer, minimum: 1 }
       boot_id: { type: string, minLength: 1 }
       since: { type: string, format: date-time }
       reconciliation_required: { const: true }
@@ -264,11 +282,11 @@ $defs:
     additionalProperties: false
   EventAcknowledgementEnvelope:
     type: object
-    required: [event_id, execution_id, event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
+    required: [event_id, execution_id, execution_event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
     properties:
       event_id: { type: string, format: uuid }
       execution_id: { type: string, format: uuid }
-      event_sequence: { type: integer, minimum: 1 }
+      execution_event_sequence: { type: integer, minimum: 1 }
       contiguous_through_sequence: { type: integer, minimum: 0 }
       disposition: { enum: [accepted, duplicate] }
       acknowledged_at: { type: string, format: date-time }
