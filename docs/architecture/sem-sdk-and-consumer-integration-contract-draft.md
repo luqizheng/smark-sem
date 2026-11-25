@@ -96,7 +96,7 @@ The SDK must not conflate TLS server authentication, SEM service request signing
 - Authentication/authorization failures, schema/version errors, stale fencing tokens and idempotency conflicts are not silently retried.
 - A timeout after request transmission is an uncertain outcome, not proof of rejection. The SDK returns an outcome that lets AI-PM reconcile/retry the same operation.
 - SDK retries must never generate a new execution ID or a new business attempt.
-- The SDK must expose server correlation/request identifiers and preserve structured SEM error codes.
+- The SDK must expose authenticated server correlation/request identifiers and preserve structured SEM error codes. It must not treat the unsigned pre-authentication 401/early-413 body or absent correlation as an authenticated protocol disposition; expose these as an unverified pre-authentication result and reconcile any potentially mutating operation using the same idempotency identity.
 - Read operations also carry caller-generated `message_id` and `request_id`; the signed `X-SEM-Request-Id` response header echoes `request_id`, never `message_id`.
 - A GET snapshot 200 response's ETag is a signed component. A conditional 304 signs both the response ETag and the originating `If-None-Match` request header. The SDK must verify the response signature against the exact originating method, authority, path, request Content-Digest and applicable conditional validator before exposing the snapshot/ETag or accepting a 304 as unchanged.
 - A response ETag must never be cached or used to construct a subsequent `If-None-Match` request until the response signature and request-context association have been verified. The signed-response profile is still D-04 Draft and must be ratified before runtime implementation.
@@ -149,6 +149,7 @@ Before SDK implementation is approved, define executable tests for:
 13. SDK does not access AI-PM DB/Outbox or mutate AI-PM business state.
 14. SEM callback events match the same canonical fixtures consumed by AI-PM.
 15. A pinned SDK version compiles and passes contract tests in the AI-PM repository.
+16. Authenticated application errors are signature-verified and request-context-bound; pre-authentication 401/early 413 contain no trusted correlation IDs and are surfaced as unverified; response-signing failure never downgrades to an unsigned correlated response.
 
 ## 10. Open decisions
 
@@ -161,6 +162,7 @@ Before SDK implementation is approved, define executable tests for:
 - Final ratification of the proposed public method signatures and builder/configuration ergonomics in [D-12 SEM SDK Public API Design](./sem-sdk-public-api-design-draft.md).
 - Whether SEM provides a reusable callback-verification helper crate, and the boundary of that helper.
 - SDK support window, semantic-versioning policy and release automation.
+- Deterministic signed-error vectors and live middleware proof for the D-04 authenticated/pre-authentication response classes.
 - Exact mapping of existing D-04 OpenAPI endpoints to SDK methods.
 
 Source compatibility findings are recorded in [SEM SDK Source Compatibility Audit](./sem-sdk-source-compatibility-audit.md). The recommended shape is an isolated `sem-sdk` crate depending on canonical `sem-protocol`, using Tokio 1 + reqwest 0.12/native-tls as a candidate, with internal Kellnr distribution subject to CI access verification. The audit is source inspection only; no integrated build, TLS pinning proof or registry publish was run.
