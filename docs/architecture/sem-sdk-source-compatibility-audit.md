@@ -146,3 +146,32 @@ This audit does not establish:
 - approval of PR #1, PR #4, PR #9, or authorization to implement.
 
 **Disposition: useful source compatibility findings obtained; SDK design remains Draft.**
+
+
+## 9. Revision and provenance correction — 2026-11-25
+
+The original header above records the snapshots used for the first pass. Those identifiers are historical and must not be read as the current PR heads. This addendum is authoritative for the latest review snapshot:
+
+| Evidence class | Repository/ref | Exact revision | What it proves |
+|---|---|---|---|
+| SEM workspace candidate | `smark-sem` PR #1, `feat/sem-modular-monolith-skeleton` | `23224d6d7f3d541677f6e48fa14d61cdd0165d9a` | Rust workspace/manifests only; independent Draft branch, not integrated with PR #4 |
+| SEM protocol candidate | `smark-sem` PR #3, `docs/sem-d05-lifecycle-crash-consistency` | `068d44f3742b1381d059f9435f26c34137c0cebb` | D-04 draft OpenAPI/JSON Schemas and protocol review; not ratified |
+| SEM SDK document branch, earlier snapshot | `smark-sem` PR #4 | `c240628bdc4bd623503a8d671e7c86a91465d3f5` | Earlier SDK document state only |
+| SEM SDK document branch, current reviewed snapshot | `smark-sem` PR #4, `docs/sem-sdk-consumer-contract` | `600d0c5ce8944e79a55cd4139fe3f2a21aaa06cf` | Current reviewed SDK docs at time of review; no SDK implementation exists |
+| AI-PM source baseline | `ai-pm` `master` | root Cargo manifest blob `9213f75ff75dba9abdf307de719524d28a75f239` | Current manifest declaration for workspace dependencies; not a compiled SEM consumer |
+| AI-PM design-document branch, earlier snapshot | `ai-pm` PR #9 | `19cfa2682682bfeb75bfea0091544b53a57bfc50` | Earlier design state only |
+| AI-PM design-document branch, current reviewed snapshot | `ai-pm` PR #9, `docs/sem-02e-architecture-convergence` | `2e19a7ed905a78d037de5ff172fc309256e68336` | Current Draft design docs only; not merged or runtime evidence |
+
+Important qualification: the AI-PM Cargo manifest inspection is against `master`; PR #9 is a documentation branch and does not establish a changed runtime dependency graph. The AI-PM root manifest declares Tokio 1 and reqwest 0.12 with native-tls; the prior lockfile-resolution observations must be rechecked against the exact current master lockfile before pinning exact resolved versions. The earlier statement that runner/worker crate dependencies were individually inspected should be treated as an earlier snapshot observation, not as evidence of an integrated SEM SDK build.
+
+## 10. Current CI evidence and limitations
+
+At the review snapshot:
+- SEM PR #1 commit `23224d6...`: workflow run #18 completed successfully (format/test/clippy as represented by the PR workflow).
+- SEM PR #3 commit `068d44f...`: protocol contract validation run #77 completed successfully.
+- SEM PR #4 current commit `600d0c5...`: no PR workflow run returned; no CI success claim.
+- AI-PM PR #9 current commit `2e19a7e...`: no PR workflow run returned; no CI success claim.
+
+These are independent branches and workflows. PR #1's successful skeleton CI does not compile PR #4's proposed SDK, and PR #3's schema/fixture validation does not prove live HTTP signatures, TLS pinning, callback transaction correctness or cross-repository interoperability.
+
+**Updated disposition:** source compatibility remains a static design input only. No combined workspace build, dependency resolution with SDK, TLS pin test, registry publish/read, AI-PM SDK compile, or live interoperability test has been executed.
