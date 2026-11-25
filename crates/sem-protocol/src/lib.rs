@@ -24,11 +24,19 @@ pub struct RunnerMessage<T> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PlatformAggregate {
+    pub aggregate_type: String,
+    pub id: Uuid,
+    pub project_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PlatformEvent<T> {
     pub event_id: Uuid,
     pub event_type: String,
     pub schema_version: u16,
     pub occurred_at: DateTime<Utc>,
+    pub aggregate: PlatformAggregate,
     pub correlation_id: Uuid,
     pub payload: T,
 }
