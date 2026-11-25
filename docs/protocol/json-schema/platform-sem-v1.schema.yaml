@@ -253,6 +253,7 @@ $defs:
       runner_id: { type: string, format: uuid }
       runner_key_version: { type: integer, minimum: 1 }
       boot_id: { type: string, minLength: 1 }
+      supervisor_instance_id: { type: string, format: uuid }
       since: { type: string, format: date-time }
       reconciliation_required: { const: true }
       reservation_retained: { const: true }
