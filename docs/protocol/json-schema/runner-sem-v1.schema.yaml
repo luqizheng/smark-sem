@@ -254,6 +254,10 @@ $defs:
             properties: { kind: { const: code }, code: { type: integer } }
             additionalProperties: false
           - type: object
+            required: [kind, signal]
+            properties: { kind: { const: signal }, signal: { type: integer, minimum: 1 } }
+            additionalProperties: false
+          - type: object
             required: [kind]
             properties: { kind: { const: unknown } }
             additionalProperties: false
