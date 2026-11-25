@@ -18,7 +18,7 @@ For every HTTP response sent by SEM or AI-PM:
 
 1. Signature-Input and Signature carry an RFC 9421 Ed25519 signature.
 2. Content-Digest is an RFC 9530 digest over the exact response message content bytes. For a response with no content (including 304), compute the digest over the empty byte sequence.
-3. The signature base binds response-derived `@status`, `content-digest`, and the operation-specific response correlation header. It also binds the originating request context using RFC 9421 request-targeted component identifiers `@method;req`, `@authority;req`, `@path;req`, and `content-digest;req`. A bare `@authority` is NOT valid as a response-derived component: RFC 9421 defines `@authority` for a request target, and a response signature must use the `req` parameter to obtain it from the associated request. `content-type` is covered only when present on the response; a verifier must not synthesize it when absent.
+3. The signature base binds response-derived `@status`, `content-digest`, and the operation-specific response correlation header. It also binds the originating request context using RFC 9421 request-targeted component identifiers `@method;req`, `@authority;req`, `@path;req`, and `content-digest;req;sf`. A bare `@authority` is NOT valid as a response-derived component: RFC 9421 defines `@authority` for a request target, and a response signature must use the `req` parameter to obtain it from the associated request. `content-type` is covered only when present on the response; a verifier must not synthesize it when absent.
 4. created, expires, nonce, keyid, and alg are mandatory signature parameters. Exact freshness bounds, nonce retention, and key rotation/overlap remain open D-04/D-09 decisions.
 5. Correlation is mandatory and direction-specific:
    - Platform→SEM request receives a SEM response echoing X-SEM-Request-Id equal to the authenticated request's message_id.
@@ -104,12 +104,12 @@ This section removes ambiguity from the *candidate* response profile. It is norm
 For all non-304 responses, including structured errors and empty-body statuses, the candidate covered-component order is:
 
 1. `"@status"`
-2. `"content-digest";sf;sf`
+2. `"content-digest";sf`
 3. Exactly one response correlation field: `"x-sem-request-id"` for Platform→SEM responses, or `"x-sem-event-id"` for SEM→AI-PM callback responses.
 4. `"@method";req`
 5. `"@authority";req`
 6. `"@path";req`
-7. `"content-digest";sf;req;sf`
+7. `"content-digest";req;sf`
 
 The Structured Fields serialization template is therefore exactly one of:
 
@@ -132,13 +132,13 @@ For a response with a representation body, `content-type` is additionally requir
 A 304 has no message content and uses this exact component order:
 
 1. `"@status"`
-2. `"content-digest";sf;sf`
+2. `"content-digest";sf`
 3. `"x-sem-request-id"`
 4. `"etag"`
 5. `"@method";req`
 6. `"@authority";req`
 7. `"@path";req`
-8. `"content-digest";sf;req;sf`
+8. `"content-digest";req;sf`
 9. `"if-none-match";req`
 
 Template:
@@ -149,7 +149,7 @@ Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "etag" "
 
 The response `Content-Digest` for a 304 MUST be SHA-256 over zero content octets:
 `sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:`.
-The request-side `content-digest;req` is the digest of the actual request content bytes (zero octets for this GET profile). The client MUST verify that the 304 is valid for the associated request's `If-None-Match` condition using HTTP conditional request comparison semantics (including weak comparison for `If-None-Match`). The signed response ETag identifies the selected current representation validator; the protocol MUST NOT replace HTTP's list, wildcard, or weak-comparison semantics with raw string equality.
+The request-side `content-digest;req;sf` is the digest of the actual request content bytes (zero octets for this GET profile). The client MUST verify that the 304 is valid for the associated request's `If-None-Match` condition using HTTP conditional request comparison semantics (including weak comparison for `If-None-Match`). The signed response ETag identifies the selected current representation validator; the protocol MUST NOT replace HTTP's list, wildcard, or weak-comparison semantics with raw string equality.
 
 ### 8.4 Signature base construction and request-context association
 
