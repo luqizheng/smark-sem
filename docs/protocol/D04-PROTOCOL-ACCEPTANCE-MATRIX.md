@@ -260,7 +260,7 @@ See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-R
 | D04-H53 | Signed structured 4xx/5xx response | Client accepts typed error only after response verification |
 | D04-H54 | Missing response Signature or Signature-Input | Client fails closed; no typed result |
 | D04-H55 | Response Content-Digest mismatch | Client rejects before decoding/trusting body |
-| D04-H56 | Response correlation header does not match request message_id/event_id | Client rejects as response-confusion/replay |
+| D04-H56 | Response correlation header does not match request request_id/callback event_id | Client rejects as response-confusion/replay |
 | D04-H57 | Valid 304 with ETag echo, empty-content digest and valid signature | Client returns NotModified only after all checks |
 | D04-H58 | 304 missing ETag, signature, digest or correlation header | Client rejects; must not treat as cache hit |
 | D04-H59 | 304 contains a response body | Client rejects as protocol violation |
