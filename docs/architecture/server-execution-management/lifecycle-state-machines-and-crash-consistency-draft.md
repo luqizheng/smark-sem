@@ -266,8 +266,8 @@ On Supervisor startup:
 
 ### 5.4 Event ordering, replay and sequence gaps
 
-- Each Runner event is immutable and has a unique `event_id`; sequence is monotonically increasing per execution/binding.
-- Reconnect snapshot includes `runner_id`, boot ID, Supervisor instance, connection generation, per-execution binding epoch, latest sequence and active process identities.
+- Each Runner event is immutable and has a unique `event_id`; sequence is monotonically increasing within a durable Runner event stream identified by `runner_id + journal_id`. The stream identity survives Supervisor restart when the durable journal is retained. Every event also carries `execution_id + binding_epoch`; SEM validates the stream cursor and execution/binding fence independently.
+- Reconnect snapshot includes `runner_id`, boot ID, Supervisor instance, connection generation, journal_id, per-stream latest sequence and active process/containment identities.
 - SEM acknowledges the highest contiguous sequence it has durably committed. It must not ACK beyond a gap.
 - Duplicate event ID with identical canonical content is a no-op. Duplicate ID with changed content is a security/protocol conflict.
 - An out-of-order event may be durably buffered, but cannot advance the contiguous cursor until gaps are resolved.
@@ -445,7 +445,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 3. Runner journal storage engine, fsync policy, corruption recovery and disk-full behavior.
 4. OS-specific process containment and durable discovery mechanism for the process-create-before-journal window (Linux cgroup/container; Windows Job Object or equivalent).
 5. How the Supervisor can prove exit after its own crash or host reboot, including limits of OS wait/reap evidence.
-6. Event sequence scope: per execution or per execution + binding epoch; this draft recommends per execution with epoch carried on each event, but requires protocol agreement.
+6. Event sequence scope: this draft recommends a durable Runner event stream keyed by `runner_id + journal_id`, with `execution_id + binding_epoch` carried on each event. This avoids requiring two different Runner hosts to allocate one shared per-execution sequence after rebind. D-04 must freeze the stream/cursor schema and retention semantics.
 7. Snapshot/replay API exact schemas, cursor semantics and maximum journal retention.
 8. Reservation expiry/recovery rules and whether quarantined capacity can ever be manually released under each D-03 host profile.
 9. Whether a process exit event must carry signed evidence in addition to authenticated WSS provenance.
