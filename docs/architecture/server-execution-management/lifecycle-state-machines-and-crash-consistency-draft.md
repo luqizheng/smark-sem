@@ -657,6 +657,9 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-97 | SEM sends durable event ACK before the complete event envelope is committed | Test fails; ACK must follow durable persistence |
 | D05-98 | Runner deletes or mutates the raw evidence record before receiving durable ACK for its event_sequence | Test fails; evidence must remain replayable and immutable until ACK |
 | D05-99 | Runner replays process-exit event after reconnect | journal_id, event_sequence, evidence_id, schema version, digest and payload remain identical; only connection-scoped framing may change |
+| D05-100 | SEM sends durable ACK without acknowledged_journal_id or acknowledged_event_sequence | Reject ACK; Runner retains raw evidence and replays the event |
+| D05-101 | ACK journal_id/event_sequence refers to a different durable stream position | Reject as stale/conflicting ACK; do not release evidence retention gate |
+| D05-102 | Transport ACK or accepted/duplicate disposition is received without durable_recorded disposition for the exact event cursor | Do not delete or mutate the process-exit evidence record |
 
 ## 11. Open decisions required before ratification
 
