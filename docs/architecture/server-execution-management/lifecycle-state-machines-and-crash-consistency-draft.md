@@ -61,6 +61,46 @@ The current AI-PM model has three separate business concepts. They must not be c
 
 Task transition legality is enforced by the AI-PM domain transition validator and application guards. SEM observations never directly set Task status.
 
+The current AI-PM domain source defines the following exact 31 TaskStatus edges. This is the edge allow-list only; guards in the right-hand column remain mandatory and are evaluated by AI-PM.
+
+| From | To | Additional AI-PM guard |
+|---|---|---|
+| Draft | Ready | Normal readiness validation |
+| Draft | Cancelled | Authorized cancellation |
+| Draft | Superseded | Replacement task exists; non-empty reason and actor; no self-supersession |
+| Ready | Claimed | Valid claim/dispatch policy |
+| Ready | Cancelled | Authorized cancellation |
+| Ready | Superseded | Replacement task exists; non-empty reason and actor; no self-supersession |
+| Ready | Completed | Manual-task path only; human principal, manual_completion flag and reason |
+| Claimed | Running | Valid claim/lease and execution start policy |
+| Claimed | Ready | Claim release/requeue policy |
+| Claimed | Cancelled | Authorized cancellation |
+| Running | Submitted | Delivery manifest submitted and readable (E1) |
+| Running | AwaitingDecision | At least one open question; waiting context recorded |
+| Running | Blocked | Blocking reason/evidence recorded |
+| Running | Cancelled | Authorized cancellation/release policy |
+| Running | Failed | Terminal failure evidence: retry exhausted, total deadline exhausted, or terminating Permission/PolicyViolation/MissingDependency failure |
+| Running | Superseded | Replacement exists; reason/actor valid; active Run positively stopped before finalization |
+| AwaitingDecision | Ready | All waiting questions resolved |
+| AwaitingDecision | Running | All waiting questions resolved |
+| AwaitingDecision | Cancelled | Authorized cancellation; waiting resolution is not required |
+| Blocked | Ready | Blocking condition resolved |
+| Blocked | Cancelled | Authorized cancellation |
+| Blocked | Superseded | Replacement exists; reason and actor valid |
+| Submitted | Reviewing | Review may begin under AI-PM review policy |
+| Submitted | Cancelled | Authorized cancellation |
+| Submitted | Superseded | Replacement exists; reason and actor valid |
+| Reviewing | Completed | Acceptance evidence complete (E2) and review policy satisfied |
+| Reviewing | ChangesRequested | Review records actionable changes |
+| Reviewing | Cancelled | Authorized cancellation |
+| Reviewing | Superseded | Replacement exists; reason and actor valid |
+| ChangesRequested | Ready | Rework scope accepted and task re-readied |
+| ChangesRequested | Cancelled | Authorized cancellation |
+
+The four terminal Task statuses are Completed, Cancelled, Failed and Superseded; none has an outgoing edge. Claimed, AwaitingDecision and ChangesRequested deliberately do not transition to Superseded. Entering Superseded always requires a distinct existing replacement task, a non-empty reason and actor; Running → Superseded additionally requires the active Run to be stopped first.
+
+The edge matrix and guards are sourced from AI-PM commit d0e72fa6805aebeadf1b282e430deba493072fd6, especially pm-domain/src/task_transition.rs. Re-check this pinned source before ratification.
+
 **Run lifecycle — current source `RunKind` and `RunStatus`:**
 
 Run kind is `Delivery` or `Review`. Current Run status is one of:
