@@ -198,6 +198,14 @@ Installing AI-PM MCP is necessary but not sufficient. Before implementation, def
 
 SEM service JWTs and Runner WSS credentials must never be reused as Harness MCP business identities.
 
+
+
+## 9.1 AI-PM MCP business transition requirements
+
+Harness business status changes must use AI-PM-owned, guarded MCP operations. Do not add an unrestricted arbitrary Task status setter. AI-PM validates every requested transition against its Task state machine and records the business audit.
+
+The existing ai-pm source baseline has specialized transitions coupled to the old Runner Claim/Lease path: pm_report_progress currently combines business progress/stage with Lease renewal and advances Task to running on the first started stage; pm_submit_result advances Task to submitted; pm_get_run_context returns the fuller execution contract but requires the old claim token; pm_get_task_context is currently a narrower snapshot. The replacement Harness MCP contract must expose complete authorized Task/execution context without requiring Runner Claim, preserve typed business progress/result transitions, and separate all process heartbeat/resource liveness from MCP business operations.
+
 ## 10. Failure and recovery semantics
 
 - SEM accepts request but cannot find a Runner: remain queued/rejected according to infrastructure policy; no business state is changed.
