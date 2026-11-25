@@ -198,6 +198,8 @@ The Platform→SEM signed 409 `IDEMPOTENCY_CONFLICT` case is now represented by 
 
 The request-association negative vector is also executable: Python and Node mutate method, authority, path and request Content-Digest one at a time and prove the response signature fails; for 304 they additionally mutate `If-None-Match`. D04-H72 records this. These are deterministic signature-base tests, not a live HTTP client's transport-response association proof.
 
+For both GET snapshot 200 and conditional 304, Python and Node also mutate the response ETag and prove signature verification fails. D04-H73..H75 cover the signed 200 ETag, 200 ETag tamper and 304 ETag tamper cases.
+
 Each positive fixture must be generated independently by at least two implementations and cross-verified by a third implementation or a separately implemented verifier. Python, Node and Rust are candidate languages; library names and versions must be pinned in the fixture manifest after actual compatibility tests, not assumed in advance. Negative vectors must mutate one component at a time and prove verification failure.
 
 ### 8.7 Freshness and replay are separate acceptance gates
