@@ -206,6 +206,8 @@ Rules:
 - A stale epoch is rejected and must never terminate a newer execution.
 - Release is not a Task transition and must not update business state.
 
+**Open contract gap (P0-07):** this request currently requires `expected_binding_epoch`, but SEM allocates that epoch only after a Runner binding exists. The current contract therefore cannot cancel an accepted queued/unbound execution. Do not fabricate an epoch or treat a missing binding as process exit. Before ratification, define an explicit `unbound` versus `bound(epoch)` expected-binding condition, a dispatch-linearized unbound-release disposition, and a callback event shape that does not invent Runner identity.
+
 ## 8. SEM → AI-PM: infrastructure result
 
 Distinct infrastructure event types (the normative set is the five-way discriminated union in `json-schema/platform-sem-v1.schema.yaml`):
