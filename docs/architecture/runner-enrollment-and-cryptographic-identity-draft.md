@@ -1,177 +1,171 @@
-# Runner Enrollment and Cryptographic Identity — Design Decision Draft
+# Runner Enrollment and Cryptographic Identity — Revised Design Draft
 
-- Status: **Proposed design / review required**.
+- Status: **Revised proposal / user review required**.
 - Decision ID: SEM-D-01.
-- Scope: Runner enrollment, proof of possession, SEM WSS authentication and AI-PM delegated-grant binding.
-- Authority: AI-PM owns the trust decision for whether a Runner key may receive delegated Harness authority; SEM owns operational Runner registration and connectivity.
-- This is a design proposal, not an approved implementation or migration.
+- Scope: Runner enrollment, cryptographic identity, SEM WSS authentication, and identity binding for AI-PM delegated execution grants.
+- Authority: **SEM owns Runner infrastructure identity and enrollment. AI-PM owns business authorization and delegated Harness grants.**
+- Design inspiration: GitLab Runner's operator workflow (create a registration credential in the control plane, then register from the Runner host using the SEM URL and credential). The registration token is not a permanent Runner credential.
+- This is a design proposal, not an approved implementation or migration. No code or migration is authorized.
 
-## 1. Problem and source constraints
+## 1. Decision direction
 
-The current AI-PM device registry is not a cryptographic Runner identity system:
-- Device registration accepts device metadata and an `is_runner` flag, but does not enroll a public key or certificate.
-- Existing `cpk_` is a reusable device-wide secret. Authentication maps it to the device owner's HumanActor and project-membership model.
-- Existing `cpk_` does not bind to execution_id, Task, Run/attempt, authorization_generation, Runner key or an operation allow-list.
+Adopt a **SEM-issued one-time registration token + Runner-generated keypair + SEM-issued Runner identity** model.
 
-Therefore the existing `cpk_` credential and device-owner attribution must not be reused for delegated Harness MCP access. The source evidence is recorded in [AI-PM Harness identity review §10](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/harness-identity-and-business-fencing-review.md).
+Desired operator flow:
 
-## 2. Decision proposal
+1. An administrator signs in to SEM and creates a Runner registration record.
+2. SEM generates a registration token and displays a registration command/configuration.
+3. An operator runs the registration command on the Runner host, supplying the SEM registry URL and registration token.
+4. The Runner generates its own asymmetric keypair locally and submits its public key with the registration token over HTTPS.
+5. SEM atomically consumes the token, creates the permanent runner_id, binds the public key, and returns the Runner identity/configuration.
+6. The Runner starts its service and authenticates to SEM over WSS using proof of possession of its private key.
 
-Adopt a **Runner keypair + AI-PM enrollment trust record + signed Runner Identity Attestation** model.
+## 2. Authority boundary
 
-- Runner Supervisor generates and owns a per-installation asymmetric keypair.
-- The private key never leaves the Runner host and is not stored in SEM or AI-PM.
-- AI-PM maintains the minimal trust record needed to decide whether that exact Runner key is eligible to redeem a delegated execution grant.
-- AI-PM issues a signed identity attestation after an owner-approved enrollment ceremony.
-- SEM receives the attestation and public key through an authenticated Platform→SEM control message and uses them to authenticate the Runner WSS connection.
-- AI-PM independently validates the Runner key against its own enrollment record when a delegated bootstrap ticket is redeemed. It never trusts a public-key thumbprint supplied only by SEM.
+- SEM is authoritative for Runner infrastructure identity: enrollment, runner_id, public-key binding, key versions, Runner status, connection eligibility, revocation and operational metadata.
+- AI-PM is authoritative for business authorization: Task/Run/attempt scope, authorization_generation, delegated grant creation/revocation, allowed MCP operations and business outcomes.
+- AI-PM does not need to create or approve each SEM Runner registration. SEM administrators control which infrastructure is admitted to SEM.
+- AI-PM must validate the Runner identity assertion issued by SEM when binding a delegated grant to a Runner. It must not accept an arbitrary runner_id or public-key thumbprint supplied by a caller.
+- SEM cannot create, widen, redeem or approve AI-PM business grants. A valid Runner identity is not business authorization.
+- The services keep independent databases and exchange authenticated versioned API messages; no shared database or cross-database transaction is introduced.
 
-This is deliberately a split of responsibility:
-- AI-PM trust record: identity and authorization trust anchor only.
-- SEM Runner record: operational endpoint, capability, supervision, health and resource metadata.
-- The two records share an immutable runner_id and key thumbprint, but neither database is shared.
+## 3. Registration credential
 
-## 3. Enrollment ceremony
+### 3.1 Creation in SEM
 
-### 3.1 Human-approved enrollment intent
+An authenticated SEM administrator creates a registration record with at least:
 
-1. An authorized AI-PM tenant/project administrator creates a Runner enrollment intent.
-2. AI-PM allocates an immutable `runner_id`, a one-time enrollment nonce and an expiry.
-3. The intent records tenant, approving actor, intended deployment label, allowed supervision modes and enrollment status.
-4. The enrollment nonce is single-use, short-lived and stored hashed. It is not a reusable Runner credential.
+- target Runner pool/group;
+- permitted Runner supervision mode(s), with unattended as the default;
+- optional labels/capability constraints;
+- registration expiry;
+- maximum successful registrations (default: one);
+- administrator/audit identity.
 
-No Runner becomes trusted merely because it connects to SEM or declares `is_runner=true`.
+SEM generates a cryptographically random, high-entropy token (recommended minimum: 256 bits of entropy). The raw token is displayed only at creation time. SEM stores only a verifier/hash, never the raw token.
 
-### 3.2 Runner key generation and proof of possession
+Recommended V1 policy:
 
-1. Runner Supervisor generates a fresh Ed25519 signing keypair on the host.
-2. Private key storage preference:
-   - OS-protected keystore/TPM-backed storage when available;
-   - otherwise a dedicated service-account-owned file with restrictive permissions and encrypted-at-rest host storage where available.
-3. The Runner sends `runner_id`, enrollment nonce, public key, key algorithm/version and a proof-of-possession signature over the enrollment challenge to AI-PM over TLS.
-4. AI-PM validates the one-time nonce, expiry, tenant/owner approval, signature and that the nonce has not already been consumed.
-5. AI-PM stores the public key, thumbprint, key version, enrollment actor, created_at, status and revocation metadata in its trust record.
+- single-use by default;
+- short expiry (recommended default: 10 minutes, configurable within a safe bounded range);
+- bound to one SEM instance and one target pool;
+- revocable before redemption;
+- atomically consumed with Runner creation so concurrent redemption cannot create multiple Runners;
+- never reused for reconnects, heartbeats, WSS sessions or task delivery.
 
-The private key is never sent to AI-PM or SEM. The enrollment nonce is not used for subsequent WSS or MCP authentication.
+The registration token is a bootstrap secret, not a Runner identity and not a delegated Harness credential.
 
-### 3.3 AI-PM identity attestation
+### 3.2 Runner host registration
 
-After enrollment, AI-PM issues a signed Runner Identity Attestation containing only infrastructure identity claims:
-- issuer and audience (SEM Runner edge);
-- runner_id and tenant_id;
-- public-key thumbprint and key algorithm;
-- key_version and attestation serial/jti;
-- issued_at, not_before and expires_at;
-- enrollment status and permitted connection purpose.
+Illustrative CLI (exact command and flags remain to be frozen):
 
-The attestation must not contain Task, Project work scope, Run, execution_id, business permissions or MCP operations. It proves identity, not business authorization.
+~~~bash
+sem-runner register --registry https://sem.example.com --registration-token <TOKEN>
+~~~
 
-AI-PM publishes the attestation and public key to SEM through the authenticated Platform→SEM service channel. SEM stores it as the operational Runner trust material. SEM validates the attestation signature against an AI-PM verification key configured out of band or through a pinned, authenticated key-distribution process.
+The CLI sends the token only to the configured HTTPS SEM endpoint. It must validate TLS normally and must not permit insecure TLS bypass in production.
 
-### 3.4 WSS connection authentication
+Command-line arguments may be exposed through shell history, process listings or diagnostics. The CLI must also support interactive token input or protected token-file/stdin input. It should warn against pasting production registration tokens into shared shell sessions.
 
-Recommended WSS handshake:
-1. Runner opens TLS/WSS to SEM.
-2. SEM sends a fresh, short-lived challenge with server identity, connection nonce and protocol version.
+### 3.3 Key generation and redemption
+
+1. The Runner CLI/Supervisor generates a fresh per-installation signing keypair on the Runner host before redemption.
+2. Recommended initial algorithm: Ed25519.
+3. The private key is persisted locally under the Runner service identity with restrictive OS permissions; use an OS-protected keystore/TPM-backed storage when supported. The private key never leaves the host.
+4. The Runner submits the registration token, public key, algorithm/key version, installation-generated request ID and basic host metadata to SEM over HTTPS.
+5. SEM validates token scope, expiry, revocation and remaining use count; it atomically consumes the token while creating the Runner record.
+6. SEM returns the assigned immutable runner_id, key version and SEM connection configuration.
+7. If the response is lost after SEM commits redemption, an idempotent request ID or narrowly scoped recovery mechanism must recover the same result without creating a second Runner or making the token reusable for a new identity.
+
+The registration token is never used after successful enrollment and must not be stored in steady-state Runner configuration.
+
+## 4. WSS authentication and Runner lifecycle
+
+1. Runner opens outbound TLS/WSS to SEM; no inbound Runner port is required.
+2. SEM sends a fresh, short-lived challenge bound to the connection/session and protocol version.
 3. Runner signs the canonical challenge using its enrolled private key.
-4. SEM validates the signature against the public key in the AI-PM-signed attestation, and checks attestation validity/revocation state.
-5. SEM establishes a Runner session bound to runner_id, key_version, connection_id and Runner boot_id.
-6. All subsequent messages are associated with that authenticated session and carry execution_id/binding_epoch/event_id/event_sequence as appropriate.
+4. SEM validates the signature against the public key bound to runner_id and checks Runner/key status.
+5. SEM establishes a session bound to runner_id, key_version, connection_id and boot_id.
+6. Heartbeats, resource telemetry, delivery acknowledgements and process observations are accepted only on the authenticated session.
 
-A plain device ID, IP address, self-declared public key or replayed signature is insufficient. TLS protects the channel; the application-level challenge binds the Runner identity and prevents replay across sessions.
+A Runner ID, IP address, hostname, self-declared public key or registration token alone is insufficient to authenticate a steady-state connection.
 
-SEM must refresh/reconcile attestation revocation state. AI-PM remains authoritative for whether the key is trusted; SEM may deny a Runner earlier but may not override AI-PM revocation.
+SEM supports key rotation and revocation:
+- Planned rotation: authenticated Runner proves possession of the current key and submits a new public key; SEM creates the next key version. Any overlap is bounded. Execution grants remain bound to one exact key version/identity generation.
+- Compromise: SEM revokes the key/Runner, rejects new WSS sessions and stops new deliveries. Revocation does not prove an already-running Harness process has stopped.
+- Lost key/reinstalled host: revoke the old key and perform a new administrator-authorized registration. Do not recover or copy the old private key from SEM.
+- Re-registration must not silently inherit old process bindings, reservations or execution authority.
 
-## 4. Delegated bootstrap binding
+## 5. AI-PM delegated-grant binding
 
-For the execution bootstrap in the companion contract:
-- AI-PM looks up the enrolled Runner key by runner_id in its own trust record.
-- AI-PM binds the one-time bootstrap ticket to runner_id, key thumbprint/key_version, execution_id, binding_epoch and the delegated grant.
-- SEM transports the opaque ticket only to the matching current Runner binding.
-- Runner proves possession by signing the redemption challenge with the enrolled private key.
-- AI-PM verifies the signature against its own enrolled public-key record, not a key value supplied by SEM.
-- The ticket is single-use; successful redemption consumes it atomically.
-- The resulting short-lived MCP grant is scoped to the exact business attempt and operation allow-list.
+The SEM Runner identity is infrastructure identity only.
 
-SEM cannot redeem the ticket because it does not possess the Runner private key. Substituting another public key or changing runner_id/key_version fails AI-PM verification.
+- AI-PM creates the delegated grant and binds it to the exact runner_id, SEM identity issuer, key version/identity generation, execution, binding epoch, authorization generation and operation allow-list.
+- AI-PM validates the Runner identity using an authenticated SEM-signed identity assertion or authenticated SEM control-plane lookup. Exact assertion format and key-distribution mechanism are D-04/D-06 contract work.
+- SEM transports the opaque one-time bootstrap ticket only to the matching authenticated Runner session.
+- Runner proves possession of the bound private key during redemption; AI-PM validates the SEM identity assertion and ticket/grant scope.
+- SEM cannot redeem or widen the grant. AI-PM remains the sole issuer and authority for delegated MCP credentials.
+- A revoked Runner identity or changed key generation cannot redeem a grant bound to the old identity generation.
+- Runner identity revocation, AI-PM grant revocation and process termination are distinct operations with distinct evidence.
 
-## 5. Rotation, revocation and recovery
+This replaces the earlier proposal that AI-PM creates each Runner enrollment intent and signs the primary Runner identity attestation. That approach unnecessarily makes the business platform the owner of infrastructure enrollment.
 
-### 5.1 Planned key rotation
+## 6. Security requirements
 
-1. Runner generates a new keypair and proves possession while authenticated with the current key.
-2. AI-PM validates the current identity and an authorized rotation operation.
-3. AI-PM creates the next key_version and publishes a new signed attestation to SEM.
-4. A bounded overlap may be allowed for WSS reconnection only; delegated bootstrap tickets bind to one exact key_version and are never transferable.
-5. AI-PM revokes the old key after the new key is confirmed active, or immediately if compromise is suspected.
-
-### 5.2 Revocation
-
-- AI-PM revokes the key in its trust record and emits a durable revocation event to SEM.
-- AI-PM rejects future bootstrap redemption and delegated MCP requests bound to the revoked key/generation.
-- SEM rejects new WSS sessions and stops new delivery to the revoked Runner.
-- Revocation does not prove an already-running Harness process has stopped. AI-PM authorization revocation and Runner process termination remain separate actions.
-- If the Runner is suspected compromised, quarantine its binding and require process/host isolation evidence before any replacement execution is dispatched.
-
-### 5.3 Lost key / host reinstall
-
-A lost private key cannot be recovered from SEM or AI-PM. The host must be re-enrolled through a new human-approved ceremony:
-- revoke old key;
-- issue new enrollment intent;
-- generate a new keypair;
-- approve the new key and update the SEM attestation;
-- reconcile or quarantine any old process bindings before reusing capacity.
-
-A copied `runner_id` or copied device metadata does not confer identity without the private key.
-
-## 6. Trust and key management requirements
-
-- AI-PM attestation signing key is separate from LMMS user-token signing keys unless a later explicit security review approves shared key infrastructure.
-- SEM pins the AI-PM attestation verification key set and supports key rotation with explicit kid/key validity windows.
-- Runner signing private keys are per installation, not per tenant and not shared among Runner hosts.
-- Key material and attestation secrets never appear in prompts, Harness arguments, workspace files, ordinary logs or telemetry.
-- Audit records include runner_id, key_version, attestation serial, enrollment/rotation/revocation actor and timestamps, but never private key or reusable bootstrap secret.
-- Enrollment, rotation and revocation endpoints require human/administrative authorization and CSRF/anti-replay protections appropriate to their transport.
+- Registration tokens are high entropy, short-lived, single-use by default, scope-bound and stored only as hashes/verifiers.
+- Token redemption is atomic and replay-safe; concurrent redemption cannot create duplicate Runner identities.
+- Registration tokens, private keys, delegated MCP tokens and bootstrap tickets must never appear in prompts, workspace files, ordinary logs or telemetry.
+- Private keys are unique per Runner installation and never shared across hosts.
+- SEM identity-signing keys (if signed assertions are used) are separate from Runner keys and protected as control-plane secrets.
+- AI-PM pins/trusts SEM identity verification keys through an authenticated, versioned key-distribution process. Rotation and emergency revocation are explicit.
+- SEM registration endpoints require authenticated administrator authorization; Runner redemption endpoints are rate-limited and audited.
+- Registration must not expose arbitrary pool selection or privilege escalation through caller-controlled metadata.
+- TLS certificate validation is mandatory in production; registration credentials must not be sent to another origin after redirects.
 
 ## 7. Rejected alternatives
 
 | Alternative | Reason rejected |
 |---|---|
-| Reuse current `cpk_` | Static device-wide credential; owner HumanActor mapping; no proof of private-key possession or per-execution scope |
-| Trust a public-key thumbprint sent by SEM | A compromised SEM could substitute its own key and obtain a Runner-bound ticket |
-| Use SEM WSS credential as MCP credential | Infrastructure channel credential is not AI-PM business authorization |
-| Put a reusable MCP token in prompt/body | Exposes credential to SEM, logs, Harness prompt history and unrelated process surfaces |
-| Identify Runner by device_id/IP/hostname only | Copyable/spoofable metadata; no cryptographic proof of possession |
+| Reuse existing AI-PM cpk_ | Reusable device-wide secret mapped to HumanActor; not a cryptographic Runner identity or per-execution grant |
+| Use registration token as permanent Runner credential | A leaked bootstrap token would permit persistent impersonation; no key rotation or proof-of-possession boundary |
+| Let AI-PM create every Runner enrollment intent | Couples infrastructure enrollment to business project administration |
+| Trust runner_id/IP/hostname only | Copyable or spoofable metadata without cryptographic proof |
 | Let SEM mint AI-PM delegated grants | Violates AI-PM business authorization authority |
+| Use WSS credential as MCP credential | Infrastructure channel authentication is not business authorization |
 
-## 8. Open implementation details
+## 8. Open details to close in D-04/D-09
 
-The architecture direction is proposed, but these details must be closed in the machine-readable security/API contract:
-- exact attestation format (COSE_Sign1/JWS or X.509 certificate);
-- exact canonical challenge encoding and signature domain separation;
-- private-key storage guarantees on supported Runner OS platforms;
-- attestation revocation propagation SLA and offline behavior;
-- whether SEM validates each WSS message signature or relies on authenticated session + TLS;
-- enrollment UX and bootstrap nonce delivery mechanism;
-- audit schema and retention.
-
-Recommended initial profile: Ed25519 signatures, short-lived enrollment nonce, AI-PM-signed JWS/COSE attestation, TLS-protected WSS with challenge-response, and per-request AI-PM grant validation. Select one exact encoding and key-management profile before implementation.
+- Exact registration API path, request/response schema and idempotency semantics.
+- Exact token encoding/prefix, hash/KDF choice, storage and rate limits.
+- Exact CLI command name and secure token input modes.
+- Runner private-key storage profile for Linux and Windows service deployments.
+- WSS challenge canonicalization, signature domain separation and replay window.
+- SEM identity assertion format (e.g. JWS/COSE) or authenticated identity lookup contract for AI-PM.
+- SEM signing-key distribution, rotation and emergency revocation.
+- Recovery behavior when SEM commits redemption but the response is lost.
+- Whether a registration record can permit multiple registrations; default remains one.
+- Audit retention and administrative recovery procedures.
 
 ## 9. Acceptance tests
 
-1. Unenrolled Runner cannot establish an authenticated SEM session.
-2. Wrong, expired, reused or revoked enrollment nonce is rejected.
-3. A public key without proof of private-key possession cannot enroll.
-4. Replaying a WSS challenge signature on another connection is rejected.
-5. Changing runner_id, key_version or thumbprint invalidates the attestation/proof.
-6. SEM cannot substitute its own key and redeem a bootstrap ticket.
-7. AI-PM rejects redemption if its own Runner trust record is revoked, even if SEM presents an old attestation.
-8. Old key cannot redeem tickets after rotation/revocation.
-9. Lost-key recovery requires a new human-approved enrollment.
-10. Key revocation does not automatically release process reservations or count as process exit.
-11. No private key, bootstrap secret or delegated MCP token appears in prompt, argv, workspace or ordinary logs.
-12. A Runner identity attestation cannot be used as a Task/Run/MCP business grant.
+1. Unauthenticated SEM users cannot create registration records.
+2. Wrong, expired, revoked or already-consumed registration tokens are rejected.
+3. A registration token cannot be redeemed outside its configured SEM instance/pool scope.
+4. Concurrent redemption produces at most one Runner identity.
+5. A Runner generates its private key locally; private key material never reaches SEM.
+6. A Runner without proof of private-key possession cannot establish WSS.
+7. Replayed challenge signatures and signatures from another connection are rejected.
+8. Changing runner_id, key version or public-key thumbprint invalidates authentication.
+9. A lost registration response can be recovered idempotently without creating a second Runner.
+10. Revoked/lost keys cannot reconnect or receive new work.
+11. AI-PM rejects a delegated grant request with an untrusted or revoked SEM Runner identity.
+12. SEM cannot create or widen an AI-PM delegated grant.
+13. Runner identity revocation does not count as process exit or automatically release process reservations.
+14. No registration token, private key, bootstrap ticket or delegated MCP token appears in prompts, argv, workspace or ordinary logs.
+15. A registration token cannot be used for WSS authentication or MCP access after enrollment.
 
 ## 10. Status
 
-This is a recommended design candidate. It must be reviewed with the delegated-grant contract and deployment security model. Until approved, Runner identity enrollment and delegated credential bootstrap remain P0 blockers. No code or migration is authorized.
+This revised proposal captures the GitLab-Runner-style operator workflow and the infrastructure/business authority split. It supersedes the previous D-01 proposal's AI-PM-created enrollment intent and AI-PM-issued primary Runner identity attestation.
+
+**Pending user ratification.** D-01 is not implementation-ready until open details affecting security and interoperability are closed in D-04/D-09. No code or migration is authorized.
