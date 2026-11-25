@@ -381,6 +381,7 @@ expectReject(() => parseStrictJson(duplicateMemberInput), "duplicate object memb
 expectReject(() => parseStrictJson(String.raw`{"outer":{"a":1,"\u0061":2}}`), "nested duplicate object member after escape decoding");
 expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\ud800"}`)), "unpaired high surrogate");
 expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\udc00"}`)), "unpaired low surrogate");
+expectReject(() => canonicalize(JSON.parse(String.raw`{"\ud800":1}`)), "unpaired surrogate property name");
 expectReject(() => canonicalize(Number.NaN), "NaN");
 expectReject(() => canonicalize(Number.POSITIVE_INFINITY), "positive infinity");
 expectReject(() => canonicalize(Number.NEGATIVE_INFINITY), "negative infinity");
