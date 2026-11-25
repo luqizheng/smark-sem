@@ -2,6 +2,8 @@
 
 > **Authority-boundary revision (2026-11-25):** HIR, E6, Task Barrier and all business intervention/approval semantics belong to AI-PM, not SEM. SEM-local supervision is infrastructure-only. Reconcile before implementation with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 
+> **Authority-boundary revision (2026-11-25):** HIR, E6, Task Barrier and all business intervention/approval semantics belong to AI-PM, not SEM. SEM-local supervision is infrastructure-only. Reconcile before implementation with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
+
 - 性质：架构设计（Phase 4/5 的设计依据），本阶段不实施。
 - 已确认决策：**Q1=B、Q2=B、Q3=A**（见 §2）。
 
