@@ -49,7 +49,7 @@ SEM must not connect to or share the AI-PM PostgreSQL database. SEM has its own 
 These documents are the active design-review set. They are still drafts and must be reconciled before implementation.
 
 1. [SEM Authority Boundary and Execution Message Model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md) — service responsibility and opaque business payload boundary.
-1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — Linux-only V1 process containment using host systemd + cgroup v2, independent host fencing and quarantine.
+1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — Linux-only V1 process containment using host systemd + cgroup v2; permanent host loss uses visible alerting, quarantine and auditable on-site operator intervention (no cloud/BMC integration).
 1.6. [Delegated Harness Grant and Credential Broker Draft](../delegated-harness-grant-and-credential-broker-draft.md) — exact attempt grant, one-time bootstrap, short-lived MCP token and local broker.
 1.5. [Runner Enrollment and Cryptographic Identity Draft](../runner-enrollment-and-cryptographic-identity-draft.md) — Runner proof of possession, AI-PM trust record and WSS identity.
 2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.
