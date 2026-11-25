@@ -41,5 +41,13 @@
     "test_private_seed_hex": "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
     "public_key_base64": "PM0kHP/Js2GARLl9A22GFFk9iwF8NA8d7odzOFUXZUs=",
     "signature_base64": "FkKP/lmuZCe57KftKeFWkcaqtmLPjod+rmAZzgZKe5DqR+t1DVG8aV15dq67BS0cDKFQ/beZhSEnUKT6rd0dBA=="
+  },
+  "rfc9421_official_ed25519": {
+    "source": "RFC 9421 Appendix B.2.6 (official Ed25519 test vector)",
+    "warning": "RFC-published test key material; public conformance fixture only, never a production key.",
+    "test_private_seed_base64url": "n4Ni-HpISpVObnQMW0wOhCKROaIKqKtW_2ZYb2p9KcU",
+    "public_key_base64": "JrQLj5P/89iXES9+vFgrIy29clF9CC/oPPsw3c5D0bs=",
+    "signature_base": "\"date\": Tue, 20 Apr 2021 02:07:55 GMT\n\"@method\": POST\n\"@path\": /foo\n\"@authority\": example.com\n\"content-type\": application/json\n\"content-length\": 18\n\"@signature-params\": (\"date\" \"@method\" \"@path\" \"@authority\" \"content-type\" \"content-length\");created=1618884473;keyid=\"test-key-ed25519\"",
+    "signature_base64": "wqcAqbmYJ2ji2glfAMaRy4gruYYnx2nEFN2HN6jrnDnQCK1u02Gb04v9EDgwUPiu4A0w6vuQv5lIp5WPpBKRCw=="
   }
 }
