@@ -199,3 +199,15 @@ The exact freshness window and replay retention remain an explicit D-09/D-04 pol
 ### 8.8 Revised disposition
 
 This section freezes a candidate serialization shape and runtime request-association contract, but does not close P0-01. Remaining blockers include executable cross-language fixtures, actual client/server API integration, duplicate-header behavior through supported HTTP stacks, proxy/authority normalization proof, nonce-store concurrency/crash tests, and a separately ratified freshness/replay policy. D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
+
+
+## 9. Deterministic signed-response vectors (2026-11-25; partial)
+
+Added TEST-ONLY response vectors to [crypto-vectors-v1.json](../../tests/protocol/fixtures/crypto-vectors-v1.json):
+
+- `http_response`: a signed 202 JSON acceptance response. Its signature base covers response status, response Content-Digest, X-SEM-Request-Id, Content-Type, and the exact originating request method/authority/path/Content-Digest via RFC 9421 `;req` components.
+- `http_304`: a signed bodyless 304. Its signature base covers response status, the SHA-256 empty-content digest, X-SEM-Request-Id, ETag, and the associated GET request method/authority/path/Content-Digest/If-None-Match via `;req` components.
+
+The fixture stores exact request bytes and response bytes. Python and Node validators independently recompute both request and response Content-Digest values, reconstruct the signature base from the request/response fields, verify Ed25519 signatures, and reproduce signatures from TEST-ONLY seeds. This exercises the candidate response serialization and the empty-content 304 path without relying on a precomputed signature-base string alone.
+
+This does **not** prove an RFC 9421 HTTP stack's live request-context association, duplicate-header handling, proxy behavior, redirect rejection, signed 4xx/5xx behavior, response nonce replay storage, or production client/server interoperability. The vectors are primitive/signature-base fixtures, not a complete RFC 9421 parser or runtime verifier. D04-H52 and D04-H57 have deterministic fixture coverage only; the rest of H52–H62 remain open, and P0-01 remains **OPEN / CHANGES REQUIRED** until live bilateral tests and replay-policy closure.
