@@ -20,6 +20,8 @@ Likewise, AI-PM's existing transactional Outbox is an outbound event producer/wo
 | Source | Observed fact | Protocol implication |
 |---|---|---|
 | `apps/pm-api/src/routes.rs` | Router registers `POST /api/v1/events`, supervision routes, notification route and merged business routers; no `/internal/ai-pm/v1/sem-events` route is registered | Proposed SEM callback is new API work |
+| `crates/pm-application/src/ingestion.rs` | Generic `submit_event()` writes `integration.inbound_event` and an `integration.job(job_type='ai_analysis')` in one transaction; idempotency key is project+source+key and duplicate detection compares payload hash | Existing generic Inbox must not be reused unchanged for SEM telemetry |
+| `docs/architecture/ai-pm-architecture-principles.md` §7.2 / `docs/architecture/knowledge-services/ownership-checklist.md` | Generic Inbox requires project_id + actor_id; shared Outbox/Inbox writes are required to go through application ports | A dedicated SEM application port/handler is required; do not write tables from the HTTP route directly |
 | `apps/pm-api/src/routes.rs` | The generic event endpoint is `submit_event_handler`; module comments describe event ingestion outcomes Accepted/ Duplicate/ IdempotencyConflict/UnknownProject | Its semantics and schema are not interchangeable with SEM infrastructure events |
 | `crates/pm-infrastructure/src/outbox.rs` | Transactional Outbox operates over `integration.outbox_event` and has bounded delivery attempts/dead-letter behavior | Outbox is not an inbound Inbox |
 | `crates/pm-infrastructure/src/outbox_worker.rs` | Worker claims and dispatches registered Outbox handlers | No SEM callback route or receiver transaction follows from this worker |
@@ -47,7 +49,7 @@ The SEM OpenAPI route remains a **proposed endpoint placeholder** until AI-PM co
 
 ## 4. Existing generic event endpoint is not a substitute
 
-The existing `/api/v1/events` route must not be silently repurposed. It is a project-scoped generic event ingestion API with its own event envelope and processing semantics. SEM infrastructure event identity, Runner provenance, binding fencing and per-execution sequence are a different domain contract.
+The existing `/api/v1/events` route must not be silently repurposed. It is a project-scoped generic event ingestion API with its own event envelope and processing semantics. Its `integration.inbound_event` table is a generic shared Inbox, but the current ingestion application service also enqueues `ai_analysis`; it has no SEM execution cursor or infrastructure observation handler. SEM infrastructure event identity, Runner provenance, binding fencing and per-execution sequence are a different domain contract. A new dedicated SEM receive application operation must decide whether to extend the shared Inbox safely or add a SEM-specific inbox/cursor store.
 
 No route alias, payload adapter or direct database write is authorized by this review.
 
@@ -66,4 +68,4 @@ The SEM-to-AI-PM infrastructure callback is not the Harness-to-AI-PM MCP busines
 
 **P0-05 remains OPEN.** The OpenAPI callback route is not source-aligned with current AI-PM because it does not yet exist. The strict SEM event payload schemas are now drafted in `platform-sem-v1.schema.yaml`, but this does not close receiver ownership, Inbox transaction, ACK cursor or retry semantics.
 
-Required next work is a bilateral AI-PM/SEM design review. Do not implement the callback, change AI-PM migrations, or claim end-to-end event delivery until both repositories have approved the contract and the user authorizes implementation.
+Required next work is a bilateral AI-PM/SEM design review. The first decision is whether to add a SEM-specific Inbox or safely extend the existing generic Inbox through a dedicated port that suppresses the `ai_analysis` side effect and adds per-execution sequence/cursor semantics. Do not implement the callback, change AI-PM migrations, or claim end-to-end event delivery until both repositories have approved the contract and the user authorizes implementation.
