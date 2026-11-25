@@ -16,7 +16,7 @@ Desired operator flow:
 1. An administrator signs in to SEM and creates a Runner registration record.
 2. SEM generates a registration token and displays a registration command/configuration.
 3. An operator runs the registration command on the Runner host, supplying the SEM registry URL and registration token.
-4. The Runner generates its own asymmetric keypair locally and submits its public key with the registration token over HTTPS.
+4. The Runner generates its own asymmetric keypair locally and submits its public key with the registration token over the configured internal HTTP or HTTPS endpoint.
 5. SEM atomically consumes the token, creates the permanent runner_id, binds the public key, and returns the Runner identity/configuration.
 6. The Runner starts its service and authenticates to SEM over WSS using proof of possession of its private key.
 
@@ -63,7 +63,7 @@ Illustrative CLI (exact command and flags remain to be frozen):
 sem-runner register --registry http://sem.internal.example --registration-token <TOKEN>
 ~~~
 
-The CLI sends the token only to the configured HTTPS SEM endpoint. It must validate TLS normally and must not permit insecure TLS bypass in production.
+The CLI sends the token only to the configured SEM origin on the company private network. The registry URL may use HTTP or HTTPS. For HTTPS, the client must validate a configured enterprise CA bundle or explicitly pinned certificate/public-key fingerprint; self-signed certificates are supported. Verification bypass is forbidden in production. HTTP is allowed only on a restricted internal network and provides no confidentiality.
 
 Command-line arguments may be exposed through shell history, process listings or diagnostics. The CLI must also support interactive token input or protected token-file/stdin input. It should warn against pasting production registration tokens into shared shell sessions.
 
@@ -72,7 +72,7 @@ Command-line arguments may be exposed through shell history, process listings or
 1. The Runner CLI/Supervisor generates a fresh per-installation signing keypair on the Runner host before redemption.
 2. Recommended initial algorithm: Ed25519.
 3. The private key is persisted locally under the Runner service identity with restrictive OS permissions; use an OS-protected keystore/TPM-backed storage when supported. The private key never leaves the host.
-4. The Runner submits the registration token, public key, algorithm/key version, installation-generated request ID and basic host metadata to SEM over HTTPS.
+4. The Runner submits the registration token, public key, algorithm/key version, installation-generated request ID and basic host metadata to SEM over the configured internal HTTP or HTTPS transport.
 5. SEM validates token scope, expiry, revocation and remaining use count; it atomically consumes the token while creating the Runner record.
 6. SEM returns the assigned immutable runner_id, key version and SEM connection configuration.
 7. If the response is lost after SEM commits redemption, an idempotent request ID or narrowly scoped recovery mechanism must recover the same result without creating a second Runner or making the token reusable for a new identity.
@@ -184,7 +184,7 @@ This replaces the earlier proposal that AI-PM creates each Runner enrollment int
 - AI-PM pins/trusts SEM identity verification keys through an authenticated, versioned key-distribution process. Rotation and emergency revocation are explicit.
 - SEM registration endpoints require authenticated administrator authorization; Runner redemption endpoints are rate-limited and audited.
 - Registration must not expose arbitrary pool selection or privilege escalation through caller-controlled metadata.
-- TLS certificate validation is mandatory in production; registration credentials must not be sent to another origin after redirects.
+- For HTTPS/WSS, server certificate validation is mandatory in production and supports enterprise CA or explicitly pinned self-signed certificates; no insecure verification bypass is allowed. Registration credentials must not be sent to another origin after redirects. HTTP may be used only on the restricted internal network.
 
 ## 7. Rejected alternatives
 
@@ -198,6 +198,8 @@ This replaces the earlier proposal that AI-PM creates each Runner enrollment int
 | Use WSS credential as MCP credential | Infrastructure channel authentication is not business authorization |
 
 ## 8. Open details to close in D-04/D-09
+
+Transport configuration must define HTTP/HTTPS selection, trust-store/CA-bundle and certificate/public-key pin formats, hostname verification, redirect policy, certificate renewal/rotation/overlap/revocation, and how trust material is provisioned to Runner hosts. Self-signed certificates are supported when explicitly trusted; disabling certificate verification is not.
 
 - Exact registration API path, request/response schema and idempotency semantics.
 - Exact token encoding/prefix, hash/KDF choice, storage and rate limits.
