@@ -1,5 +1,8 @@
 # 部署拓扑（deployment-topology）
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 > **Authority-boundary revision (2026-11-25):** This historical topology must be reconciled with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). SEM remains an independent Runner/Harness runtime service, but is not a Platform Claim/Lease/business-command proxy. Harness business context and Task mutations use AI-PM MCP.
 
 > **Authority-boundary revision (2026-11-25):** This historical topology must be reconciled with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). SEM remains an independent Runner/Harness runtime service, but is not a Platform Claim/Lease/business-command proxy. Harness business context and Task mutations use AI-PM MCP.
