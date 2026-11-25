@@ -309,7 +309,7 @@ A syntactically valid HTTP request with malformed JSON can therefore still be au
 - Platform → SEM: `X-SEM-Request-Id` equals the authenticated `Idempotency-Key` header. For a valid request this is the envelope `request_id`; the header, not a body field, is the correlation source.
 - SEM → AI-PM callback: `X-SEM-Event-Id` equals the authenticated `Idempotency-Key` header. For a valid event this is the envelope `event_id`; if the body event_id is absent or mismatched, reject it and correlate the signed error only to the authenticated header value.
 
-The response signature MUST bind the exact originating request context using the ratified response component set, including method, authority, path and request Content-Digest. The 304 profile additionally binds the request If-None-Match and response ETag. Signed response bodies use ProtocolErrorEnvelope for errors; optional body message_id/in_reply_to fields are not used as transport correlation and MUST NOT be populated from unvalidated body fields.
+The response signature MUST bind the exact originating request context using the ratified response component set, including method, authority, path and request Content-Digest. The 304 profile additionally binds the request If-None-Match and response ETag. The body `request_id` (Platform) and `event_id` (callback) fields MUST be canonical lowercase hyphenated UUID strings. The signed Idempotency-Key header is parsed as a UUID and a valid request requires byte-for-byte equality with that canonical body value. The header schema deliberately permits any UUID case so that an authenticated noncanonical/mismatched header can receive a signed 400 whose correlation header echoes the exact authenticated header bytes; response correlation headers therefore use UUID format without a lowercase-only pattern. Signed response bodies use ProtocolErrorEnvelope for errors; optional body message_id/in_reply_to fields are not used as transport correlation and MUST NOT be populated from unvalidated body fields.
 
 Application-level 429 is evaluated only after request authentication and MUST be signed with a mandatory Retry-After header. A network-edge/WAF rate-limit response generated before the API authentication boundary is outside this API contract and MUST NOT include protocol correlation identifiers.
 
@@ -337,3 +337,15 @@ Python and Node independently reconstruct and verify both signatures, recompute 
 Added unsigned `pre_authentication_error_responses` fixtures for 401 invalid authentication and early 413 payload-size rejection. Python and Node assert that these have no protocol signature/correlation headers and that their minimal error bodies contain no message_id, in_reply_to, request_id or event_id.
 
 Acceptance cases D04-H86..H88 record these fixtures. This closes deterministic positive/negative fixture coverage for the two 404 directions and structural pre-auth error envelope shape only. It does not prove middleware ordering, that the callback receiver emits 404 only after authentication, early body-limit behavior, or live HTTP response/request association. Signed 400/412/422/429/500 vectors remain open.
+
+
+## 20. Canonical UUID representation and signed error echo (2026-11-25)
+
+The callback Inbox stores `idempotency_key` as canonical lowercase hyphenated UUID text, and its SEM detail CHECK expects canonical lowercase event_id. To make this consistent at the wire boundary:
+
+- Platform request envelope `request_id` and SEM callback envelope `event_id` are constrained by JSON Schema to canonical lowercase hyphenated UUID strings.
+- The signed HTTP `Idempotency-Key` header remains a UUID-formatted string. For a valid request it MUST be byte-for-byte equal to the canonical body identity.
+- If a signed but noncanonical/mismatched header is received, authentication has already succeeded. Return a signed 400, do not write, and echo the exact authenticated header value in `X-SEM-Request-Id` or `X-SEM-Event-Id`. Response correlation header schemas therefore use UUID format but intentionally do not impose the lowercase body pattern.
+- A valid callback's event_id, Idempotency-Key and stored Inbox idempotency_key all resolve to the same canonical lowercase UUID.
+
+D04-H89..H90 cover uppercase body IDs and uppercase/mismatched signed Idempotency-Key headers. This is a Draft schema rule; it must pass OpenAPI/JSON Schema CI and both independent validators before ratification.
