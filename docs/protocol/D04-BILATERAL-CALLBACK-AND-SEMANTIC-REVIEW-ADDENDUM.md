@@ -264,3 +264,10 @@ Latest response-context validation: PR head `16cf8432c7dc8642370e763f92c2539ced4
 
 
 Latest Python/Node JCS cross-check evidence: PR head `2cbb991571e58bc6076754428840a6b2800a9401` passed CI runs #317/#318, including the expanded RFC 8785 edge corpus.
+
+
+## 16. GET snapshot 200 ETag must be signed
+
+The GET infrastructure snapshot 200 response includes an ETag used by subsequent conditional requests. The original body-bearing response profile did not include that ETag in its covered components, leaving the cache validator outside the response signature. The candidate profile now inserts `etag` after `x-sem-request-id` and before `content-type` for GET 200 only; 304 continues to sign its ETag and `if-none-match;req`.
+
+Added `http_snapshot_200` to the deterministic response vectors. Python and Node verify the 200 response signature and reject a tampered ETag. D04-H73/H74 cover the positive/negative cases. This remains deterministic fixture evidence, not live intermediary/cache behavior proof.
