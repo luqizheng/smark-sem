@@ -154,6 +154,7 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | D04-W45 | execution.release_applied reports stop_fenced only | SEM must not infer process exit or release capacity unless separate exit evidence is present |
 | D04-W46 | execution.release_applied reports process_stopped or already_exited without process_exit_evidence_id | Reject; a positive stop/exit disposition must reference exact durable exit evidence |
 | D04-W47 | execution.release_applied reports stop_fenced, stale_rejected or local_uncertain with process_exit_evidence_id | Reject; these dispositions must not masquerade as positive process-exit proof |
+| D04-W48 | process_stopped/already_exited release_applied references a different execution, binding or later/missing Runner process-exit journal event | Reject/quarantine; no release completion or capacity release until the exact earlier process-exit evidence is linked |
 | D04-H33 | Each SEM event_type maps to exactly one strict payload schema | Contract validator fails on missing/duplicate event branch |
 | D04-H34 | SEM infrastructure event contains TaskStatus, approval or acceptance decision fields | Reject as authority-boundary violation |
 | D04-H35 | Duplicate event_id with identical canonical body reaches AI-PM Inbox | One durable event observation; duplicate ACK |
