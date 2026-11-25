@@ -529,7 +529,7 @@ The SEM callback is at-least-once and carries one event per request in the curre
 A successful acknowledgement contains:
 - `event_id`: exact event acknowledged;
 - `execution_id`: event stream identity;
-- `event_sequence`: sequence of this event;
+- `execution_event_sequence`: sequence of this SEM→AI-PM event within the exact execution;
 - `contiguous_through_sequence`: highest contiguous sequence durably committed by AI-PM for this execution;
 - `disposition`: `accepted` or `duplicate`;
 - `acknowledged_at`: receiver timestamp.
@@ -541,7 +541,7 @@ The success ACK is never returned before Inbox + permitted Run-observation commi
 ### 13.9 Ordering and duplicate handling
 
 - Every sender supplies a unique message_id; every logical operation also has its stable request_id, delivery_id or release_id.
-- Runner observations carry a monotonically increasing event_sequence within the execution/binding stream. SEM persists the last accepted sequence and deduplicates message_id.
+- Runner observations carry a monotonically increasing `event_sequence` within the durable Runner event stream identified by `runner_id + journal_id`; SEM validates `execution_id + binding_epoch` independently and persists the last contiguous stream sequence.
 - A duplicate message with the same identity and canonical payload returns the original acknowledgement. Reuse with a different payload is a conflict.
 - A gap in `execution_event_sequence` within one execution, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
 - SEM→AI-PM events are at-least-once. Each durable SEM→AI-PM event carries `execution_id` and `execution_event_sequence`, monotonic within that execution's SEM event stream. AI-PM deduplicates by `event_id` and stores the per-execution cursor. This is distinct from Runner→SEM `journal_id + event_sequence`, which is scoped by `runner_id + journal_id` and survives WSS reconnect. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
