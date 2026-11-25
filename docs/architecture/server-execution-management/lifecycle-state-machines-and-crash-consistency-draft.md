@@ -387,7 +387,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 - Local journal must be access-controlled and tamper-evident to the extent supported by the host profile. Host compromise is handled by D-03 trust and isolation policy, not by assuming the journal is infallible.
 - Clock timestamps are diagnostic; ordering and fencing use stable IDs, epochs and sequence numbers, not wall-clock ordering alone.
 
-## 10. Acceptance matrix (minimum 40 cases)
+## 10. Acceptance matrix (56 cases)
 
 | ID | Scenario | Required result |
 |---|---|---|
@@ -437,6 +437,16 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-44 | Old authorization generation calls MCP after retry | AI-PM rejects every stale business operation |
 | D05-45 | WSS ping/pong succeeds but app heartbeat is stale | Runner is not dispatch-ready |
 | D05-46 | Resource telemetry is from a different boot ID | Telemetry rejected as stale; no admission based on it |
+| D05-47 | D-05 is checked against an AI-PM source revision with different Run enums | Ratification blocked until an explicit source compatibility update is reviewed |
+| D05-48 | Delivery Run and Review Run attempt an edge valid only for the other kind | AI-PM rejects the edge |
+| D05-49 | Supervisor crashes after OS create but before process identity journal commit | Existing launch is discovered through the pre-created containment identity; otherwise quarantine; never launch a duplicate |
+| D05-50 | Supervisor crashes during process creation while release arrives | No stop-fence ACK until in-flight create is resolved or independently fenced |
+| D05-51 | Process exists outside its expected containment boundary | Quarantine; no claim of safe stop/release |
+| D05-52 | Supervisor restarts after child exits but before wait status is persisted | Durable process owner proves containment empty; exit code may be unknown; no PID-only inference |
+| D05-53 | Runner rebinds an execution to another Runner with independent event stream | Per-stream sequence cursors remain unambiguous; old binding events are fenced |
+| D05-54 | `authorization_generation` changes while `lease_generation` remains unchanged (and vice versa) | Each authority rejects only its own stale generation; no cross-domain substitution |
+| D05-55 | Process exit is proven but workspace cleanup fails | Process capacity and cleanup resource accounting follow separate evidence; no false full release |
+| D05-56 | `infrastructure_uncertain` receives late valid start/exit/reconcile evidence | Only explicitly allowed reconciliation edges apply; no guessed terminal transition |
 
 ## 11. Open decisions required before ratification
 
