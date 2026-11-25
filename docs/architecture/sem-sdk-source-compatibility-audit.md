@@ -1,12 +1,15 @@
 # SEM SDK Source Compatibility Audit
 
 - Status: **SOURCE-VERIFIED DESIGN INPUT — NOT AN API APPROVAL**
-- Audit date: 2026-11-25
-- Repositories/revisions:
-  - `smark-sem`: PR #1 head `23224d6d7f3d541677f6e48fa14d61cdd0165d9a` (Rust workspace skeleton)
-  - `smark-sem`: PR #4 head `c240628bdc4bd623503a8d671e7c86a91465d3f5` (SDK contract draft)
-  - `ai-pm`: PR #9 head `19cfa2682682bfeb75bfea0091544b53a57bfc50`
-- Method: GitHub source/manifest inspection only. No local compilation, dependency resolution, TLS handshake, registry publish, or runtime test was performed.
+- Audit date: 2026-11-25 (latest provenance refresh)
+- Current review snapshot:
+  - `smark-sem` PR #1 workspace candidate: `23224d6d7f3d541677f6e48fa14d61cdd0165d9a`
+  - `smark-sem` PR #3 protocol candidate: `068d44f3742b1381d059f9435f26c34137c0cebb`
+  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `600d0c5ce8944e79a55cd4139fe3f2a21aaa06cf`
+  - `ai-pm` source baseline: `master` (manifest, lockfile and app manifests identified by blob SHA in §§9–11)
+  - `ai-pm` PR #9 design-doc head: `2e19a7ed905a78d037de5ff172fc309256e68336` (Draft docs only)
+- Method: GitHub source/manifest inspection only. No local compilation, combined dependency resolution, TLS handshake/pinning, registry publish, or runtime test was performed.
+- Historical first-pass revisions are retained in §9; they are not the current reviewed heads.
 
 ## 1. Verified source facts
 
