@@ -87,7 +87,10 @@ paths:
         '200':
           description: Current infrastructure snapshot; never a business Task status.
           headers:
-            ETag: { required: true, schema: { type: string } }
+            ETag:
+              required: true
+              description: Entity tag validator; included as a covered component in the signed 200 snapshot response.
+              schema: { type: string }
             Content-Digest: { required: true, schema: { type: string } }
             Signature-Input: { required: true, schema: { type: string } }
             Signature: { required: true, schema: { type: string } }
