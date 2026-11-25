@@ -52,6 +52,8 @@ These documents are the active design-review set. They are still drafts and must
 
 1. [SEM Authority Boundary and Execution Message Model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md) — service responsibility and opaque business payload boundary.
 1.1. [SEM SDK and Consumer Integration Contract](../sem-sdk-and-consumer-integration-contract-draft.md) — SEM-owned SDK, AI-PM consumption, transport, retries, versioning and callback boundary.
+1.1.1. [D-12 SEM SDK Public API Design](../sem-sdk-public-api-design-draft.md) — proposed three-operation Rust client, typed errors, signing, idempotency, conditional reads, release fencing and acceptance criteria.
+1.1.2. [SEM SDK Source Compatibility Audit](../sem-sdk-source-compatibility-audit.md) — source-verified workspace/runtime/HTTP/TLS/registry findings.
 1.2. [Runner Enrollment and Cryptographic Identity Draft](../runner-enrollment-and-cryptographic-identity-draft.md) — Runner proof of possession, AI-PM trust record and WSS identity.
 1.3. [Delegated Harness Grant and Credential Broker Draft](../delegated-harness-grant-and-credential-broker-draft.md) — exact attempt grant, one-time bootstrap, short-lived MCP token and local broker.
 1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — process containment, independent host fencing and quarantine.
@@ -73,7 +75,7 @@ These documents are the active design-review set. They are still drafts and must
 - Runner enrollment and key trust: independently verifiable Runner identity, key rotation, revocation and recovery.
 - Delegated Harness credential bootstrap: ticket format, redemption endpoint, credential broker IPC, token storage, expiry and revocation.
 - Complete wire contract: canonical OpenAPI/JSON Schema, all request/event/ack/error envelopes, version negotiation and compatibility.
-- SDK contract and release engineering: final Rust crate/API shape, async/runtime compatibility, distribution, semver policy, support window and bilateral CI.
+- SDK contract and release engineering: public API proposal exists; final ratification, async/runtime/TLS proof, distribution, semver policy, support window and bilateral CI remain open.
 - Lifecycle and recovery: durable state machines, duplicate/out-of-order messages, process start/exit, uncertain Runner quarantine, release/start races and host isolation.
 - Resource admission: telemetry freshness, reservations, concurrency model, disk pressure and starvation/fairness policy.
 - Git delivery: execution-scoped ref, credential provisioning, verification, cleanup and trust boundaries.
