@@ -30,6 +30,12 @@ No distributed transaction and no shared database. Cross-service delivery is ide
 
 The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md), [cross-repository code ownership](docs/architecture/CROSS-REPOSITORY-CODE-OWNERSHIP.md), and [Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md) for current boundaries and contracts.
 
+## Implementation status
+
+- Rust modular-monolith skeleton: [Draft PR #1](https://github.com/luqizheng/smark-sem/pull/1); Format, Test and Clippy pass on the current head.
+- The skeleton exposes only liveness and does not yet connect to Platform or SEM PostgreSQL.
+- No production Runner WSS, service authentication, dispatch, process supervision or persistence implementation exists yet.
+
 ## Repository structure
 
 - docs/architecture/ — SEM architecture, contracts, audit, decisions
