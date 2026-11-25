@@ -68,7 +68,7 @@ This decision approves the cryptographic primitives and protocol families, not e
 - Timestamp skew, signature lifetime, nonce entropy and nonce retention bounds.
 - Exact WSS transcript JSON field names/types, domain-separation test vectors and challenge expiry behavior.
 - Key provisioning, storage, rotation overlap and revocation propagation.
-- Positive and negative cross-language test vectors (including malformed/non-canonical inputs, wrong audience, changed body, replay and revoked key).
+- Expanded cross-language vectors for RFC 8785 edge cases (malformed/non-canonical inputs, UTF-16 key ordering, number serialization, wrong audience and replay); the fixed ASCII/integer transcript is already verified by Python and Node.
 - AI-PM callback route and Inbox transaction/retry contract alignment.
 
 The earlier candidate values (HTTP created tolerance 30 seconds future / 60 seconds old, expiry no later than created + 60 seconds, nonce >=128 bits retained >=10 minutes; WSS 32-byte nonces and 30-second challenge) remain **provisional test starting points**, not normative values.
@@ -83,7 +83,7 @@ A deterministic, TEST-ONLY vector set is maintained at [crypto-vectors-v1.json](
 - The official RFC 9421 Appendix B.2.6 Ed25519 vector is verified by both Python and Node; the fixed WSS JCS transcript/signature is independently serialized, verified and reproduced by Python and Node. Node's JCS check is intentionally limited to the fixture's ASCII strings/integer subset, not the complete RFC 8785 edge-case space.
 - Deterministic TEST-ONLY private seeds to permit exact reproduction. These seeds MUST NOT be used in any deployed environment.
 
-These vectors prove the selected algorithm primitives and the specific Draft serialization examples. They do not ratify the final HTTP covered-component profile, time bounds, nonce retention, full JCS edge-case behavior, key rotation policy or production implementation. Those remain open until cross-language fixtures and the full RFC 9421 verifier behavior are independently tested.
+These vectors prove the selected algorithm primitives and the specific Draft serialization examples. They do not ratify the final HTTP covered-component profile, time bounds, nonce retention, full JCS edge-case behavior, key rotation policy or production implementation. Those remain open until broader cross-language edge-case fixtures and the full RFC 9421 verifier behavior are independently tested.
 
 ## 7. Acceptance requirements
 
