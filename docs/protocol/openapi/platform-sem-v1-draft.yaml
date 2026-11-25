@@ -49,11 +49,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ExecutionAcceptanceEnvelope' }
         '400': { $ref: '#/components/responses/SignedPlatformError' }
-        '401': { $ref: '#/components/responses/UnauthenticatedError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
         '409': { $ref: '#/components/responses/SignedPlatformError' }
-        '413': { $ref: '#/components/responses/UnauthenticatedError' }
+        '413': { $ref: '#/components/responses/PreAuthenticationError' }
         '422': { $ref: '#/components/responses/SignedPlatformError' }
-        '429': { $ref: '#/components/responses/SignedPlatformError' }
+        '429': { $ref: '#/components/responses/SignedPlatformRateLimitError' }
         '500': { $ref: '#/components/responses/SignedPlatformError' }
   /internal/sem/v1/executions/{execution_id}:
     get:
@@ -118,7 +118,7 @@ paths:
               required: true
               description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
               schema: { type: string, format: uuid }
-        '401': { $ref: '#/components/responses/UnauthenticatedError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
         '404': { $ref: '#/components/responses/SignedPlatformError' }
         '500': { $ref: '#/components/responses/SignedPlatformError' }
   /internal/sem/v1/executions/{execution_id}/release:
@@ -157,10 +157,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReleaseAcceptanceEnvelope' }
         '400': { $ref: '#/components/responses/SignedPlatformError' }
-        '401': { $ref: '#/components/responses/UnauthenticatedError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
         '404': { $ref: '#/components/responses/SignedPlatformError' }
         '409': { $ref: '#/components/responses/SignedPlatformError' }
         '412': { $ref: '#/components/responses/SignedPlatformError' }
+        '413': { $ref: '#/components/responses/PreAuthenticationError' }
         '422': { $ref: '#/components/responses/SignedPlatformError' }
         '500': { $ref: '#/components/responses/SignedPlatformError' }
   /internal/ai-pm/v1/sem-events:
@@ -200,11 +201,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EventAcknowledgementEnvelope' }
         '400': { $ref: '#/components/responses/SignedCallbackError' }
-        '401': { $ref: '#/components/responses/UnauthenticatedError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
         '409': { $ref: '#/components/responses/SignedCallbackError' }
-        '413': { $ref: '#/components/responses/UnauthenticatedError' }
+        '413': { $ref: '#/components/responses/PreAuthenticationError' }
         '422': { $ref: '#/components/responses/SignedCallbackError' }
-        '429': { $ref: '#/components/responses/SignedCallbackError' }
+        '429': { $ref: '#/components/responses/SignedCallbackRateLimitError' }
         '500': { $ref: '#/components/responses/SignedCallbackError' }
 components:
   securitySchemes:
@@ -267,13 +268,31 @@ components:
           description: Exact authenticated event_id (Idempotency-Key); never an unverified body/header value.
           schema: { type: string, format: uuid }
       content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
-    UnauthenticatedError:
+    PreAuthenticationError:
       description: >-
-        Pre-authentication failure (invalid/missing signature, stale/replayed nonce, or body rejected
-        before full authentication such as an early payload-size limit). No protocol signature headers
-        or request/event correlation headers are present; the body MUST NOT contain message_id,
-        in_reply_to, request_id or event_id.
-      content: { application/json: { schema: { $ref: '#/components/schemas/UnauthenticatedErrorEnvelope' } } }
+        Failure before a trustworthy authenticated request context exists (invalid/missing signature,
+        unknown key, stale/replayed nonce, or an early body-size rejection before full-body digest
+        verification). No protocol signature headers or request/event correlation headers are present;
+        the body MUST NOT contain message_id, in_reply_to, request_id or event_id.
+      content: { application/json: { schema: { $ref: '#/components/schemas/PreAuthenticationErrorEnvelope' } } }
+    SignedPlatformRateLimitError:
+      description: Authenticated Platform request rate limit. Same signature/correlation requirements as SignedPlatformError; Retry-After is mandatory.
+      headers:
+        Content-Digest: { required: true, schema: { type: string } }
+        Signature-Input: { required: true, schema: { type: string } }
+        Signature: { required: true, schema: { type: string } }
+        X-SEM-Request-Id: { required: true, schema: { type: string, format: uuid } }
+        Retry-After: { required: true, schema: { type: integer, minimum: 0 } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    SignedCallbackRateLimitError:
+      description: Authenticated SEM callback rate limit. Same signature/correlation requirements as SignedCallbackError; Retry-After is mandatory.
+      headers:
+        Content-Digest: { required: true, schema: { type: string } }
+        Signature-Input: { required: true, schema: { type: string } }
+        Signature: { required: true, schema: { type: string } }
+        X-SEM-Event-Id: { required: true, schema: { type: string, format: uuid } }
+        Retry-After: { required: true, schema: { type: integer, minimum: 0 } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
   schemas:
     BaseEnvelope:
       type: object
@@ -364,7 +383,7 @@ components:
       additionalProperties: false
     EventAcknowledgementEnvelope:
       $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/EventAcknowledgementEnvelope'
-    UnauthenticatedErrorEnvelope:
+    PreAuthenticationErrorEnvelope:
       type: object
       required: [error]
       properties:
@@ -373,7 +392,7 @@ components:
           required: [code, class, retryable, detail]
           properties:
             code: { type: string }
-            class: { const: auth }
+            class: { enum: [auth, protocol] }
             retryable: { type: boolean }
             detail: { type: string, maxLength: 160 }
           additionalProperties: false
