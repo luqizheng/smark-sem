@@ -274,3 +274,63 @@ This is a design decision, not implementation evidence. The Linux profile is not
 Permanent host loss is still unresolved: Linux-only does not imply a managed VM or BMC. Until the deployment's host-management profile is selected and tested, permanent host loss remains quarantine plus operator intervention.
 
 **Updated audit disposition: CHANGES REQUIRED.** The OS scope and architecture candidate are selected, but P0-02/P0-03/P0-04 remain open pending Linux integration/failure-injection proof; P0-01 still requires independent source/matrix review. No ratification or implementation is authorized.
+
+## 9. Follow-up re-review against the current D-05 draft — 2026-11-25
+
+Reviewed current companion draft sections 3.1, 3.4, 3.6, 4, 5.3–5.4 and 6.1 against the earlier findings. The previous P0 findings must not be repeated as if no progress occurred; the current disposition is below.
+
+### P0-01 — AI-PM Run/attempt source compatibility: CLOSED AT DRAFT-CONTRACT LEVEL
+
+The current D-05 §3.1 now pins the AI-PM source baseline and explicitly maps:
+- 13 TaskStatus values and the 31 guarded TaskStatus edges;
+- RunKind Delivery/Review and the seven RunStatus values with distinct transition matrices;
+- RunOutcome as separate outcome data;
+- run_id + attempt_no as current Delivery attempt identity;
+- lease_generation as current executor-lease fencing;
+- authorization_generation as a future, separate AI-PM-owned authorization dimension.
+
+This closes the original source-vocabulary conflation in the Draft. It does not prove the source has not changed since the pinned commit; the exact AI-PM source must be re-audited immediately before ratification and bilateral implementation.
+
+### P0-02 — OS create/containment crash window: PARTIALLY ADDRESSED; INTEGRATION PROOF OPEN
+
+The current D-05 §3.6 selects a V1 Linux-only host profile: systemd >=250 as PID 1, cgroup v2, host systemd manager, one stable transient service/cgroup per execution binding, no automatic restart, KillMode=control-group, no cgroup delegation, and a durable launch_id/unit tombstone. It defines GetUnit/InvocationID/ControlGroup/job inspection after ambiguous StartTransientUnit replies and forbids blind second starts. This is materially more concrete than the earlier generic OS-adapter draft and Windows is now out of V1 scope.
+
+Remaining blockers:
+- Earlier §3.3 generic text still says the Linux OS adapter decision is open and lists multiple alternatives/Windows. Reconcile or explicitly supersede that text so there is one normative V1 profile.
+- Define the exact D-Bus StartTransientUnit request, unit properties, job-mode, returned job-path persistence, and the GetUnit/GetJob recovery decision table. A stable unit name alone is not proof that a specific invocation was started exactly once.
+- Prove the launch broker's same-launch_id deduplication and systemd job semantics under a real systemd >=250 host with failure injection at request-send, manager-accept, job-queued, ExecStart, process-created, Supervisor-crash and reply-lost boundaries.
+- Prove cgroup escape prevention and the exact privilege boundary with a hostile Harness/descendant test.
+
+### P0-03 — Release/start race: PARTIALLY ADDRESSED; SYSTEMD JOB LINEARIZATION NEEDS PROOF
+
+Current §6.1 now defines a per-execution/binding durable single-writer sequencer, a launch-broker linearization point, before/after release behavior, unresolved-create uncertainty, and the meaning of stop-fence ACK. This closes the earlier absence of any linearization model at the conceptual level.
+
+The remaining ambiguity is the exact OS linearization point. systemd `StartTransientUnit` returns a job object; acceptance/queueing of that job is not necessarily equivalent to ExecStart having created the process. The contract must distinguish at least: request not accepted; job accepted/queued; job running; unit process spawned; unit terminal. If release arrives after job acceptance but before process spawn, the broker must define how it cancels/fences that exact job and prove no late process can appear. Do not use “atomically creates or adopts the process” as a shorthand for the D-Bus method unless the integration proof establishes that behavior.
+
+### P0-04 — Process exit after Supervisor crash: PARTIALLY ADDRESSED; EVIDENCE QUERY CONTRACT OPEN
+
+Current §3.6 identifies systemd as durable process owner and requires matching InvocationID, retained terminal unit state, no pending start/restart job, exact cgroup v2 populated=0, and journaled evidence. It also separates unknown numeric exit status from proof that the containment is empty. This is a substantial improvement.
+
+Remaining blockers:
+- Freeze exact systemd properties and D-Bus query sequence used to bind the observation to the immutable invocation: InvocationID, ControlGroup, ActiveState, SubState, Result, ExecMainCode, ExecMainStatus, job state and cgroup.events populated value.
+- Define how evidence is captured atomically enough to avoid querying one invocation and reading cgroup state after a unit-name reuse/race. The journal tombstone and invocation check must fence reuse.
+- Prove retention/GC behavior for successful and failed units until both local journal and SEM reconciliation acknowledge evidence.
+- Define host reboot and permanent host loss separately under D-03 Profiles A/B/C; systemd state from the prior boot may not be queryable after reboot.
+
+### P1 observations
+
+- The event sequence scope is now explicit in D-05 §5.4 as `runner_id + journal_id`, with execution_id + binding_epoch validated separately. Confirm every state-changing WSS message branch carries journal_id + event_sequence and that replay snapshots/cursors use the same scope.
+- D-05 now has explicit uncertainty-resolution edges and a separate process-capacity vs workspace-cleanup distinction. The D-05 transition table and the D-04 wire schemas still need a mechanical cross-reference check.
+- The selected systemd profile remains an architecture candidate, not an implementation proof. No runtime work should start until D-10 integration/failure-injection evidence and D-03 host-loss profile are complete.
+
+## 10. Updated disposition
+
+| Finding | Previous | Current |
+|---|---|---|
+| P0-01 AI-PM Run/attempt vocabulary | OPEN | **CLOSED at Draft-contract level; source recheck required before ratification** |
+| P0-02 create/containment crash window | OPEN | **PARTIAL; Linux systemd profile selected, integration proof and stale generic text remain** |
+| P0-03 release/start race | OPEN | **PARTIAL; conceptual linearization defined, systemd job boundary remains ambiguous** |
+| P0-04 exit evidence after Supervisor crash | OPEN | **PARTIAL; systemd process owner identified, exact query/atomicity/retention proof remains** |
+| P1-02 event sequence scope | OPEN | **DRAFT-CLOSED; verify all state-changing message branches and replay cursors** |
+
+**Overall: CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT.** This re-review records real progress but does not close D-05's remaining P0 integration and D-03 dependencies.
