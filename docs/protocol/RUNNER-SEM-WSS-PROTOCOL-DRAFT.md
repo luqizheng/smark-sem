@@ -9,7 +9,7 @@
 
 ## 1. Protocol invariants
 
-1. Runner initiates an outbound TLS-protected WSS connection to SEM. SEM does not initiate inbound connections to Runner.
+1. Runner initiates an outbound TLS-protected WSS connection to SEM. SEM does not initiate inbound connections to Runner. Internal enterprise CA and explicitly pinned self-signed server certificates are supported; certificate verification is mandatory.
 2. One authenticated WSS session is the normal bidirectional channel for heartbeats, health probes, resource telemetry, execution delivery, delivery receipts, process observations and release commands.
 3. Registration credentials are bootstrap-only. Every WSS session authenticates with the registered Runner key using proof of possession.
 4. WSS transport connectivity, application liveness, Supervisor health, admission state and capacity are separate facts.
@@ -40,7 +40,7 @@ Candidate handshake:
 6. SEM sends `runner.session.established` with a new random `connection_id`, server-issued `session_generation`, negotiated protocol version and heartbeat policy.
 7. Runner acknowledges the session and begins application heartbeats.
 
-The exact canonical byte encoding, signature algorithm parameters, TLS policy, challenge TTL and key-rotation overlap must be frozen in D-01/D-09 before implementation. Ed25519 is the current D-01 candidate, not a ratified cryptographic profile.
+The exact canonical byte encoding, signature algorithm parameters, TLS policy, challenge TTL and key-rotation overlap must be frozen in D-01/D-09 before implementation. TLS trust configuration must support an enterprise CA bundle or an explicitly pinned self-signed certificate/public key; hostname/identity validation remains mandatory and verification bypass is forbidden. Ed25519 is the current D-01 candidate, not a ratified cryptographic profile.
 
 ### 2.3 Session fencing
 
@@ -356,7 +356,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 - Local Runner event journal implementation, fsync guarantees, retention and disk-full behavior (D-10).
 - Whether a Runner may maintain more than one WSS session or endpoint for HA (default: one current session).
 - Exact event replay snapshot schema and retention window (D-05/D-10).
-- TLS termination topology, certificate policy, rate limits and ingress protection (D-09).
+- TLS termination topology, enterprise/self-signed certificate trust provisioning, pinning, hostname validation, renewal/rotation/revocation, rate limits and ingress protection (D-09).
 - Whether SEM sends an explicit server-side delivery cancellation before release or only the fenced release instruction (D-05).
 
 Until these are resolved and accepted, this document remains Draft / Review. It is not an implementation authorization.
