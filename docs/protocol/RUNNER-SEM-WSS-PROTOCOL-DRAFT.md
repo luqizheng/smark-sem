@@ -228,6 +228,19 @@ Delivery receipt candidate:
 - A receipt must be correlated to the exact `delivery_id`, `execution_id`, `binding_epoch` and Runner boot/session.
 - Runner local durable registry must survive Supervisor process restart. Workspace backup is not required; execution identity and process evidence are durable operational state.
 
+
+### 7.1 Release-applied disposition and process-exit evidence
+
+The Runner's `execution.release_applied` is an infrastructure observation, not a business completion event. Its disposition has these meanings:
+
+- `stop_fenced`: the durable per-binding stop fence is committed and later starts are blocked. This does **not** prove that a running process exited and does not by itself permit capacity release. It MUST NOT carry `process_exit_evidence_id`.
+- `process_stopped` or `already_exited`: the exact execution process is positively proven exited. The payload MUST carry `process_exit_evidence_id` equal to the immutable `evidence_id` of the corresponding `harness.process_exited` journal event. SEM validates the same execution_id, binding_epoch, launch_id, containment_id, boot_id and process identity across the linked evidence before accepting the terminal disposition.
+- `stale_rejected`: the release targets a stale binding and is rejected without changing the current binding or process. It MUST NOT carry process-exit evidence.
+- `local_uncertain`: the Runner cannot prove safe stop/no-start completion. It MUST NOT carry positive process-exit evidence; SEM retains the reservation and quarantine and reconciles.
+
+The application JSON Schema requires the evidence reference for `process_stopped` and `already_exited`, and rejects it for `stop_fenced`, `stale_rejected` and `local_uncertain`. Cross-message identity equality remains a semantic receiver check and must be covered by bilateral fixtures/integration tests. No release disposition changes AI-PM Task/Run business state.
+
+
 ## 8. Disconnect, reconnect and replay
 
 ### 8.1 On disconnect
