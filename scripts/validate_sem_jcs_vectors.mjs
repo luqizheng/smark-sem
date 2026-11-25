@@ -122,6 +122,16 @@ for (const name of ["http_response", "http_304", "http_callback_ack"]) {
   if (!crypto.verify(null, Buffer.from(responseBase, "ascii"), responsePublicKey, responseSignature)) {
     throw new Error(name + " Ed25519 response signature failed");
   }
+
+  if (name === "http_callback_ack") {
+    const wrongPairs = pairs.map(pair => [...pair]);
+    wrongPairs[2][1] = request.message_id;
+    const wrongBase = wrongPairs.map(([component, value]) => component + ": " + value).join("\\n")
+      + '\\n"@signature-params": ' + vector.signature_params;
+    if (crypto.verify(null, Buffer.from(wrongBase, "ascii"), responsePublicKey, responseSignature)) {
+      throw new Error("Callback ACK signature accepted a mismatched X-SEM-Event-Id");
+    }
+  }
   const responseSeed = Buffer.from(vector.test_private_seed_base64, "base64");
   const responsePrivateKey = crypto.createPrivateKey({
     key: Buffer.concat([privateDerPrefix, responseSeed]),
