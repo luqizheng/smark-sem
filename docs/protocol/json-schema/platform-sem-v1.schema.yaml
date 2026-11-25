@@ -263,9 +263,12 @@ $defs:
     additionalProperties: false
   EventAcknowledgementEnvelope:
     type: object
-    required: [event_id, disposition, acknowledged_at]
+    required: [event_id, execution_id, event_sequence, contiguous_through_sequence, disposition, acknowledged_at]
     properties:
       event_id: { type: string, format: uuid }
+      execution_id: { type: string, format: uuid }
+      event_sequence: { type: integer, minimum: 1 }
+      contiguous_through_sequence: { type: integer, minimum: 0 }
       disposition: { enum: [accepted, duplicate] }
       acknowledged_at: { type: string, format: date-time }
     additionalProperties: false
@@ -284,5 +287,7 @@ $defs:
           retryable: { type: boolean }
           retry_after_ms: { type: [integer, 'null'], minimum: 0 }
           detail: { type: string, maxLength: 512 }
+          execution_id: { type: string, format: uuid }
+          expected_sequence: { type: integer, minimum: 1 }
         additionalProperties: false
     additionalProperties: false
