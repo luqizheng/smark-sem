@@ -43,7 +43,7 @@ except ValueError:
 else:
     raise AssertionError("duplicate JSON member with escaped-equivalent name was accepted")
 
-data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+data = json.loads(FIXTURE.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_object_members)
 http = data["http"]
 body = http["body"].encode("utf-8")
 digest = "sha-256=:" + base64.b64encode(hashlib.sha256(body).digest()).decode("ascii") + ":"
@@ -179,3 +179,22 @@ print("crypto-vectors-ok: HTTP Content-Digest + profile-specific RFC 9421 Ed2551
 print("crypto-vectors-ok: WSS RFC 8785 JCS + domain-separated Ed25519 proof")
 print("negative-vectors-ok: HTTP method/authority/path/content-type/idempotency/digest mutations")
 print("negative-vectors-ok: WSS runner_id/audience/authority/challenge/protocol/domain-prefix mutations")
+
+
+# Shared Platform -> AI-PM callback envelope vector. This particular vector is
+# intentionally ASCII-only with integer numbers; broader UTF-16/number edge
+# coverage is tested independently below and in the Node verifier.
+callback_fixture_path = ROOT / "tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json"
+callback = json.loads(
+    callback_fixture_path.read_text(encoding="utf-8"),
+    object_pairs_hook=reject_duplicate_object_members,
+)
+envelope = callback["envelope"]
+expected = callback["expected"]
+payload_jcs = json.dumps(envelope["payload"], ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+envelope_jcs = json.dumps(envelope, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+assert payload_jcs == expected["payload_jcs_utf8"], "callback payload JCS bytes mismatch"
+assert hashlib.sha256(payload_jcs.encode("utf-8")).hexdigest() == expected["payload_hash_sha256"], "callback payload_hash mismatch"
+assert envelope_jcs == expected["event_envelope_jcs_utf8"], "callback event-envelope JCS bytes mismatch"
+assert hashlib.sha256(envelope_jcs.encode("utf-8")).hexdigest() == expected["event_envelope_hash_sha256"], "callback event_envelope_hash mismatch"
+print("callback-jcs-ok: payload and complete authenticated envelope bytes + SHA-256")
