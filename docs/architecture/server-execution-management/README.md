@@ -2,10 +2,10 @@
 
 # Server Execution Management Architecture V1
 
-- 状态：**Design In Progress — SEM-02E Review Pending**
+- 状态：**Design In Progress — SEM-02J Changes Required / Audit In Progress**
 - 架构收敛主文档：[SEM-02E 全量架构收敛基线](./sem-02e-architecture-convergence.md)
 - 评审包：[SEM-02E Review Package](./sem-02e-review-package.md)
-- 分支：`docs/sem-02e-architecture-convergence`
+- 维护仓库：`luqizheng/smark-sem`（SEM 专属文档主仓库）
 - 当前工作仅限架构文档；未修改业务代码、Migration、API、WSS、Dockerfile、Compose 或 Worker/Runner 主循环；Phase 0 未启动。
 
 ## 一句话架构
@@ -38,7 +38,15 @@ AI-PM 由 Platform、**独立服务 SEM**、Client Runner 和 Harness 构成。P
 | Runner | 默认 unattended；supervised 需要用户确认 |
 | Git | 每个 Repository 一个权威 origin |
 
-## 23 份专题文档 + SEM-02E/02F 收敛规格
+## 文档维护与跨仓库边界
+
+- [跨仓库代码归属清单](../CROSS-REPOSITORY-CODE-OWNERSHIP.md)：Platform、SEM、Runner 的代码责任与迁移处置。
+- [Platform–SEM–Runner Protocol V1](../../protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md)：HTTPS、Outbox/Inbox、WSS、Ticket、Claim、Lease Renewal、Process Observation 和命令 ACK 契约。
+- [仓库迁移记录](../../migration/REPOSITORY-MIGRATION.md)：源文件清单、来源和迁移状态。
+
+源仓库 `ai-pm` 的 SEM 专属设计目录共 23 份文档，SEM-01 部署审计目录共 6 份文档；两组均已完整复制到本仓库。另有 SEM-02E–02J 专项收敛与审计文档。旧设计文档保留历史属性；冲突时以较新的已确认决策和 SEM-02J 审计为准。
+
+## 一致性维护
 
 以 SEM-02E 为跨文档一致性的主基线。专题文档必须把规范更新写回正文并删除冲突定义，不允许只在文末追加“以新节为准”。
 
