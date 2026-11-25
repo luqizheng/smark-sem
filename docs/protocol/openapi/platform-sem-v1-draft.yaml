@@ -1,0 +1,318 @@
+openapi: 3.1.0
+info:
+  title: Platform–SEM Internal Execution API
+  version: 1.0.0-draft.1
+  description: >-
+    Draft bilateral HTTP contract for AI-PM Platform and SEM. This API carries
+    opaque execution instructions and infrastructure facts only; AI-PM retains
+    all business authority. HTTP and HTTPS use identical schemas.
+servers:
+  - url: https://sem.internal.example
+    description: HTTPS with explicitly configured trust; HTTP deployment may override the scheme.
+security:
+  - platformRequestSignature: []
+tags:
+  - name: Executions
+  - name: SEM Events
+paths:
+  /internal/sem/v1/executions:
+    post:
+      tags: [Executions]
+      operationId: submitExecutionRequest
+      summary: Durably submit an opaque execution request
+      description: >-
+        AI-PM sends this only after its own authorization and business decision.
+        A 202 response means SEM durably accepted the request; it does not mean
+        a Runner was bound or a Harness started. Retries use the same request_id.
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExecutionRequestedEnvelope' }
+      responses:
+        '202':
+          description: Request durably accepted or exact duplicate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExecutionAcceptanceEnvelope' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /internal/sem/v1/executions/{execution_id}:
+    get:
+      tags: [Executions]
+      operationId: getExecutionInfrastructureState
+      summary: Reconcile one opaque execution by its AI-PM identifier
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Current infrastructure snapshot; never a business Task status.
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExecutionSnapshotEnvelope' }
+        '304': { description: Snapshot unchanged. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Execution identifier is unknown to SEM. }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /internal/sem/v1/executions/{execution_id}/release:
+    post:
+      tags: [Executions]
+      operationId: requestExecutionRelease
+      summary: Persist a binding-fenced release instruction
+      description: >-
+        AI-PM has already made the business decision to release. SEM validates
+        expected_binding_epoch and persists the release intent before forwarding.
+        A stale epoch must never stop a newer binding.
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExecutionReleaseRequestedEnvelope' }
+      responses:
+        '202':
+          description: Release intent durably accepted or exact duplicate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReleaseAcceptanceEnvelope' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { description: Execution identifier is unknown to SEM. }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '412':
+          description: Expected binding epoch does not match current binding.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/ServerError' }
+  /internal/ai-pm/v1/sem-events:
+    post:
+      tags: [SEM Events]
+      operationId: receiveSemInfrastructureEvent
+      summary: Receive one SEM infrastructure event in AI-PM
+      description: >-
+        SEM delivers events at least once. AI-PM durably deduplicates by event_id
+        and applies only infrastructure observations to its own Run policy. This
+        endpoint must never permit SEM to directly mutate Task status.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SemInfrastructureEventEnvelope' }
+      responses:
+        '200':
+          description: Event durably accepted or exact duplicate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventAcknowledgementEnvelope' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '500': { $ref: '#/components/responses/ServerError' }
+components:
+  securitySchemes:
+    platformRequestSignature:
+      type: apiKey
+      in: header
+      name: Signature
+      description: >-
+        Placeholder for the bilateral request-signature profile. Exact algorithm,
+        canonicalization, key identifiers, timestamp/nonce headers and rotation
+        are D-01/D-09 decisions. This placeholder is not an implementation spec.
+  parameters:
+    MessageId:
+      name: X-SEM-Message-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    RequestId:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    InvalidRequest:
+      description: Invalid envelope or field constraints.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    Unauthorized:
+      description: Request authentication failed.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    IdempotencyConflict:
+      description: An idempotency key was reused with a different canonical payload.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    PayloadTooLarge:
+      description: Request exceeds configured payload limit.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    Unprocessable:
+      description: Request is structurally valid but violates protocol invariants.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    RateLimited:
+      description: Request rate limit exceeded.
+      headers: { Retry-After: { schema: { type: integer, minimum: 0 } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    ServerError:
+      description: Transient server failure; retry with the same idempotency key.
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+  schemas:
+    BaseEnvelope:
+      type: object
+      required: [message_id, schema_version, message_type, occurred_at, payload]
+      properties:
+        message_id: { type: string, format: uuid }
+        schema_version: { const: 1 }
+        message_type: { type: string }
+        occurred_at: { type: string, format: date-time }
+        correlation_id: { type: string, format: uuid }
+        payload: { type: object }
+      additionalProperties: false
+    ExecutionRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/BaseEnvelope'
+        - type: object
+          properties:
+            message_type: { const: execution.requested }
+            payload: { $ref: '#/components/schemas/ExecutionRequest' }
+    ExecutionRequest:
+      type: object
+      required: [execution_id, prompt, harness_profile, runner_requirements]
+      properties:
+        execution_id: { type: string, format: uuid }
+        prompt:
+          type: object
+          required: [content_type, body]
+          properties:
+            content_type: { const: text/plain; charset=utf-8 }
+            body: { type: string, minLength: 1 }
+          additionalProperties: false
+        harness_profile: { type: string, minLength: 1, maxLength: 64 }
+        runner_requirements:
+          type: object
+          required: [capabilities, supervision_mode]
+          properties:
+            capabilities: { type: array, items: { type: string }, uniqueItems: true }
+            supervision_mode: { enum: [unattended, supervised] }
+          additionalProperties: false
+      additionalProperties: false
+    ExecutionAcceptanceEnvelope:
+      type: object
+      required: [message_id, request_id, execution_id, acceptance, accepted_at]
+      properties:
+        message_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid }
+        execution_id: { type: string, format: uuid }
+        acceptance: { enum: [accepted, duplicate] }
+        accepted_at: { type: string, format: date-time }
+      additionalProperties: false
+    ExecutionReleaseRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/BaseEnvelope'
+        - type: object
+          properties:
+            message_type: { const: execution.release_requested }
+            payload: { $ref: '#/components/schemas/ExecutionReleaseRequest' }
+    ExecutionReleaseRequest:
+      type: object
+      required: [execution_id, release_id, expected_binding_epoch, stop_policy]
+      properties:
+        execution_id: { type: string, format: uuid }
+        release_id: { type: string, format: uuid }
+        expected_binding_epoch: { type: integer, minimum: 1 }
+        stop_policy:
+          type: object
+          required: [mode, grace_period_seconds]
+          properties:
+            mode: { enum: [graceful_then_force, force] }
+            grace_period_seconds: { type: integer, minimum: 0, maximum: 3600 }
+          additionalProperties: false
+      additionalProperties: false
+    ReleaseAcceptanceEnvelope:
+      type: object
+      required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
+      properties:
+        message_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid }
+        execution_id: { type: string, format: uuid }
+        release_id: { type: string, format: uuid }
+        acceptance: { enum: [accepted, duplicate] }
+        accepted_at: { type: string, format: date-time }
+      additionalProperties: false
+    SemInfrastructureEventEnvelope:
+      type: object
+      required: [event_id, event_type, schema_version, occurred_at, event_sequence, payload]
+      properties:
+        event_id: { type: string, format: uuid }
+        event_type:
+          enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain]
+        schema_version: { const: 1 }
+        occurred_at: { type: string, format: date-time }
+        event_sequence: { type: integer, minimum: 1 }
+        correlation_id: { type: string, format: uuid }
+        payload: { type: object, minProperties: 1 }
+      additionalProperties: false
+    ExecutionSnapshotEnvelope:
+      type: object
+      required: [execution_id, infrastructure_state, observed_at, version]
+      properties:
+        execution_id: { type: string, format: uuid }
+        infrastructure_state: { enum: [accepted, queued, reserved, bound, delivering, delivery_received, starting, running, release_requested, stopping, released, delivery_failed, start_failed, infrastructure_uncertain, cleanup_failed] }
+        binding_epoch: { type: integer, minimum: 1 }
+        runner_id: { type: string, format: uuid }
+        delivery_id: { type: string, format: uuid }
+        observed_at: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+      additionalProperties: false
+    EventAcknowledgementEnvelope:
+      type: object
+      required: [event_id, disposition, acknowledged_at]
+      properties:
+        event_id: { type: string, format: uuid }
+        disposition: { enum: [accepted, duplicate] }
+        acknowledged_at: { type: string, format: date-time }
+      additionalProperties: false
+    ProtocolErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        message_id: { type: string, format: uuid }
+        in_reply_to: { type: string, format: uuid }
+        error:
+          type: object
+          required: [code, class, retryable, detail]
+          properties:
+            code: { type: string }
+            class: { enum: [auth, protocol, conflict, admission, transient, uncertain, compatibility] }
+            retryable: { type: boolean }
+            retry_after_ms: { type: [integer, 'null'], minimum: 0 }
+            detail: { type: string, maxLength: 512 }
+          additionalProperties: false
+      additionalProperties: false
