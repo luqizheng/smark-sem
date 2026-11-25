@@ -124,6 +124,8 @@ Specify canonical serialization, message_id, request_id, execution_id, delivery_
 
 Detailed proposal: [Lifecycle State Machines and Crash Consistency Draft](./server-execution-management/lifecycle-state-machines-and-crash-consistency-draft.md). It defines the AI-PM Run/attempt, SEM Execution and Runner Supervisor process lifecycles; durable-before-effect transitions; SEM/Runner restart reconciliation; delivery and release races; independent authorization-generation and binding-epoch fencing; event replay/gap handling; and 46 acceptance cases. It remains Draft / Review. The exact AI-PM Run vocabulary, Runner journal/fsync and OS process-containment recovery, event cursor schema, and D-04 machine-readable contracts remain open.
 
+Independent review: [D-05 Independent Architecture Audit](./server-execution-management/d05-independent-architecture-audit.md). Disposition: **CHANGES REQUIRED**. The audit identifies four P0 blockers (AI-PM Run source incompatibility; OS process-create/containment crash window; undefined release/start linearization; insufficient post-Supervisor-crash exit proof) and P1 gaps. Keep PR #3 Draft; no implementation.
+
 ### D-06 — Delegated MCP application-service contract
 
 Define every allowed MCP operation, request/response schema, exact resource scoping, required grant checks and audit event. Prove read and write paths both reject cross-task/project/tenant access. Keep formal review/approval and manual completion human-only. Preserve existing Task state machine semantics; do not let process exit or submission equal Task completion.
