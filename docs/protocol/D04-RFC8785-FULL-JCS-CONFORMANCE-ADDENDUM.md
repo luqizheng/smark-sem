@@ -89,3 +89,6 @@ Both SEM Python and Node validators now independently verify the exact canonical
 The fixture is deliberately ASCII-only with integer numbers. It proves agreement for the full callback envelope shape and the two-hash contract, but does not replace the broader Unicode, UTF-16 ordering and numeric boundary cases in §4. AI-PM's Rust implementation must consume this exact pinned fixture and match all bytes/hashes; the consumer-side acceptance requirement is recorded in AI-PM PR #9.
 
 This remains protocol test evidence, not a production parser, database migration, or live bilateral callback test.
+
+
+CI evidence update: the optional-correlation-id value and omission assertions passed in runs #224 and #225; the latest PR head `cda9912d106cd0bb90f67da42c3f971f9147b8b7` passed runs #226 (push) and #227 (pull_request), all ten validation steps green.
