@@ -238,7 +238,7 @@ Proposed:
 8. Ambiguous timeout is distinguishable from definitive rejection.
 9. Idempotent replay returns the same durable disposition; changed body conflicts.
 10. 412 stale epoch is typed and never automatically retried.
-11. 200/304 conditional read and 404 semantics are tested; the 304 ETag response-header omission in the current OpenAPI draft is resolved.
+11. 200/304 conditional reads verify signed ETag and request-context binding; tampered ETag/If-None-Match reject; authenticated 404 is a signed structured response.
 12. No automatic durable retry, Outbox access, DB access, Task transition or callback server exists in SDK.
 13. AI-PM compiles against the published immutable SDK version in bilateral CI.
 14. SEM CI verifies public API compatibility and package publication provenance.
@@ -246,7 +246,7 @@ Proposed:
 
 ## 10. Blocking open decisions
 
-- D-04 exact request/response/event schema and signature profile closure, including the currently unspecified ETag response header on 304.
+- D-04 exact request/response/event schema and signature profile ratification, complete signed error-class coverage, freshness/replay policy and live middleware proof.
 - Final signer/verifier/key-resolver interfaces and crypto implementation ownership.
 - Whether reqwest 0.12/native-tls can meet explicit pinning requirements safely.
 - SEM CI access to internal Kellnr and immutable publish permissions.
@@ -263,7 +263,7 @@ Proposed:
 The following are hard blockers to API ratification, not optional post-ratification implementation polish:
 
 1. **D-04 HTTP authentication and signed responses:** freeze request and response covered components for every operation, response correlation fields, key identifiers and trust lookup, created/expires/nonce validation, replay retention, key rotation/overlap/revocation, and callback ACK signing. The independent D-04 review still marks P0-01/P0-05 open. TLS is not a substitute because restricted-internal HTTP is a supported transport.
-2. **Conditional GET 304:** OpenAPI currently defines ETag on 200 but not on 304. Before freezing `ExecutionRead::NotModified`, specify whether 304 echoes ETag (recommended), whether it carries a signed response, exact signed response components/correlation, mandatory empty-body semantics, and positive/negative vectors. Until then this API branch is provisional.
+2. **Conditional GET 304:** the candidate contract now requires ETag on both 200 and 304; 200 signs ETag, and 304 signs ETag plus the originating `If-None-Match` request header. Positive/negative vectors exist. Remaining blocker is ratification and live HTTP/client-cache behavior proof, not an unspecified ETag field.
 3. **Transport proof:** Tokio 1 + reqwest 0.12/native-tls remains a candidate. No integrated SEM workspace dependency resolution or certificate/public-key pin proof has run. Enterprise CA, explicit pin match, hostname mismatch, expiry, rotation and fail-closed tests are separate acceptance cases.
 4. **Distribution proof:** Kellnr is only a candidate. No SEM CI publish/read permission, immutable publication, credential handling or rollback proof exists.
 5. **Consumer proof:** no published immutable SDK has been consumed by AI-PM; no bilateral compile or fixture test exists.
@@ -275,13 +275,13 @@ This matrix maps the proposed API to the current D-04 candidate. It is intention
 | SDK method | OpenAPI operation | Request / response model | Required headers / identity | Status and typed outcome | D-04 evidence required |
 |---|---|---|---|---|---|
 | `submit_execution` | `submitExecutionRequest` — `POST /internal/sem/v1/executions` | `ExecutionRequestedEnvelope` → `ExecutionAcceptanceEnvelope` | `Signature`, `Signature-Input`, `Content-Digest`, `Idempotency-Key == request_id`, `X-SEM-Message-Id == message_id` | 202 accepted/duplicate; 400 validation; 401 auth; 409 idempotency conflict; 413 too large; 422 invariant; 429 rate limited; 500 explicit service failure; ambiguous post-transmission result → `OutcomeUnknown` | D-04 HTTP request signature/digest/replay; request identity/header equality; duplicate same body; changed-body conflict; response signature and correlation; 429/5xx retry semantics |
-| `get_execution` | `getExecutionInfrastructureState` — `GET /internal/sem/v1/executions/{execution_id}` | 200 `ExecutionSnapshotEnvelope`; 304 no body; 404 unknown execution | `Signature`, `Signature-Input` for authenticated response; `If-None-Match` when conditional; exact response correlation/signature profile still open | 200 → `Modified(snapshot, etag)`; 304 → provisional `NotModified`; 404 → `NotFound`; 401/500 typed auth/service error | Signed GET response; ETag/If-None-Match semantics; 304 ETag echo decision, signed empty response and no-body proof; 404 authenticated response |
+| `get_execution` | `getExecutionInfrastructureState` — `GET /internal/sem/v1/executions/{execution_id}` | 200 `ExecutionSnapshotEnvelope`; 304 no body; 404 structured error | Request: `X-SEM-Message-Id == message_id`, `Idempotency-Key == request_id`, optional `If-None-Match`; response: `X-SEM-Request-Id == request_id`, signed `ETag` on 200/304, `Signature`, `Signature-Input`, `Content-Digest` | 200 → `Modified(snapshot, etag)`; 304 → `NotModified { etag }`; 404 → signed `NotFound`; 401/500 typed auth/service error | Signed GET response; ETag/If-None-Match binding; 304 empty-body and no-body proof; request-context replay negatives; H72–H75; authenticated 404 signature coverage |
 | `request_release` | `requestExecutionRelease` — `POST /internal/sem/v1/executions/{execution_id}/release` | `ExecutionReleaseRequestedEnvelope` → `ReleaseAcceptanceEnvelope` | `Signature`, `Signature-Input`, `Content-Digest`, `Idempotency-Key == request_id`, `X-SEM-Message-Id == message_id`; path `execution_id` must equal body | 202 accepted/duplicate; 400 validation; 401 auth; 404 unknown execution; 409 idempotency conflict; 412 fencing conflict; 422 invariant; 500 service failure; ambiguous result → `OutcomeUnknown` | Signed request/response; path/body identity; same-key duplicate; changed-body conflict; stale binding_epoch non-retryable; authenticated 412 response |
 
 ### 12.1 Cross-cutting rules
 
 - All authenticated responses, including error responses and 304, must have a precisely defined verification/correlation contract before a typed response is exposed as trusted.
-- The table's header names reflect the current OpenAPI draft; the final signed-component set and response-header names are not yet frozen.
+- The table's header names reflect the current OpenAPI draft. Candidate signed components and response-header names are specified in D-04; ratification and live middleware proof remain open.
 - SDK default remains **no automatic retry**. AI-PM owns durable retry scheduling. A future per-call helper must be explicitly invoked and bounded; no hidden retry may mask an ambiguous result.
 - The D-04 acceptance matrix currently contains protocol case identifiers, but the SDK-specific mapping above must be joined to the final case IDs after D-04 closure. Do not invent or treat provisional case IDs as normative.
 - The SDK API, package version and implementation remain Draft / NOT RATIFIED until all blockers and bilateral consumer tests pass.
