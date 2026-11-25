@@ -71,6 +71,6 @@ The existing Python verifier still independently validates only the fixed ASCII/
 
 CI run #157 on commit `8b3eec5aa5711edee98b9da7dc1102c7c094040d` completed successfully, including the Node JCS edge-vector step. This proves the committed Node checks execute successfully; it does not prove cross-language JCS conformance or close P0-02.
 
-CI run #171 on commit `534b74498c0f0b33889a743b2b55d915064f8b4b` completed all validation steps successfully, including Node UTF-16/number/duplicate-member vectors and signed 202/304 response verification. This run does not include the later Python duplicate-member check added after that commit; its new run is pending.
+CI run #197 on commit `1367ecc3eb4d78b1484ad1b279df6ae55b251d12` completed all validation steps successfully. It includes Node UTF-16/number/duplicate-member vectors, Python duplicate-member rejection, RFC 9421 `sf` Content-Digest canonicalization, and Python/Node signed 202/304 response verification.
 
 Updated disposition: **PARTIAL PROGRESS / P0-02 OPEN / CHANGES REQUIRED**. Remaining gates include a second independent implementation for the same Unicode and numeric fixtures, production parser integration and no-session-side-effect proof for duplicate members, reference-byte fixtures, transcript semantic checks, and challenge replay/expiry tests with no-side-effect assertions.
