@@ -77,6 +77,8 @@ The final design must choose and specify:
 
 ### D-02 — Delegated grant and bootstrap protocol
 
+A detailed proposal is now recorded in [Delegated Harness Grant and Credential Broker Draft](./delegated-harness-grant-and-credential-broker-draft.md). It recommends an AI-PM-owned exact-scope grant, one-time Runner-key-bound bootstrap ticket, opaque short-lived MCP token, local credential broker/proxy and per-request application-service authorization. The exact token/wire schema and Harness proxy transport remain open.
+
 Specify the exact AI-PM-owned grant record/claims and lifecycle:
 - grant_id, jti, tenant/project/task/run/attempt/execution tuple, authorization_generation;
 - Runner identity/key binding, operation allow-list, delegating actor, Harness executor identity;
