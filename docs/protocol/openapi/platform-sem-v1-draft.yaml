@@ -10,7 +10,7 @@ servers:
   - url: https://sem.internal.example
     description: HTTPS with explicitly configured trust; HTTP deployment may override the scheme.
 security:
-  - platformRequestSignature: []
+  - serviceRequestSignature: []
 tags:
   - name: Executions
   - name: SEM Events
@@ -115,7 +115,7 @@ paths:
       operationId: receiveSemInfrastructureEvent
       summary: Receive one SEM infrastructure event in AI-PM
       description: >-
-        SEM delivers events at least once. AI-PM durably deduplicates by event_id
+        SEM delivers events at least once. The Idempotency-Key header must equal event_id. AI-PM durably deduplicates by event_id
         and applies only infrastructure observations to its own Run policy. This
         endpoint must never permit SEM to directly mutate Task status.
       parameters:
@@ -144,7 +144,7 @@ components:
     platformRequestSignature:
       type: apiKey
       in: header
-      name: Signature
+      name: X-SEM-Signature
       description: >-
         Placeholder for the bilateral request-signature profile. Exact algorithm,
         canonicalization, key identifiers, timestamp/nonce headers and rotation
