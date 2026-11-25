@@ -21,7 +21,7 @@ For every HTTP response sent by SEM or AI-PM:
 3. The signature base binds response-derived `@status`, `content-digest`, and the operation-specific response correlation header. It also binds the originating request context using RFC 9421 request-targeted component identifiers `@method;req`, `@authority;req`, `@path;req`, and `content-digest;req;sf`. A bare `@authority` is NOT valid as a response-derived component: RFC 9421 defines `@authority` for a request target, and a response signature must use the `req` parameter to obtain it from the associated request. `content-type` is covered only when present on the response; a verifier must not synthesize it when absent.
 4. created, expires, nonce, keyid, and alg are mandatory signature parameters. Exact freshness bounds, nonce retention, and key rotation/overlap remain open D-04/D-09 decisions.
 5. Correlation is mandatory and direction-specific:
-   - Platform→SEM request receives a SEM response echoing X-SEM-Request-Id equal to the authenticated request's message_id.
+   - Platform→SEM request receives a SEM response echoing X-SEM-Request-Id equal to the authenticated request's `request_id` (the operation/idempotency identity). It is not `message_id`, which remains the transport message identity and may also be echoed in the response body.
    - SEM→AI-PM callback receives an AI-PM response echoing X-SEM-Event-Id equal to the authenticated callback's event_id.
 6. The receiver verifies signature, digest, key status, freshness, correlation and replay protection before trusting any status/body. Error responses are signed too.
 7. An absent/invalid signature, digest, correlation, or trust decision is an authentication failure, never a typed business/protocol outcome.
