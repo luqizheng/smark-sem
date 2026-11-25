@@ -13,6 +13,7 @@ on:
   push:
     branches:
       - docs/sem-d05-lifecycle-crash-consistency
+      - docs/d05-linux-proof-contract
     paths:
       - "docs/protocol/**"
       - "scripts/validate_sem_contracts.py"
