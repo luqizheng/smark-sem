@@ -18,6 +18,8 @@ on:
       - "docs/protocol/**"
       - "scripts/validate_sem_contracts.py"
       - "scripts/validate_sem_crypto_vectors.py"
+      - "scripts/validate_sem_payload_fixtures.py"
+      - "scripts/validate_sem_jcs_vectors.mjs"
       - "tests/protocol/**"
       - ".github/workflows/sem-contracts.yml"
 
