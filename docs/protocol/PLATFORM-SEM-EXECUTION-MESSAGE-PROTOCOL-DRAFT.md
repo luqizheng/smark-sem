@@ -29,7 +29,7 @@
 | correlation_id | AI-PM | Trace correlation only; never authorization |
 | process_identity | Runner | Exact local OS process identity, including boot/start identity |
 
-A new business execution attempt should receive a new execution_id from AI-PM. SEM may retry delivery of the same execution_id idempotently. SEM increments execution_epoch when it establishes a new valid Runner binding. A release request must reference the exact execution_id and execution_epoch returned by SEM. An old epoch cannot stop a newer binding.
+A new business execution attempt should receive a new execution_id from AI-PM. SEM may retry delivery of the same execution_id idempotently. SEM increments execution_epoch when it establishes or replaces a valid Runner binding. SEM reports the current binding through an execution.binding_established infrastructure event. AI-PM stores that opaque epoch with its execution mapping and includes it in a release request. An old epoch cannot stop a newer binding. If AI-PM has not received the latest binding event, it must query/reconcile the execution by execution_id before issuing a fenced release.
 
 ## 3. Platform → SEM: execution request
 
@@ -81,7 +81,7 @@ Rules:
 
 Possible acceptance values: accepted, duplicate, rejected.
 
-Acceptance means only that SEM durably accepted the infrastructure execution request. It does not mean a Runner was selected, the prompt was delivered, Harness started, or business work began.
+Acceptance means only that SEM durably accepted the infrastructure execution request. It does not mean a Runner was selected, the prompt was delivered, Harness started, or business work began. The current execution_epoch is assigned only when a Runner binding is established and is reported separately.
 
 Duplicate request_id with the same canonical payload returns the original acceptance result. The same request ID with a different payload is a conflict.
 
@@ -116,6 +116,7 @@ Runner must not fetch Task context from SEM or ask SEM to mutate Task state.
 ## 6. Runner → SEM: infrastructure observations
 
 Use distinct message types for distinct facts:
+- execution.binding_established: SEM has bound the execution to a specific Runner and assigned the current execution_epoch.
 - execution.delivery_received: Runner durably accepted the delivery message.
 - harness.starting: launch is in progress.
 - harness.started: exact Harness process identity has been established.
