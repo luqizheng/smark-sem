@@ -357,5 +357,10 @@ const reorderedEnvelope = Object.fromEntries(Object.entries(callbackEnvelope).re
 if (canonicalize(reorderedEnvelope) !== callbackExpected.event_envelope_jcs_utf8) {
   throw new Error("Reordering callback envelope members changed canonical bytes");
 }
+const mutatedCorrelation = { ...callbackEnvelope, correlation_id: "ffffffff-ffff-4fff-8fff-ffffffffffff" };
+const mutatedCorrelationJcs = canonicalize(mutatedCorrelation);
+if (crypto.createHash("sha256").update(mutatedCorrelationJcs, "utf8").digest("hex") === callbackExpected.event_envelope_hash_sha256) {
+  throw new Error("Changing optional correlation_id did not change the complete-envelope hash");
+}
 console.log("callback-idempotency-ok: event_type/occurred_at mutations change envelope hash; member order does not");
 
