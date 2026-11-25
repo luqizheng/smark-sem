@@ -1,5 +1,7 @@
 # 部署拓扑（deployment-topology）
 
+> **Authority-boundary revision (2026-11-25):** This historical topology must be reconciled with [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). SEM remains an independent Runner/Harness runtime service, but is not a Platform Claim/Lease/business-command proxy. Harness business context and Task mutations use AI-PM MCP.
+
 - 性质：架构设计（Phase 2 的设计依据），本阶段不修改任何 Compose/Dockerfile。
 
 ## 1. 网络与通信关系
