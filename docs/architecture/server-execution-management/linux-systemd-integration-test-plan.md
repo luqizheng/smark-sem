@@ -130,7 +130,7 @@ Run deterministic schedules where Release wins:
 - while the invocation is running;
 - during StopUnit and after the stop job completes.
 
-Assert that the durable release fence blocks all later start commands, in-flight starts are reconciled, waiting jobs are canceled only with exact correlation, running jobs are stopped using the exact unit, and no effective release ACK is emitted before the required no-start or positive-exit proof.
+Assert that the durable release fence blocks all later start commands, in-flight starts are reconciled, waiting jobs are canceled only with exact correlation, and running jobs are stopped using the exact unit. A no-start outcome must emit execution.release_applied=stop_fenced only after proving no accepted invocation, no pending start/restart job and exact containment absent/empty; a process that existed must emit process_stopped/already_exited with the exact process-exit evidence_id. Any ambiguous outcome remains local_uncertain with reservation/quarantine retained. No effective release ACK is emitted before the corresponding proof.
 
 ### 5.3 Process containment and hostile descendant behavior
 
