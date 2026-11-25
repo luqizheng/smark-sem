@@ -173,10 +173,81 @@ function canonicalize(value, label = "$") {
   throw new Error(`JCS rejected non-JSON value at ${label}`);
 }
 
+function parseStrictJson(input) {
+  let index = 0;
+  const whitespace = () => {
+    while (index < input.length && /[\t\n\r ]/.test(input[index])) index += 1;
+  };
+  const scanString = () => {
+    const start = index;
+    index += 1;
+    while (index < input.length) {
+      const ch = input[index];
+      if (ch === "\\") {
+        index += 2;
+      } else if (ch === '"') {
+        index += 1;
+        return input.slice(start, index);
+      } else {
+        index += 1;
+      }
+    }
+    throw new Error("Malformed JSON string");
+  };
+  const scanValue = () => {
+    whitespace();
+    const ch = input[index];
+    if (ch === '"') {
+      scanString();
+      return;
+    }
+    if (ch === "{") {
+      index += 1;
+      whitespace();
+      const names = new Set();
+      if (input[index] === "}") { index += 1; return; }
+      while (index < input.length) {
+        whitespace();
+        if (input[index] !== '"') throw new Error("Malformed JSON object key");
+        const name = JSON.parse(scanString());
+        if (names.has(name)) throw new Error("Duplicate JSON object member: " + name);
+        names.add(name);
+        whitespace();
+        if (input[index] !== ":") throw new Error("Malformed JSON object separator");
+        index += 1;
+        scanValue();
+        whitespace();
+        if (input[index] === "}") { index += 1; return; }
+        if (input[index] !== ",") throw new Error("Malformed JSON object delimiter");
+        index += 1;
+      }
+      throw new Error("Unterminated JSON object");
+    }
+    if (ch === "[") {
+      index += 1;
+      whitespace();
+      if (input[index] === "]") { index += 1; return; }
+      while (index < input.length) {
+        scanValue();
+        whitespace();
+        if (input[index] === "]") { index += 1; return; }
+        if (input[index] !== ",") throw new Error("Malformed JSON array delimiter");
+        index += 1;
+      }
+      throw new Error("Unterminated JSON array");
+    }
+    while (index < input.length && !/[\s,\]}]/.test(input[index])) index += 1;
+  };
+  scanValue();
+  whitespace();
+  if (index !== input.length) throw new Error("Trailing data after JSON value");
+  return JSON.parse(input);
+}
+
 function expectCanonical(input, expected, label) {
-  const actual = canonicalize(JSON.parse(input));
+  const actual = canonicalize(parseStrictJson(input));
   if (actual !== expected) {
-    throw new Error(`JCS edge vector failed (${label}): expected ${expected}, got ${actual}`);
+    throw new Error("JCS edge vector failed (" + label + "): expected " + expected + ", got " + actual);
   }
 }
 
@@ -231,6 +302,8 @@ expectCanonical(
   "recursive sort, array order and control escaping"
 );
 expectReject(() => JSON.parse("{"), "malformed JSON");
+const duplicateMemberInput = String.raw\`{"a":1,"\u0061":2}\`;
+expectReject(() => parseStrictJson(duplicateMemberInput), "duplicate object member after escape decoding");
 expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\ud800"}`)), "unpaired high surrogate");
 expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\udc00"}`)), "unpaired low surrogate");
 expectReject(() => canonicalize(Number.NaN), "NaN");
