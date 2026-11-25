@@ -2,6 +2,8 @@
 
 > **Authority-boundary revision (2026-11-25):** Task Barrier/HIR/Run safety is AI-PM business authority, not SEM-owned state. SEM reports process/runtime evidence; AI-PM decides business disposition, retry, barrier and Task state. This is not an SEM implementation contract; see [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 
+> **Authority-boundary revision (2026-11-25):** Task Barrier/HIR/Run safety is AI-PM business authority, not SEM-owned state. SEM reports process/runtime evidence; AI-PM decides business disposition, retry, barrier and Task state. This is not an SEM implementation contract; see [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
+
 - 性质：架构设计（Phase 0 的设计依据），本阶段不实施。
 - 核心公理：**数据库租约状态是「平台认知」，不是「操作系统事实」。租约过期 ≠ 进程死亡。**
 
