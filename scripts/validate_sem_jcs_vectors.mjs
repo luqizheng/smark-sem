@@ -120,8 +120,8 @@ function expectReject(action, label) {
 
 // RFC 8785 §3.2.3 UTF-16 property ordering example, including a supplementary
 // plane emoji whose surrogate pair sorts before U+FB33.
-const unicodeInput = String.raw`{"\\u20ac":"Euro Sign","\\r":"Carriage Return","\\ufb33":"Hebrew Letter Dalet With Dagesh","1":"One","\\ud83d\\ude00":"Emoji: Grinning Face","\\u0080":"Control","\\u00f6":"Latin Small Letter O With Diaeresis"}`;
-const unicodeExpected = String.raw`{"\\r":"Carriage Return","1":"One","":"Control","ö":"Latin Small Letter O With Diaeresis","€":"Euro Sign","😀":"Emoji: Grinning Face","דּ":"Hebrew Letter Dalet With Dagesh"}`;
+const unicodeInput = String.raw\`{"\u20ac":"Euro Sign","\r":"Carriage Return","\ufb33":"Hebrew Letter Dalet With Dagesh","1":"One","\ud83d\ude00":"Emoji: Grinning Face","\u0080":"Control","\u00f6":"Latin Small Letter O With Diaeresis"}\`;
+const unicodeExpected = String.raw\`{"\r":"Carriage Return","1":"One","":"Control","ö":"Latin Small Letter O With Diaeresis","€":"Euro Sign","😀":"Emoji: Grinning Face","דּ":"Hebrew Letter Dalet With Dagesh"}\`;
 expectCanonical(unicodeInput, unicodeExpected, "UTF-16 property ordering");
 
 // RFC 8785 Appendix B representative IEEE-754 serialization cases, including
@@ -158,13 +158,13 @@ expectCanonical("1e21", "1e+21", "upper exponent boundary");
 // Recursive sorting, array-order preservation, Unicode/control escaping and
 // malformed / forbidden data rejection.
 expectCanonical(
-  String.raw`{"z":[{"b":2,"a":1},3],"a":"\\u000f\\nA'B\\\"\\\\\\\"/"}`,
-  String.raw`{"a":"\\u000f\\nA'B\\\"\\\\\\\"/","z":[{"a":1,"b":2},3]}`,
-  "recursive sort and string escaping"
+  String.raw\`{"z":[{"b":2,"a":1},3],"a":"\u000f\nplain"}\`,
+  String.raw\`{"a":"\u000f\nplain","z":[{"a":1,"b":2},3]}\`,
+  "recursive sort, array order and control escaping"
 );
 expectReject(() => JSON.parse("{"), "malformed JSON");
-expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\\ud800"}`)), "unpaired high surrogate");
-expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\\udc00"}`)), "unpaired low surrogate");
+expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\ud800"}`)), "unpaired high surrogate");
+expectReject(() => canonicalize(JSON.parse(String.raw`{"x":"\udc00"}`)), "unpaired low surrogate");
 expectReject(() => canonicalize(Number.NaN), "NaN");
 expectReject(() => canonicalize(Number.POSITIVE_INFINITY), "positive infinity");
 expectReject(() => canonicalize(Number.NEGATIVE_INFINITY), "negative infinity");
