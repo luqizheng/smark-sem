@@ -162,9 +162,20 @@ for number_text, expected_number in [
 ]:
     assert jcs_canonicalize(json.loads(number_text)) == expected_number, "RFC 8785 exponent boundary mismatch: " + number_text
 
+string_escape_input = r'{"text":"quote:\" slash:/ reverse:\\ unicode:é"}'
+string_escape_expected = r'{"text":"quote:\" slash:/ reverse:\\ unicode:é"}'
+assert jcs_canonicalize(json.loads(string_escape_input, object_pairs_hook=reject_duplicate_object_members)) == string_escape_expected, "RFC 8785 quote/reverse-solidus/slash/non-ASCII escaping mismatch"
+
 nested_input = r'{"z":[{"b":2,"a":1},3],"a":"\u000f\nplain"}'
 nested_expected = r'{"a":"\u000f\nplain","z":[{"a":1,"b":2},3]}'
 assert jcs_canonicalize(json.loads(nested_input, object_pairs_hook=reject_duplicate_object_members)) == nested_expected, "RFC 8785 recursive sorting/array order/control escaping mismatch"
+
+try:
+    json.loads(r'{"outer":{"a":1,"\u0061":2}}', object_pairs_hook=reject_duplicate_object_members)
+except ValueError:
+    pass
+else:
+    raise AssertionError("nested duplicate object member was accepted")
 
 for invalid_json in ("{",):
     try:
@@ -180,6 +191,13 @@ for invalid_json in (r'{"x":"\ud800"}', r'{"x":"\udc00"}'):
         pass
     else:
         raise AssertionError("unpaired surrogate was accepted")
+try:
+    jcs_canonicalize(json.loads(r'{"\ud800":1}', object_pairs_hook=reject_duplicate_object_members))
+except ValueError:
+    pass
+else:
+    raise AssertionError("unpaired surrogate property name was accepted")
+
 for invalid_number in ("NaN", "Infinity", "-Infinity", "1e400"):
     try:
         jcs_canonicalize(json.loads(invalid_number))
