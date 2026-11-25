@@ -240,3 +240,7 @@ Corrected on PR #5:
 - Added D04-W46/W47 and positive/negative fixture assertions.
 
 This is schema and Draft semantic alignment only. The schema cannot prove that the referenced event exists or that the identity tuple matches; SEM receiver logic and live event-order/replay tests must enforce that. D-05 P0-02/P0-03/P0-04 remain open pending executable Linux systemd >=250 failure-injection evidence.
+
+### CI evidence update for §5.9 — 2026-11-25
+
+SEM Protocol Contract Validation run #513 (`45619646503`) passed all 10 steps on commit `eceec9e0ef7ba7a31865f9e779e4a73a0be8f8b3`, including JSON Schema meta-validation and the new positive/negative ReleaseApplied evidence fixtures. This validates the Draft contract shape only; it does not prove SEM's cross-message identity join or live Runner process-exit evidence behavior.
