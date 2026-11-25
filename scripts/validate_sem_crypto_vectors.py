@@ -142,6 +142,13 @@ for name in ("http_response", "http_error_409", "http_304", "http_callback_ack")
     response_sig = b64d(vector["signature_base64"])
     assert verify(response_pub, response_sig, response_base.encode("ascii")), name + " Ed25519 response signature failed"
 
+    if name in ("http_response", "http_error_409"):
+        wrong_pairs = list(pairs)
+        wrong_pairs[2] = ('"x-sem-request-id"', request["message_id"])
+        wrong_base = "\\n".join(f"{component}: {value}" for component, value in wrong_pairs)
+        wrong_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), name + " signature unexpectedly accepted message_id as request correlation"
+
     if name == "http_callback_ack":
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-event-id"', request["message_id"])
