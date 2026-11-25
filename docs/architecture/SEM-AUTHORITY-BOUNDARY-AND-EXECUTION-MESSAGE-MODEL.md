@@ -107,7 +107,7 @@ Platform MCP remains mandatory for Harness business context and business operati
 - SEM-to-Runner and Platform-to-SEM authentication remain mandatory, scoped, short-lived/rotatable and auditable.
 - Harness-to-AI-PM MCP authentication is independent of SEM service identity. Never forward SEM service credentials as a human or project principal. A per-execution delegated grant must be scoped to one Task/attempt and must not impersonate a human.
 - AI-PM must bind Harness MCP credentials to the intended tenant/project/principal and enforce permissions on every call.
-- Prompt bodies may contain secrets or untrusted instructions: encrypt in transit and at rest where persisted, redact logs, constrain size/content type, and never execute them inside SEM.
+- Prompt bodies may contain secrets or untrusted instructions: V1 Platform↔SEM transport is internal plain HTTP and therefore does not provide wire confidentiality; keep this traffic on a restricted company network, authenticate and integrity-protect every request, encrypt sensitive payload fields at the application layer if the internal-network threat model requires it, encrypt persisted data at rest, redact logs, constrain size/content type, and never execute them inside SEM.
 - SEM routing metadata is not authorization. AI-PM-issued execution authorization and Harness MCP authorization remain separate controls.
 - Correlation IDs are not credentials and must not be accepted as proof of business identity.
 
