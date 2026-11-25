@@ -1,0 +1,32 @@
+{
+  "fixture_id": "SEM-CALLBACK-ENVELOPE-JCS-001",
+  "purpose": "Cross-language RFC 8785 JCS vector for the Platform-to-AI-PM SEM callback envelope. This vector intentionally uses ASCII strings and integer numbers so the expected canonical UTF-8 bytes are independently reproducible without implementation-specific serializer behavior.",
+  "envelope": {
+    "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "event_type": "execution.infrastructure_uncertain",
+    "schema_version": 1,
+    "occurred_at": "2026-11-25T10:15:31Z",
+    "execution_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "execution_event_sequence": 7,
+    "payload": {
+      "binding_epoch": 3,
+      "boot_id": "boot-2026-11-25T10:00:00Z",
+      "operator_action_required": true,
+      "reconciliation_required": true,
+      "reservation_retained": true,
+      "runner_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "runner_key_version": 2,
+      "since": "2026-11-25T10:15:30Z",
+      "supervisor_instance_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "uncertainty_code": "host_unreachable",
+      "uncertainty_scope": "runner_host"
+    },
+    "correlation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+  },
+  "expected": {
+    "payload_jcs_utf8": "{\"binding_epoch\":3,\"boot_id\":\"boot-2026-11-25T10:00:00Z\",\"operator_action_required\":true,\"reconciliation_required\":true,\"reservation_retained\":true,\"runner_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"runner_key_version\":2,\"since\":\"2026-11-25T10:15:30Z\",\"supervisor_instance_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"uncertainty_code\":\"host_unreachable\",\"uncertainty_scope\":\"runner_host\"}",
+    "payload_hash_sha256": "c1349717e204fe0f759f6874e9cb169cf10abc74b47c9588a8a7586c536b8e96",
+    "event_envelope_jcs_utf8": "{\"correlation_id\":\"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee\",\"event_id\":\"cccccccc-cccc-4ccc-8ccc-cccccccccccc\",\"event_type\":\"execution.infrastructure_uncertain\",\"execution_event_sequence\":7,\"execution_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"occurred_at\":\"2026-11-25T10:15:31Z\",\"payload\":{\"binding_epoch\":3,\"boot_id\":\"boot-2026-11-25T10:00:00Z\",\"operator_action_required\":true,\"reconciliation_required\":true,\"reservation_retained\":true,\"runner_id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa\",\"runner_key_version\":2,\"since\":\"2026-11-25T10:15:30Z\",\"supervisor_instance_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"uncertainty_code\":\"host_unreachable\",\"uncertainty_scope\":\"runner_host\"},\"schema_version\":1}",
+    "event_envelope_hash_sha256": "3955c6e2431ee0f9ae4a34855771f2bdc06f061b7b5e3866ece99f39e11350a8"
+  }
+}

@@ -28,7 +28,10 @@ SEM must not connect to or share the AI-PM PostgreSQL database. SEM has its own 
 
 ## 3. Confirmed deployment and operating constraints
 
-- AI-PM ↔ SEM: versioned HTTPS service contract with durable Outbox/Inbox and idempotent reconciliation.
+- AI-PM ↔ SEM: versioned HTTP or HTTPS service contract over the company private network; HTTPS is optional and supports enterprise CA or explicitly trusted self-signed certificates. No public internet ingress. Durable Outbox/Inbox and idempotent reconciliation remain mandatory.
+- Platform↔SEM message schemas are transport-independent. HTTPS clients must validate an explicitly configured trust chain or certificate/public-key pin; self-signed certificates are supported, but disabling verification is not.
+- HTTP is allowed only on a restricted internal network and has no wire confidentiality; authentication, request integrity, replay defense and audit remain mandatory. Sensitive fields requiring confidentiality need HTTPS or application-layer protection.
+- Runner registration and WSS accept enterprise CA or explicitly pinned self-signed server certificates. Certificate lifecycle and trust distribution are D-09 requirements.
 - Runner ↔ SEM: authenticated persistent WSS connection for delivery and infrastructure observations.
 - The two services use independent databases; no cross-database transaction is assumed.
 - Platform Outbox has one authoritative consumer in AI-PM. SEM does not consume the Platform database directly.
@@ -46,24 +49,30 @@ SEM must not connect to or share the AI-PM PostgreSQL database. SEM has its own 
 These documents are the active design-review set. They are still drafts and must be reconciled before implementation.
 
 1. [SEM Authority Boundary and Execution Message Model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md) — service responsibility and opaque business payload boundary.
-1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — process containment, independent host fencing and quarantine.
+1.4. [Runner Host Isolation and Permanent-Loss Recovery Draft](../runner-host-isolation-and-permanent-loss-recovery-draft.md) — Linux-only V1 process containment using host systemd + cgroup v2; permanent host loss uses visible alerting, quarantine and auditable on-site operator intervention (no cloud/BMC integration).
 1.6. [Delegated Harness Grant and Credential Broker Draft](../delegated-harness-grant-and-credential-broker-draft.md) — exact attempt grant, one-time bootstrap, short-lived MCP token and local broker.
 1.5. [Runner Enrollment and Cryptographic Identity Draft](../runner-enrollment-and-cryptographic-identity-draft.md) — Runner proof of possession, AI-PM trust record and WSS identity.
-2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.\n2.1. [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md) — WSS authentication, heartbeat, resource telemetry, delivery ACK, reconnect/replay and dispatch readiness.
-3. [Execution Identity, Lifecycle, Fencing and Delivery Contract Draft](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) — delegated Harness identity, three lifecycles, process fencing and Git evidence.
-4. [Consistency Review](./consistency-review.md) — source-audit findings and cross-document invariants.
-5. [Code Contract Mapping](./code-contract-mapping.md) — current source responsibilities and candidate adapter boundaries.
-6. [Repository Migration Record](../../migration/REPOSITORY-MIGRATION.md) — repository ownership and document migration history.
+2. [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md) — bilateral message directions, envelopes, delivery and release.
+2.1. [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md) — WSS authentication, heartbeat, resource telemetry, delivery ACK, reconnect/replay and dispatch readiness.
+2.2. [Platform–SEM OpenAPI 3.1 Draft](../../protocol/openapi/platform-sem-v1-draft.yaml) — initial HTTP endpoint contract.
+2.3. [Platform–SEM JSON Schema](../../protocol/json-schema/platform-sem-v1.schema.yaml) and [Runner–SEM WSS JSON Schema](../../protocol/json-schema/runner-sem-v1.schema.yaml), [Runner–SEM handshake JSON Schema](../../protocol/json-schema/runner-sem-handshake-v1.schema.yaml) — initial message validation baselines; cursor domains are explicitly separated between WSS transport, Runner journal and SEM per-execution event stream.
+2.4. [D-04 Protocol Acceptance Matrix](../../protocol/D04-PROTOCOL-ACCEPTANCE-MATRIX.md) — bilateral positive, negative, replay and failure-path acceptance cases.
+2.5. [D-04 Independent Protocol Review](../../protocol/D04-INDEPENDENT-PROTOCOL-REVIEW.md) — current contract audit and P0/P1 closure requirements; disposition: Changes Required.
+3. [Lifecycle State Machines and Crash Consistency Draft](./lifecycle-state-machines-and-crash-consistency-draft.md) — D-05 source-aligned Task/Run mapping, normative SEM/Runner transition tables, uncertainty recovery, crash consistency and 78-case acceptance matrix and Linux systemd 250+ / cgroup v2 process-owner profile with durable unit-retention and launch-tombstone rules.
+3.1. [D-05 Independent Architecture Audit](./d05-independent-architecture-audit.md) — source compatibility and adversarial review of process creation, release/start races, exit evidence and recovery; disposition: Changes Required.\n4. [Execution Identity, Lifecycle, Fencing and Delivery Contract Draft](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) — delegated Harness identity, three lifecycles, process fencing and Git evidence.
+5. [Consistency Review](./consistency-review.md) — source-audit findings and cross-document invariants.
+6. [Code Contract Mapping](./code-contract-mapping.md) — current source responsibilities and candidate adapter boundaries.
+7. [Repository Migration Record](../../migration/REPOSITORY-MIGRATION.md) — repository ownership and document migration history.
 
 ## 5. Required design packages still to close
 
 - Runner enrollment and key trust: independently verifiable Runner identity, key rotation, revocation and recovery.
 - Delegated Harness credential bootstrap: ticket format, redemption endpoint, credential broker IPC, token storage, expiry and revocation.
-- Complete wire contract: canonical OpenAPI/JSON Schema, all request/event/ack/error envelopes, version negotiation and compatibility.
+- Complete wire contract: canonical OpenAPI/JSON Schema, all request/event/ack/error envelopes, version negotiation and compatibility. Initial Draft schemas exist; D-04 remains open pending complete payloads, security/canonicalization decisions, validation and cross-repository contract fixtures.
 - Lifecycle and recovery: durable state machines, duplicate/out-of-order messages, process start/exit, uncertain Runner quarantine, release/start races and host isolation.
 - Resource admission: telemetry freshness, reservations, concurrency model, disk pressure and starvation/fairness policy.
 - Git delivery: execution-scoped ref, credential provisioning, verification, cleanup and trust boundaries.
-- Operations: deployment topology, secrets, TLS, health/readiness, observability, retention, disaster recovery and operator procedures.
+- Operations: deployment topology, secrets, network isolation, service identity/authentication, health/readiness, observability, retention, disaster recovery and operator procedures.
 - Implementation plan: repo ownership, module/port boundaries, dependency graph, ordered milestones and measurable acceptance tests.
 
 ## 6. Historical documents

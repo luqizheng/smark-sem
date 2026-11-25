@@ -1,10 +1,25 @@
 # Platform–SEM–Runner Execution Message Protocol Draft
 
-- Version: Draft 0.1
+- Version: Draft 0.2
 - Status: Architecture review only; not normative and not implementation-authorizing.
 - Replaces: the superseded Platform–SEM–Runner Protocol V1.
 - Authority baseline: [SEM Authority Boundary and Execution Message Model](../architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 - Detailed companion contract: [Execution Identity, Lifecycle, Fencing and Delivery Contract](./EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+- Machine-readable HTTP contract: [OpenAPI 3.1 draft](./openapi/platform-sem-v1-draft.yaml).
+- Reusable HTTP message schemas: [Platform–SEM v1 JSON Schema](./json-schema/platform-sem-v1.schema.yaml).
+
+## Transport deployment profile (V1)
+
+Platform↔SEM and Runner↔SEM transport security is configurable for company-internal deployment; the application message contract does not change with the transport choice.
+
+- Platform↔SEM supports both HTTP and HTTPS. Both endpoints must be reachable only through the company private network/VPN or an explicitly approved internal network segment. V1 has no public internet ingress requirement.
+- HTTPS is supported with publicly trusted certificates, enterprise-private CA certificates, or self-signed certificates. A self-signed certificate is a supported production deployment option when its trust is explicitly provisioned.
+- Clients must validate the configured trust chain or an explicitly pinned certificate/public-key fingerprint. Certificate validation must never be silently disabled; no production `--insecure` / verify=false mode.
+- Runner registration CLI and WSS clients use the same configurable trust-material model (CA bundle or explicit pin), while Runner key proof-of-possession remains separate from TLS server authentication.
+- HTTP is permitted only on the restricted internal network. It provides no transport confidentiality; request authentication, integrity protection, timestamp/nonce replay defense, idempotency and audit remain mandatory. Sensitive fields that require confidentiality must be protected at the application layer or sent over HTTPS.
+- Certificate expiry, renewal, rotation, overlap, revocation and trust-material distribution are D-09 operational requirements. A trust change must not silently downgrade validation.
+
+This is a deployment/transport choice, not two business protocols. Endpoint configuration selects `http://` or `https://`; message schemas, Outbox/Inbox, idempotency and reconciliation are identical.
 
 ## 1. Contract invariants
 
@@ -15,7 +30,35 @@
 5. AI-PM decides business completion/cancellation and sends SEM an explicit release/stop instruction.
 6. Task lifecycle and SEM Execution lifecycle are independent.
 7. No shared database, distributed transaction, SEM access to Platform PostgreSQL, or business-state mirror.
-8. Every message is authenticated, versioned, idempotent and correlated. Stale release messages must not stop a newer execution.
+8. Every message is authenticated, versioned, idempotent and correlated. Stale release messages must not stop a newer execution. HTTP message IDs and idempotency keys are carried in both the envelope and headers where defined; the receiver rejects disagreement.
+
+
+## 1.1 HTTP service authentication and integrity (approved cryptographic baseline)
+
+Because V1 permits private-network HTTP as well as HTTPS, TLS cannot be the sole request-authentication or integrity mechanism. The approved V1 cryptographic baseline is **asymmetric Ed25519 HTTP Message Signatures**, using the standardized HTTP Message Signatures and Content-Digest fields:
+
+- HTTP Message Signatures: RFC 9421 — https://www.rfc-editor.org/rfc/rfc9421
+- Content-Digest: RFC 9530 — https://www.rfc-editor.org/rfc/rfc9530
+
+Each service direction has its own signing keypair: AI-PM signs Platform→SEM requests; SEM signs SEM→AI-PM callbacks and HTTP responses. The private key remains in the owning service. The peer pins/loads the public key under a configured key_id. These service keys are separate from Runner Ed25519 identity keys, TLS certificates and Harness delegated credentials.
+
+Required signature coverage for every request:
+
+- `@method`, `@authority`, `@path`, `@query`;
+- `content-digest;sf` and `content-type` (RFC 9530 Content-Digest is canonicalized using RFC 9421 Structured Field serialization, including the digest of an empty body for bodyless requests);
+- `x-sem-message-id` when the operation has a message ID;
+- `idempotency-key` for mutating/idempotent operations;
+- signature parameters `created`, `expires`, `nonce`, `keyid` and `alg=ed25519`.
+
+Wire headers follow RFC 9421 (`Signature-Input` and `Signature`) and RFC 9530 (`Content-Digest`). The receiver verifies the HTTP signature and body digest before parsing or persisting the request. It then atomically checks the nonce replay registry and message/idempotency record. Same key + same idempotency key + same canonical body returns the original disposition; same key with a different body is a conflict.
+
+Provisional freshness values (not yet normative): `created` may be at most 30 seconds in the future and no more than 60 seconds old; `expires` must not exceed `created + 60 seconds`; nonce is a cryptographically random value with at least 128 bits of entropy and is single-use per key_id. The receiver retains consumed nonces for at least 10 minutes and rejects duplicates. These are proposed initial bounds, not frozen operational values.
+
+Responses are also signed by the responding service. The earlier shorthand response component list is superseded by the dedicated [D-04 HTTP Signed Response and Conditional GET Contract Addendum](./D04-HTTP-SIGNED-RESPONSE-AND-CONDITIONAL-GET-ADDENDUM.md), especially its §8 candidate serialization profile. In particular, response signatures bind `@status`, `content-digest;sf`, the direction-specific response correlation field (`X-SEM-Request-Id` equals the authenticated `Idempotency-Key` for Platform→SEM; `X-SEM-Event-Id` equals the authenticated `Idempotency-Key` for SEM→AI-PM callback), and the originating request components using RFC 9421 `;req` parameters; they do not use a bare response-derived `@authority`. For valid envelopes the authenticated header equals body `request_id`/`event_id`; on signed validation errors the response MUST correlate only to the authenticated header, never an unverified body field. The authenticated-versus-pre-authentication error response boundary is defined in the D-04 bilateral addendum §18. The addendum defines a distinct 304 component set and request-context association contract. Clients verify the response signature before trusting any 2xx, 4xx or 5xx outcome. This protects response integrity/authenticity on HTTP; it does not provide confidentiality. The addendum remains Draft / not ratified, so these exact details are not yet an implementation authorization.
+
+Key lifecycle requirements: distinct key IDs per environment and direction; public-key distribution through trusted deployment configuration; overlapping old/new public keys during rotation; explicit revocation; no automatic fallback to unsigned requests; unknown, expired or revoked key IDs fail closed. The exact key storage mechanism belongs to D-09.
+
+**Cryptographic decision approved:** Ed25519 + RFC 9421 + RFC 9530 is the V1 HTTP request/response authentication and integrity baseline. Exact covered-component sets, header names, timestamp/nonce bounds, OpenAPI representation, key lifecycle operations and interoperable test vectors remain D-04/D-09 closure items. The algorithm-family decision is closed; P0-01 remains open for wire-level specification and validation.
 
 ## 2. Identifiers
 
@@ -79,7 +122,7 @@ Rules:
 }
 ~~~
 
-Possible acceptance values: accepted, duplicate, rejected.
+Possible acceptance values: accepted and duplicate. Rejections use the structured HTTP error envelope and an appropriate status code.
 
 Acceptance means only that SEM durably accepted the infrastructure execution request. It does not mean a Runner was selected, the prompt was delivered, Harness started, or business work began. The binding_epoch is assigned only when a Runner binding is established and is reported in execution.binding_established; it is not part of the initial durable-acceptance response.
 
@@ -145,6 +188,7 @@ Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
   "correlation_id": "uuid",
   "payload": {
     "execution_id": "uuid",
+    "release_id": "uuid",
     "expected_binding_epoch": 1,
     "stop_policy": {
       "mode": "graceful_then_force",
@@ -283,6 +327,8 @@ SEM release is triggered when AI-PM decides that the corresponding Run/attempt n
 7. Whether infrastructure reporting is pushed to an AI-PM endpoint, returned synchronously, or both.
 8. Retention policy for prompt bodies, process observations and infrastructure logs.
 
+The OpenAPI and JSON Schema files are Draft validation artifacts. They do not resolve the open questions above or authorize implementation.
+
 No implementation or migration is authorized until these questions are reviewed and the bilateral contract is approved.
 
 
@@ -305,11 +351,12 @@ This event is emitted only after SEM has selected a Runner and durably reserved 
 
 ~~~json
 {
-  "message_id": "uuid",
-  "message_type": "execution.binding_established",
+  "event_id": "uuid",
+  "event_type": "execution.binding_established",
   "schema_version": 1,
   "occurred_at": "RFC3339 UTC",
-  "event_sequence": 1,
+  "execution_id": "uuid",
+  "execution_event_sequence": 1,
   "payload": {
     "execution_id": "uuid",
     "binding_epoch": 1,
@@ -353,6 +400,7 @@ SEM routes this opaque ticket only to the exact current Runner binding and does 
   "message_id": "uuid",
   "message_type": "execution.delivery_received",
   "schema_version": 1,
+  "journal_id": "uuid",
   "event_sequence": 1,
   "occurred_at": "RFC3339 UTC",
   "payload": {
@@ -374,18 +422,22 @@ This receipt proves only that Runner Supervisor durably recorded the delivery op
   "message_id": "uuid",
   "message_type": "harness.started",
   "schema_version": 1,
+  "journal_id": "uuid",
   "event_sequence": 2,
   "occurred_at": "RFC3339 UTC",
   "payload": {
     "execution_id": "uuid",
     "binding_epoch": 1,
+    "launch_id": "uuid",
+    "containment_id": "opaque-containment-id",
     "runner_id": "uuid",
     "supervisor_instance_id": "uuid",
     "process_identity": {
       "os_boot_id": "opaque-boot-id",
       "pid": 1234,
       "process_start_identity": "opaque-os-start-token",
-      "process_group_or_container_id": "opaque-runtime-id"
+      "cgroup_path": "/sys/fs/cgroup/sem/...",
+      "systemd_invocation_id": "opaque-systemd-invocation-id"
     },
     "harness_profile": "codex"
   }
@@ -401,6 +453,7 @@ PID alone is not a stable process identity. The process start identity and OS bo
   "message_id": "uuid",
   "message_type": "harness.process_exited",
   "schema_version": 1,
+  "journal_id": "uuid",
   "event_sequence": 3,
   "occurred_at": "RFC3339 UTC",
   "payload": {
@@ -411,18 +464,20 @@ PID alone is not a stable process identity. The process start identity and OS bo
       "os_boot_id": "opaque-boot-id",
       "pid": 1234,
       "process_start_identity": "opaque-os-start-token",
-      "process_group_or_container_id": "opaque-runtime-id"
-    },
-    "exit_code": 0,
-    "exit_signal": null,
-    "observation_id": "uuid",
-    "evidence_kind": "supervisor_wait_reaped",
+      "launch_id": "uuid",
+    "containment_id": "opaque-containment-id",
+    "boot_id": "opaque-boot-id",
+    "systemd_invocation_id": "opaque-systemd-invocation-id",
+    "cgroup_path": "/sys/fs/cgroup/sem/...",
+    "cgroup_populated": 0,
+    "evidence_id": "uuid",
+    "exit_status": { "kind": "code", "code": 0 },
     "supervisor_instance_id": "uuid"
   }
 }
 ~~~
 
-The evidence_kind is accepted only when produced by the trusted Runner Supervisor implementation through the authenticated Runner channel. A Harness self-report is not process-exit evidence. The exit code is infrastructure evidence and never means Task completion.
+The systemd invocation and cgroup v2 evidence must be produced by the trusted host-side Runner Supervisor. A Harness self-report is not process-exit evidence. The exit status is infrastructure evidence and never means Task completion.
 
 ### 13.6 Runner → SEM: resource telemetry
 
@@ -467,10 +522,50 @@ Telemetry includes observation time and Runner boot identity. SEM applies a conf
 
 If AI-PM does not know the current binding_epoch, it must first query/reconcile the execution by execution_id. SEM rejects a stale expected_binding_epoch and never applies it to a newer binding. Release arriving while launch is in progress must be persisted as a stop fence so the Supervisor cannot launch a late process after the release.
 
-### 13.8 Ordering and duplicate handling
+### 13.8 SEM event delivery acknowledgement and per-execution cursor
+
+The SEM callback is at-least-once and carries one event per request in the current Draft. AI-PM must commit its durable Inbox row and permitted infrastructure observation in one transaction before returning a success acknowledgement.
+
+A successful acknowledgement contains:
+- `event_id`: exact event acknowledged;
+- `execution_id`: event stream identity;
+- `execution_event_sequence`: sequence of this SEM→AI-PM event within the exact execution;
+- `contiguous_through_sequence`: highest contiguous sequence durably committed by AI-PM for this execution;
+- `disposition`: `accepted` or `duplicate`;
+- `acknowledged_at`: receiver timestamp.
+
+If a later sequence arrives before the missing predecessor, AI-PM returns a structured `409 EVENT_SEQUENCE_GAP` with `execution_id` and `expected_sequence`; it does not advance the contiguous cursor. SEM retains and retries/replays the missing event. A duplicate event_id with the same canonical body returns `duplicate`; the same event_id with a different body returns `409 IDEMPOTENCY_CONFLICT`. A duplicate older event may return the current contiguous cursor, but must not change it.
+
+The success ACK is never returned before Inbox + permitted Run-observation commit. The generic AI-PM `POST /api/v1/events` endpoint is not this callback receiver; a dedicated AI-PM route and Inbox contract remain to be designed and approved bilaterally.
+
+### 13.9 Ordering and duplicate handling
 
 - Every sender supplies a unique message_id; every logical operation also has its stable request_id, delivery_id or release_id.
-- Runner observations carry a monotonically increasing event_sequence within the execution/binding stream. SEM persists the last accepted sequence and deduplicates message_id.
+- Runner observations carry a monotonically increasing `event_sequence` within the durable Runner event stream identified by `runner_id + journal_id`; SEM validates `execution_id + binding_epoch` independently and persists the last contiguous stream sequence.
 - A duplicate message with the same identity and canonical payload returns the original acknowledgement. Reuse with a different payload is a conflict.
-- A sequence gap, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
-- SEM→AI-PM events are at-least-once. AI-PM deduplicates and applies infrastructure facts without changing Task status automatically.
+- A gap in `execution_event_sequence` within one execution, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
+- SEM→AI-PM events are at-least-once. Each durable SEM→AI-PM event carries `execution_id` and `execution_event_sequence`, monotonic within that execution's SEM event stream. AI-PM deduplicates by `event_id` and stores the per-execution cursor. This is distinct from Runner→SEM `journal_id + event_sequence`, which is scoped by `runner_id + journal_id` and survives WSS reconnect. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
+
+
+## 6.1 SEM event callback acknowledgement
+
+The callback success acknowledgement echoes the exact event sequence field name from the event envelope. The field is `execution_event_sequence`; the ambiguous alias `event_sequence` is not accepted. This value is scoped to one SEM execution event stream and is distinct from Runner journal `event_sequence` and WSS `message_sequence`.
+
+```json
+{
+  "event_id": "uuid",
+  "execution_id": "uuid",
+  "execution_event_sequence": 12,
+  "contiguous_through_sequence": 12,
+  "disposition": "accepted",
+  "acknowledged_at": "RFC3339 UTC"
+}
+```
+
+A duplicate delivery with the same event_id and identical canonical body returns `disposition: duplicate` and echoes the same `execution_event_sequence`. The ACK is returned only after the AI-PM Inbox record, append-only Run observation and per-attempt cursor have committed atomically. A sequence gap or identity conflict is an error response, never a success ACK.
+
+## 6.2 Identity and evidence validation requirements
+
+The event schema requires `runner_key_version`, `boot_id` and `supervisor_instance_id` on delivery, process, release and uncertainty observations. The receiver must compare these fields to the currently known binding for the execution; schema validity alone is not authorization to apply an observation.
+
+For `harness.process_observed` with `observation=exited`, the payload must contain exact process identity and exit evidence with exactly one of `exit_code` or `exit_signal`. For `exit_status_unknown`, evidence may prove the containment is empty while the numeric status remains unknown. A `execution.release_status` event with `release_state=process_exited` must include `process_exit_evidence_id` referring to the exact accepted process-exit evidence. These references must resolve to the same execution, runner key version, boot, supervisor instance, binding epoch, launch and containment identity in the SEM durable ledger.

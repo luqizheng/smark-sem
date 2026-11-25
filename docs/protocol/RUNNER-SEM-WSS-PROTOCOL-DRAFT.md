@@ -1,15 +1,16 @@
 # Runner–SEM WebSocket Protocol and Dispatch Contract Draft
 
-- Version: Draft 0.1
+- Version: Draft 0.2
 - Status: Architecture review; not normative and not implementation-authorizing.
 - Owner: SEM (Runner transport, identity, admission and infrastructure delivery).
 - Companion: [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md).
 - Scope: Runner registration follow-up, authenticated WSS session, liveness, dispatch, delivery ACK, telemetry, reconnect and replay.
+- Machine-readable schemas: [Runner–SEM WSS v1 JSON Schema](./json-schema/runner-sem-v1.schema.yaml) and [Runner–SEM handshake JSON Schema](./json-schema/runner-sem-handshake-v1.schema.yaml).
 - Explicit non-goals: AI-PM business authorization, Task state, Harness MCP grant semantics, business retry policy, process-exit inference from connection state.
 
 ## 1. Protocol invariants
 
-1. Runner initiates an outbound TLS-protected WSS connection to SEM. SEM does not initiate inbound connections to Runner.
+1. Runner initiates an outbound TLS-protected WSS connection to SEM. SEM does not initiate inbound connections to Runner. Internal enterprise CA and explicitly pinned self-signed server certificates are supported; certificate verification is mandatory.
 2. One authenticated WSS session is the normal bidirectional channel for heartbeats, health probes, resource telemetry, execution delivery, delivery receipts, process observations and release commands.
 3. Registration credentials are bootstrap-only. Every WSS session authenticates with the registered Runner key using proof of possession.
 4. WSS transport connectivity, application liveness, Supervisor health, admission state and capacity are separate facts.
@@ -40,7 +41,9 @@ Candidate handshake:
 6. SEM sends `runner.session.established` with a new random `connection_id`, server-issued `session_generation`, negotiated protocol version and heartbeat policy.
 7. Runner acknowledges the session and begins application heartbeats.
 
-The exact canonical byte encoding, signature algorithm parameters, TLS policy, challenge TTL and key-rotation overlap must be frozen in D-01/D-09 before implementation. Ed25519 is the current D-01 candidate, not a ratified cryptographic profile.
+Approved cryptographic baseline: Ed25519 signs UTF-8 bytes consisting of the domain-separation prefix `SEM-RUNNER-WSS-AUTH-V1\n` followed by the RFC 8785 JSON Canonicalization Scheme (JCS) serialization of an object containing audience, endpoint_authority, runner_id, key_version, challenge_id, server_nonce, client_nonce and selected_protocol_version. The challenge is single-use. Candidate parameter values are a 30-second TTL and 32-byte cryptographically random server/client nonces encoded base64url without padding; these exact values remain provisional pending D-01/D-09 operational closure and test vectors. The signature is the 64-byte Ed25519 signature encoded base64url without padding. The handshake shapes are in [Runner–SEM handshake JSON Schema](./json-schema/runner-sem-handshake-v1.schema.yaml). The cryptographic algorithm and canonicalization family are approved; transcript field exactness, challenge lifecycle and interoperability vectors remain open.
+
+TLS trust configuration must support an enterprise CA bundle or an explicitly pinned self-signed certificate/public key; hostname/identity validation remains mandatory and verification bypass is forbidden. Runner key proof-of-possession remains separate from TLS server authentication.
 
 ### 2.3 Session fencing
 
@@ -65,6 +68,8 @@ All application messages use a common envelope. Fields shown are required unless
   "connection_id": "uuid",
   "session_generation": 17,
   "message_sequence": 42,
+  "journal_id": "uuid",
+  "event_sequence": 42,
   "occurred_at": "RFC3339 UTC",
   "payload": {}
 }
@@ -72,9 +77,11 @@ All application messages use a common envelope. Fields shown are required unless
 
 Rules:
 
+- `journal_id` and `event_sequence` are required only for durable Runner observations; heartbeat and replaceable telemetry snapshots may omit them.
 - `message_id` is globally unique per sender message and is used for deduplication.
-- `message_sequence` is monotonically increasing for each direction within one connection generation, starting from a negotiated initial value.
-- Sequence numbers are not reused after reconnect; the new generation starts a new sequence space.
+- `message_sequence` is a transport sequence, monotonically increasing for each direction within one connection generation. It starts a new sequence space after reconnect and is used for connection-level gap detection only.
+- Durable Runner observations additionally carry `journal_id` and `event_sequence`. `event_sequence` is monotonically increasing within the durable stream keyed by `runner_id + journal_id`, survives WSS reconnects, and is never reset merely because `connection_id` or `session_generation` changes.
+- SEM validates both sequence domains independently. A transport sequence gap triggers connection replay/reconciliation; a durable event sequence gap triggers journal replay/reconciliation. Neither sequence may be substituted for the other.
 - `occurred_at` is the sender's observation time. SEM also records server-side `received_at`; server receipt time is authoritative for freshness decisions.
 - `runner_id`, `connection_id` and `session_generation` must match the authenticated session.
 - Unknown optional fields are ignored only when schema compatibility policy allows it. Unknown message types are rejected with a structured unsupported-message error.
@@ -89,12 +96,15 @@ Rules:
 | SEM → Runner | `runner.challenge` | Fresh authentication challenge |
 | Runner → SEM | `runner.auth.proof` | Proof of private-key possession |
 | SEM → Runner | `runner.session.established` | Bind connection generation and negotiated policy |
+| Runner → SEM | `runner.session.ack` | Acknowledge the negotiated session during the handshake |
 | Runner → SEM | `runner.heartbeat` | Application liveness and Supervisor status |
 | SEM → Runner | `runner.health_probe` | Optional correlated health check |
 | Runner → SEM | `runner.health_report` | Probe response |
 | Runner → SEM | `runner.resources.report` | CPU, memory, disk/workspace-volume and capacity report |
 | Runner → SEM | `runner.admission.changed` | Accepting/draining/disabled transition |
 | SEM → Runner | `execution.deliver` | Opaque execution delivery |
+| SEM → Runner | `execution.credential_bootstrap` | Opaque short-lived bootstrap ticket delivery |
+| SEM → Runner | `runner.replay.snapshot` | Reconciliation snapshot after reconnect |
 | Runner → SEM | `execution.delivery_received` | Durable Supervisor receipt |
 | Runner → SEM | `harness.starting` / `harness.started` / `harness.start_failed` | Process launch observations |
 | Runner → SEM | `harness.process_exited` | Exact process exit observation |
@@ -104,6 +114,8 @@ Rules:
 | Either direction | `protocol.error` | Structured protocol failure |
 | SEM → Runner | `runner.session.superseded` | Close stale connection |
 | Runner → SEM | `runner.replay.request` | Request reconciliation after reconnect |
+
+The `runner.session.ack` frame belongs to the pre-application handshake schema and is not part of the post-handshake application envelope. `runner.session.superseded` is sent on an already authenticated, older connection and therefore belongs only to the post-handshake application schema; it is not a handshake frame. The handshake and application schema message-type sets MUST be disjoint. The application-message schema has a dedicated strict payload definition for every post-handshake message type. Direction is normative as shown in this catalogue.
 
 Application heartbeat is not replaced by WebSocket ping/pong. Ping/pong is a transport keepalive and fast dead-peer hint only.
 
@@ -189,7 +201,7 @@ A resource report is bound to `runner_id`, `boot_id`, `connection_id`, `session_
 
 ## 7. Dispatch and delivery handshake
 
-1. AI-PM submits an idempotent execution request over the HTTPS contract.
+1. AI-PM submits an idempotent execution request over the versioned internal HTTP contract.
 2. SEM queues it and selects only a Runner whose authenticated session, liveness, Supervisor, admission and capacity satisfy the dispatch predicate.
 3. In one SEM database transaction, SEM creates/updates the binding, increments `binding_epoch`, creates a capacity reservation and persists a delivery record with stable `delivery_id`.
 4. Only after commit does SEM send `execution.deliver` over the current WSS connection.
@@ -337,7 +349,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 13. WSS loss before receipt ACK causes uncertain state and reconciliation, not blind reassignment.
 14. WSS loss after receipt ACK but before process-start event remains uncertain until replay/reconciliation.
 15. Reconnect uses a new connection generation and rejects old-generation events.
-16. Runner replay is idempotent and preserves original event identity.
+16. Runner replay is idempotent and preserves original event_id, journal_id and event_sequence; transport message_id/message_sequence are newly framed for the current connection only.
 17. Sequence gap prevents unsafe state advancement and triggers reconciliation.
 18. Resource snapshots may coalesce; process/delivery/release events may not be silently dropped.
 19. Heartbeat timeout never creates process-exited evidence.
@@ -347,7 +359,7 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 23. Unknown required protocol version fails closed; compatible optional fields are handled per schema policy.
 24. Prompt body and delegated bootstrap bytes remain opaque to SEM and are absent from logs/errors.
 
-## 14. Decisions still open before this contract can be frozen
+## 14. Machine-readable contract and decisions still open before this contract can be frozen
 
 - Exact Ed25519 transcript encoding, signature domain separation and challenge TTL (D-01).
 - Whether the initial protocol is JSON text frames only; frame-size and compression policy (D-09).
@@ -356,7 +368,22 @@ Eligibility is re-evaluated immediately before reservation and delivery. Reserva
 - Local Runner event journal implementation, fsync guarantees, retention and disk-full behavior (D-10).
 - Whether a Runner may maintain more than one WSS session or endpoint for HA (default: one current session).
 - Exact event replay snapshot schema and retention window (D-05/D-10).
-- TLS termination topology, certificate policy, rate limits and ingress protection (D-09).
+- TLS termination topology, enterprise/self-signed certificate trust provisioning, pinning, hostname validation, renewal/rotation/revocation, rate limits and ingress protection (D-09).
 - Whether SEM sends an explicit server-side delivery cancellation before release or only the fenced release instruction (D-05).
 
+The JSON Schema is a validation baseline, not a ratified wire contract. It intentionally leaves the handshake transcript, complete payload refinements for every message, timer values, frame limits and replay snapshot semantics open.
+
 Until these are resolved and accepted, this document remains Draft / Review. It is not an implementation authorization.
+
+
+## 9.1 Process exit status representation and Platform mapping
+
+The `harness.process_exited` payload represents the operating-system process termination result as a tagged union:
+
+- `{ "kind": "code", "code": <integer> }` when the Supervisor positively observes a numeric exit code;
+- `{ "kind": "signal", "signal": <positive integer> }` when the process was terminated by an operating-system signal;
+- `{ "kind": "unknown" }` only when the exact containment is proven empty but the numeric termination result was lost or cannot be recovered.
+
+The `unknown` variant MUST NOT include a code or signal. The signal variant MUST NOT be coerced into an exit code. SEM's Platform event producer maps code to `exit_evidence.exit_code`, signal to `exit_evidence.exit_signal`, and unknown to an evidence object with neither numeric field. The AI-PM receiver preserves the same distinction. None of these infrastructure facts implies Task success or failure; AI-PM decides the business Run outcome.
+
+A release/uncertainty path MUST retain the durable capacity reservation while process state is uncertain. The SEM infrastructure-uncertainty event therefore requires `reservation_retained: true`; the reservation can be released only after reconciliation establishes a safe terminal infrastructure disposition under the lifecycle policy.

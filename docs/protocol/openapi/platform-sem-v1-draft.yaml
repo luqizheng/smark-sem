@@ -1,0 +1,427 @@
+openapi: 3.1.0
+info:
+  title: Platform–SEM Internal Execution API
+  version: 1.0.0-draft.1
+  description: >-
+    Draft bilateral HTTP contract for AI-PM Platform and SEM. This API carries
+    opaque execution instructions and infrastructure facts only; AI-PM retains
+    all business authority. HTTP and HTTPS use identical schemas.
+servers:
+  - url: https://sem.internal.example
+    description: HTTPS with explicitly configured trust; HTTP deployment may override the scheme.
+security:
+  - httpMessageSignature: []
+    httpMessageSignatureInput: []
+    contentDigestHeader: []
+tags:
+  - name: Executions
+  - name: SEM Events
+paths:
+  /internal/sem/v1/executions:
+    post:
+      tags: [Executions]
+      operationId: submitExecutionRequest
+      summary: Durably submit an opaque execution request
+      description: >-
+        AI-PM sends this only after its own authorization and business decision.
+        A 202 response means SEM durably accepted the request; it does not mean
+        a Runner was bound or a Harness started. Retries use the same request_id.
+      parameters:
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExecutionRequestedEnvelope' }
+      responses:
+        '202':
+          description: Request durably accepted or exact duplicate.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExecutionAcceptanceEnvelope' }
+        '400': { $ref: '#/components/responses/SignedPlatformError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
+        '409': { $ref: '#/components/responses/SignedPlatformError' }
+        '413': { $ref: '#/components/responses/PreAuthenticationError' }
+        '422': { $ref: '#/components/responses/SignedPlatformError' }
+        '429': { $ref: '#/components/responses/SignedPlatformRateLimitError' }
+        '500': { $ref: '#/components/responses/SignedPlatformError' }
+  /internal/sem/v1/executions/{execution_id}:
+    get:
+      tags: [Executions]
+      operationId: getExecutionInfrastructureState
+      summary: Reconcile one opaque execution by its AI-PM identifier
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Current infrastructure snapshot; never a business Task status.
+          headers:
+            ETag:
+              required: true
+              description: Entity tag validator; included as a covered component in the signed 200 snapshot response.
+              schema: { type: string }
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExecutionSnapshotEnvelope' }
+        '304':
+          description: >-
+            The selected representation is unchanged. This response has no
+            message content. ETag MUST echo the current validator for the
+            selected representation. The response is authenticated and signed
+            under the same SEM response-signature profile as a 200 response;
+            Content-Digest is computed over the empty message content. This
+            response remains Draft until D-04 signed-response profile ratification.
+          headers:
+            ETag:
+              required: true
+              description: Exact current entity tag for the unchanged representation.
+              schema: { type: string }
+            Content-Digest:
+              required: true
+              description: RFC 9530 digest of the empty response content.
+              schema: { type: string }
+            Signature-Input:
+              required: true
+              description: RFC 9421 response signature parameters; exact covered components remain D-04 ratification blocker.
+              schema: { type: string }
+            Signature:
+              required: true
+              description: RFC 9421 Ed25519 response signature.
+              schema: { type: string }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
+        '404': { $ref: '#/components/responses/SignedPlatformError' }
+        '500': { $ref: '#/components/responses/SignedPlatformError' }
+  /internal/sem/v1/executions/{execution_id}/release:
+    post:
+      tags: [Executions]
+      operationId: requestExecutionRelease
+      summary: Persist a binding-fenced release instruction
+      description: >-
+        AI-PM has already made the business decision to release. SEM validates
+        expected_binding_epoch and persists the release intent before forwarding.
+        A stale epoch must never stop a newer binding.
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExecutionReleaseRequestedEnvelope' }
+      responses:
+        '202':
+          description: Release intent durably accepted or exact duplicate.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReleaseAcceptanceEnvelope' }
+        '400': { $ref: '#/components/responses/SignedPlatformError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
+        '404': { $ref: '#/components/responses/SignedPlatformError' }
+        '409': { $ref: '#/components/responses/SignedPlatformError' }
+        '412': { $ref: '#/components/responses/SignedPlatformError' }
+        '413': { $ref: '#/components/responses/PreAuthenticationError' }
+        '422': { $ref: '#/components/responses/SignedPlatformError' }
+        '500': { $ref: '#/components/responses/SignedPlatformError' }
+  /internal/ai-pm/v1/sem-events:
+    post:
+      servers:
+        - url: https://ai-pm.internal.example
+          description: AI-PM callback ingress; HTTP is allowed only on the approved private network.
+      tags: [SEM Events]
+      operationId: receiveSemInfrastructureEvent
+      summary: Receive one SEM infrastructure event in AI-PM
+      description: >-
+        SEM delivers events at least once. The Idempotency-Key header MUST equal the event_id in the authenticated envelope. AI-PM durably deduplicates by event_id
+        and applies only infrastructure observations to its own Run policy. This
+        endpoint must never permit SEM to directly mutate Task status.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: MUST be covered by the request signature and equal the event_id in a valid callback envelope. Error correlation uses this authenticated header value, never an unverified body field.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SemInfrastructureEventEnvelope' }
+      responses:
+        '200':
+          description: Event durably accepted or exact duplicate.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Event-Id:
+              required: true
+              description: Echo of the authenticated callback event_id.
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventAcknowledgementEnvelope' }
+        '400': { $ref: '#/components/responses/SignedCallbackError' }
+        '401': { $ref: '#/components/responses/PreAuthenticationError' }
+        '404': { $ref: '#/components/responses/SignedCallbackError' }
+        '409': { $ref: '#/components/responses/SignedCallbackError' }
+        '413': { $ref: '#/components/responses/PreAuthenticationError' }
+        '422': { $ref: '#/components/responses/SignedCallbackError' }
+        '429': { $ref: '#/components/responses/SignedCallbackRateLimitError' }
+        '500': { $ref: '#/components/responses/SignedCallbackError' }
+components:
+  securitySchemes:
+    httpMessageSignature:
+      type: apiKey
+      in: header
+      name: Signature
+      description: >-
+        RFC 9421 HTTP Message Signature value. V1 uses Ed25519. The signature
+        covers the request components and Content-Digest defined by the D-04
+        cryptographic profile decision. This is an API documentation representation,
+        not a replacement for RFC 9421 signature verification.
+    httpMessageSignatureInput:
+      type: apiKey
+      in: header
+      name: Signature-Input
+      description: RFC 9421 signature parameters including created, expires, nonce, keyid and alg.
+    contentDigestHeader:
+      type: apiKey
+      in: header
+      name: Content-Digest
+      description: RFC 9530 digest of the exact HTTP message content.
+  parameters:
+    MessageId:
+      name: X-SEM-Message-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    RequestId:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID value MUST be covered by the request signature and byte-for-byte equal the canonical lowercase request_id (Platform request) or event_id (valid callback envelope). Signed error correlation echoes this exact authenticated header value.
+      schema: { type: string, format: uuid }
+  responses:
+    SignedPlatformError:
+      description: >-
+        Authenticated application response. MUST carry Content-Digest, Signature-Input,
+        Signature and exactly one X-SEM-Request-Id equal to the authenticated Idempotency-Key/request_id.
+        The body is ProtocolErrorEnvelope and the response signature is bound to the exact originating request context.
+      headers:
+        Content-Digest: { required: true, schema: { type: string } }
+        Signature-Input: { required: true, schema: { type: string } }
+        Signature: { required: true, schema: { type: string } }
+        X-SEM-Request-Id:
+          required: true
+          description: Exact authenticated request_id (Idempotency-Key); never message_id.
+          schema: { type: string, format: uuid }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    SignedCallbackError:
+      description: >-
+        Authenticated callback response. MUST carry Content-Digest, Signature-Input,
+        Signature and exactly one X-SEM-Event-Id equal to the authenticated Idempotency-Key. A valid event has the same event_id; on a signed validation error the header value remains the sole correlation source.
+        The body is ProtocolErrorEnvelope and the response signature is bound to the exact originating request context.
+      headers:
+        Content-Digest: { required: true, schema: { type: string } }
+        Signature-Input: { required: true, schema: { type: string } }
+        Signature: { required: true, schema: { type: string } }
+        X-SEM-Event-Id:
+          required: true
+          description: Exact authenticated Idempotency-Key; never an unverified body event_id.
+          schema: { type: string, format: uuid }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    PreAuthenticationError:
+      description: >-
+        Failure before a trustworthy authenticated request context exists (invalid/missing signature,
+        unknown key, stale/replayed nonce, or an early body-size rejection before full-body digest
+        verification). No protocol signature headers or request/event correlation headers are present;
+        the body MUST NOT contain message_id, in_reply_to, request_id or event_id.
+      content: { application/json: { schema: { $ref: '#/components/schemas/PreAuthenticationErrorEnvelope' } } }
+    SignedPlatformRateLimitError:
+      description: Authenticated Platform request rate limit. Same signature/correlation requirements as SignedPlatformError; Retry-After is mandatory.
+      headers:
+        Content-Digest: { required: true, schema: { type: string } }
+        Signature-Input: { required: true, schema: { type: string } }
+        Signature: { required: true, schema: { type: string } }
+        X-SEM-Request-Id: { required: true, schema: { type: string, format: uuid } }
+        Retry-After:
+          required: true
+          description: HTTP-date or delay-seconds as defined by HTTP semantics.
+          schema: { type: string }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+    SignedCallbackRateLimitError:
+      description: Authenticated SEM callback rate limit. Same signature/correlation requirements as SignedCallbackError; Retry-After is mandatory.
+      headers:
+        Content-Digest: { required: true, schema: { type: string } }
+        Signature-Input: { required: true, schema: { type: string } }
+        Signature: { required: true, schema: { type: string } }
+        X-SEM-Event-Id: { required: true, schema: { type: string, format: uuid } }
+        Retry-After:
+          required: true
+          description: HTTP-date or delay-seconds as defined by HTTP semantics.
+          schema: { type: string }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' } } }
+  schemas:
+    BaseEnvelope:
+      type: object
+      required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
+      properties:
+        message_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+        schema_version: { const: 1 }
+        message_type: { type: string }
+        occurred_at: { type: string, format: date-time }
+        correlation_id: { type: string, format: uuid }
+        payload: { type: object }
+      additionalProperties: false
+    ExecutionRequestedEnvelope:
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/ExecutionRequestedEnvelope'
+    ExecutionRequest:
+      type: object
+      required: [execution_id, prompt, harness_profile, runner_requirements]
+      properties:
+        execution_id: { type: string, format: uuid }
+        prompt:
+          type: object
+          required: [content_type, body]
+          properties:
+            content_type: { const: text/plain; charset=utf-8 }
+            body: { type: string, minLength: 1 }
+          additionalProperties: false
+        harness_profile: { type: string, minLength: 1, maxLength: 64 }
+        runner_requirements:
+          type: object
+          required: [capabilities, supervision_mode]
+          properties:
+            capabilities: { type: array, items: { type: string }, uniqueItems: true }
+            supervision_mode: { enum: [unattended, supervised] }
+          additionalProperties: false
+      additionalProperties: false
+    ExecutionAcceptanceEnvelope:
+      type: object
+      required: [message_id, request_id, execution_id, acceptance, accepted_at]
+      properties:
+        message_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+        execution_id: { type: string, format: uuid }
+        acceptance: { enum: [accepted, duplicate] }
+        accepted_at: { type: string, format: date-time }
+      additionalProperties: false
+    ExecutionReleaseRequestedEnvelope:
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/ExecutionReleaseRequestedEnvelope'
+    ExecutionReleaseRequest:
+      type: object
+      required: [execution_id, release_id, expected_binding_epoch, stop_policy]
+      properties:
+        execution_id: { type: string, format: uuid }
+        release_id: { type: string, format: uuid }
+        expected_binding_epoch: { type: integer, minimum: 1 }
+        stop_policy:
+          type: object
+          required: [mode, grace_period_seconds]
+          properties:
+            mode: { enum: [graceful_then_force, force] }
+            grace_period_seconds: { type: integer, minimum: 0, maximum: 3600 }
+          additionalProperties: false
+      additionalProperties: false
+    ReleaseAcceptanceEnvelope:
+      type: object
+      required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
+      properties:
+        message_id: { type: string, format: uuid }
+        request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
+        execution_id: { type: string, format: uuid }
+        release_id: { type: string, format: uuid }
+        acceptance: { enum: [accepted, duplicate] }
+        accepted_at: { type: string, format: date-time }
+      additionalProperties: false
+    SemInfrastructureEventEnvelope:
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/SemInfrastructureEventEnvelope'
+    ExecutionSnapshotEnvelope:
+      type: object
+      required: [execution_id, infrastructure_state, observed_at, version]
+      properties:
+        execution_id: { type: string, format: uuid }
+        infrastructure_state: { enum: [accepted, queued, reserved, bound, delivering, delivery_received, starting, running, release_requested, stopping, released, delivery_failed, start_failed, infrastructure_uncertain, cleanup_failed] }
+        binding_epoch: { type: integer, minimum: 1 }
+        runner_id: { type: string, format: uuid }
+        delivery_id: { type: string, format: uuid }
+        observed_at: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+      additionalProperties: false
+    EventAcknowledgementEnvelope:
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/EventAcknowledgementEnvelope'
+    PreAuthenticationErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, class, retryable, detail]
+          properties:
+            code: { type: string }
+            class: { enum: [auth, protocol] }
+            retryable: { type: boolean }
+            detail: { type: string, maxLength: 160 }
+          additionalProperties: false
+      additionalProperties: false
+    ProtocolErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        message_id: { type: string, format: uuid }
+        in_reply_to: { type: string, format: uuid }
+        error:
+          type: object
+          required: [code, class, retryable, detail]
+          properties:
+            code: { type: string }
+            class: { enum: [auth, protocol, conflict, admission, transient, uncertain, compatibility] }
+            retryable: { type: boolean }
+            retry_after_ms: { type: [integer, 'null'], minimum: 0 }
+            detail: { type: string, maxLength: 512 }
+            execution_id: { type: string, format: uuid }
+            expected_sequence: { type: integer, minimum: 1 }
+          additionalProperties: false
+      additionalProperties: false

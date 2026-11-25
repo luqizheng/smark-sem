@@ -31,7 +31,7 @@ These are the current user-confirmed constraints and must not be reopened casual
 - SEM owns its execution/delivery/release ledger, Runner connectivity/registration metadata, resource telemetry/reservations and binding_epoch.
 - Runner Supervisor owns local Harness process start/stop, process identity and positive process-exit evidence.
 - AI-PM and SEM use independent databases; SEM has no AI-PM DB access.
-- AI-PM→SEM is versioned HTTPS with durable Outbox/Inbox; Runner↔SEM is authenticated WSS.
+- AI-PM→SEM is a versioned internal HTTP/HTTPS contract over the company private network, with durable Outbox/Inbox and idempotent reconciliation; HTTPS is optional in V1 and supports enterprise CA or self-signed certificates. No public internet ingress is provided. Runner↔SEM remains authenticated WSS with the same internal certificate trust options.
 - No cross-database transaction; delivery is at-least-once, idempotent and reconciled.
 - Runner default supervision is unattended; supervised mode is explicit.
 - Runner CPU/memory/workspace-volume telemetry informs SEM admission/concurrency.
@@ -64,14 +64,14 @@ These are the current user-confirmed constraints and must not be reopened casual
 The current proposal is recorded in [Runner Enrollment and Cryptographic Identity Draft](./runner-enrollment-and-cryptographic-identity-draft.md). It adopts the GitLab-Runner-style operator workflow:
 
 1. An SEM administrator creates a scoped, short-lived, single-use registration credential in SEM.
-2. The operator runs `sem-runner register --registry https://sem.example.com --registration-token <TOKEN>` on the Runner host.
+2. The operator runs `sem-runner register --registry https://sem.internal.example --registration-token <TOKEN> --ca-cert /etc/sem/internal-ca.crt` (or use an explicitly configured certificate/public-key pin for a self-signed endpoint) on the Runner host.
 3. Runner generates its own Ed25519 keypair locally; only the public key is sent to SEM.
 4. SEM atomically consumes the registration credential, assigns immutable `runner_id`, and binds the public key.
 5. The installed Runner authenticates its long-lived outbound WSS connection with challenge-response proof of possession. The registration token is never reused for WSS or MCP.
 
 Authority is split deliberately: SEM owns infrastructure enrollment, Runner identity, key versions, connection/admission state and revocation. AI-PM owns business grants and exact Task/Run authorization. SEM-issued Runner identity is not business authorization.
 
-The same WSS connection is the dispatch channel; SEM must not open a fresh connection or poll Runner for every task. Dispatch eligibility is a derived predicate, not a socket-open boolean. It requires an authenticated current WSS session, fresh application heartbeat, fresh same-boot resource telemetry, healthy Supervisor, accepting-work admission state and sufficient capacity after durable reservations. Transport ping/pong alone is insufficient. A delivery is sent only after reservation and binding epoch are durable; missing ACK or WSS loss causes reconciliation, not blind reassignment.
+Platform↔SEM supports HTTP or HTTPS on the private network; HTTPS certificate validation accepts explicitly trusted enterprise/self-signed certificates and never permits silent verification bypass. Runner registration and WSS also accept explicitly provisioned internal trust material. See the transport deployment profile in the architecture README. The same WSS connection is the dispatch channel; SEM must not open a fresh connection or poll Runner for every task. Dispatch eligibility is a derived predicate, not a socket-open boolean. It requires an authenticated current WSS session, fresh application heartbeat, fresh same-boot resource telemetry, healthy Supervisor, accepting-work admission state and sufficient capacity after durable reservations. Transport ping/pong alone is insufficient. A delivery is sent only after reservation and binding epoch are durable; missing ACK or WSS loss causes reconciliation, not blind reassignment.
 
 The proposal remains pending ratification and D-04/D-09 contract closure. Open details include exact API/CLI schemas, token hashing and idempotency, key storage, WSS challenge canonicalization, heartbeat intervals/deadlines, identity assertion/key distribution, and rotation/recovery procedures.
 
@@ -94,7 +94,7 @@ Explicitly prohibit reuse of human JWT/API keys, SEM service JWT, Runner WSS cre
 
 ### D-03 — Permanent Runner loss and process isolation
 
-A safety proposal is now recorded in [Runner Host Isolation and Permanent-Loss Recovery Draft](./runner-host-isolation-and-permanent-loss-recovery-draft.md). It distinguishes local process containment from independent host fencing and defines three deployment profiles: managed VM, bare metal with BMC/IPMI, and unmanaged bare metal. Until the actual deployment profile is selected, safe behavior is quarantine plus operator intervention; automatic failover is not claimable.
+A safety proposal is recorded in [Runner Host Isolation and Permanent-Loss Recovery Draft](./runner-host-isolation-and-permanent-loss-recovery-draft.md). User decision (2026-11-25): V1 Runner OS is Linux-only. The selected V1 architecture candidate is a host-managed systemd transient service per execution on cgroup v2, with Supervisor as a host systemd service and Harness in a distinct unprivileged identity. Windows/non-systemd/cgroup-v1 hosts and Runner containers without a trusted host-side broker are unsupported. This closes the V1 OS-scope choice, but systemd D-Bus idempotency, unit retention/GC, cgroup exit evidence and crash behavior still require Linux integration/failure-injection proof. Permanent host loss is now a user-confirmed V1 operating decision: visible alert + quarantine + auditable on-site operator intervention; no cloud/VM power API or BMC/IPMI integration. The minimal manual-resolution audit/authorization behavior and Linux failure-injection proof remain to be completed.
 
 Specify what constitutes independently verifiable host fencing:
 - cloud/VM power-off or revoke compute lease;
@@ -106,28 +106,19 @@ Define which evidence is trusted, who can issue it, how it is signed/audited, an
 
 ### D-04 — Complete bilateral protocol
 
-A detailed Runner↔SEM WSS candidate is now recorded in [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md). It defines the authenticated long-lived session, connection-generation fencing, heartbeat/health separation, telemetry, durable delivery ACK, reconnect/replay, backpressure and dispatch eligibility. It remains Draft; exact crypto canonicalization, timers, resource policy and machine-readable schemas remain open.
+Narrative and machine-readable Draft contracts exist for both directions: [Platform–SEM Execution Message Protocol](../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), [Runner–SEM WSS Protocol](../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md), [OpenAPI 3.1](../protocol/openapi/platform-sem-v1-draft.yaml), the Platform–SEM and Runner–SEM JSON Schemas, and the [D-04 acceptance matrix](../protocol/D04-PROTOCOL-ACCEPTANCE-MATRIX.md). Cryptographic algorithm families are selected as Draft baselines: Ed25519 + RFC 9421 + RFC 9530 for Platform↔SEM HTTP; Ed25519 + RFC 8785 JCS for Runner WSS proof-of-possession.
 
-Publish machine-readable OpenAPI/JSON Schema and examples for:
-- execution.requested / accepted / rejected;
-- execution.binding_established;
-- credential bootstrap transport and redemption;
-- delivery received / started / start_failed;
-- process exited / uncertain / reconciliation;
-- resource telemetry;
-- release requested / applied / failed;
-- error envelope, retryability, retry-after, conflict and reconciliation response.
+The HTTP response contract now has an explicit candidate split between authenticated application errors and pre-authentication failures. Deterministic signed 404 vectors now cover both Platform GET and SEM callback directions; Python/Node verify exact request context and direction-specific correlation. Unsigned 401/early-413 fixtures are also checked for absence of protocol signature/correlation headers and IDs in the body. Authenticated 400/404/409/412/422/429/500 responses are signed and correlated only to the authenticated Idempotency-Key; pre-authentication 401 and early 413 responses contain no protocol correlation identifiers or response signatures. Application-level 429 is signed and carries Retry-After. OpenAPI defines direction-specific signed error components and a structurally restricted pre-authentication error envelope. D04-H78..H85 cover middleware order, correlation safety, rate limiting and signing failure.
 
-Specify canonical serialization, message_id, request_id, execution_id, delivery_id, release_id, event_id, event_sequence, binding_epoch, timestamp rules, payload size limits, encryption, retention, schema evolution and unknown-field policy. Clearly distinguish SEM→AI-PM events from Runner→SEM observations.
+The callback receiver design in [AI-PM PR #9](https://github.com/luqizheng/ai-pm/pull/9) now specifies reuse of `integration.inbound_event`, full-envelope JCS replay identity, exact Inbox column mapping, Run-row lock order, READ COMMITTED conflict recovery and 39 PostgreSQL/JCS acceptance cases. A shared callback envelope vector is pinned to SEM; a Rust canonicalizer candidate is evaluated but not selected. No AI-PM migration, callback route, production JCS dependency or runtime receiver is implemented.
+
+The [D-04 Independent Protocol Review](../protocol/D04-INDEPENDENT-PROTOCOL-REVIEW.md) remains **CHANGES REQUIRED**. Deterministic Python/Node fixtures and schema CI do not prove live HTTP middleware request-context association, response nonce replay storage, reverse-proxy behavior, full signed-error vectors, production Rust JCS integration, two-connection PostgreSQL concurrency, or bilateral callback runtime interoperability. WSS handshake/session lifecycle and producer/receiver evidence mapping also require runtime tests. D-04 remains Draft / P0 OPEN and is not an implementation authorization.
 
 ### D-05 — State machines and crash consistency
 
-Provide normative state tables with allowed transitions, actor, preconditions, durable write, emitted event, duplicate behavior and recovery for:
-- AI-PM business Run/attempt and authorization grant;
-- SEM execution/delivery/binding/release;
-- Runner Supervisor process lifecycle and local durable registry.
+Detailed proposal: [Lifecycle State Machines and Crash Consistency Draft](./server-execution-management/lifecycle-state-machines-and-crash-consistency-draft.md). It defines the source-aligned AI-PM Task/Run/attempt model, full 31-edge TaskStatus matrix and guards, SEM Execution and Runner Supervisor transition tables, uncertain-state recovery edges, durable-before-effect rules, release/start linearization requirements, independent fencing, Linux systemd/cgroup v2 process-owner profile, Runner event-stream replay and 78 acceptance cases. It remains Draft / Review. Linux V1 architecture candidate now specifies systemd 250+, Type=exec, ExitType=cgroup, RemainAfterExit=yes, CollectMode=inactive, Restart=no, KillMode=control-group, GetUnit/job reconciliation and durable launch tombstones; exact distro behavior still needs integration proof. Independent transition-matrix review, D-04 schemas, the minimal manual-resolution audit/authorization behavior and Linux systemd integration proof remain open.
 
-Cover races: release during start, natural exit before release, disconnect during delivery, SEM restart, Runner reboot, delayed/out-of-order events, event sequence gaps, duplicate message with changed payload, and stale binding epoch.
+Independent review: [D-05 Independent Architecture Audit](./server-execution-management/d05-independent-architecture-audit.md). Disposition: **CHANGES REQUIRED**. Follow-up edits correct the AI-PM source mapping, strengthen launch/release linearization requirements, recommend a durable Runner event stream, and add ten acceptance cases. Linux systemd/cgroup launch and durable exit proof remain P0 until integration-tested; D-04 machine-readable schemas remain open. Keep PR #3 Draft; no implementation.
 
 ### D-06 — Delegated MCP application-service contract
 
@@ -153,7 +144,7 @@ Specify CPU, memory and workspace-volume reservation units; telemetry freshness;
 
 ### D-09 — Deployment and operations
 
-Specify service topology, network ingress/egress, TLS/mTLS, service identities, secret source/rotation, database migrations, health/readiness, rolling upgrades, compatibility window, observability, log redaction, event/prompt retention, incident response, disaster recovery and operator access. Clarify whether SEM DB needs backup/restore and what data can be rebuilt. Workspace backup remains out of scope.
+Specify service topology and private-network ingress/egress; HTTP/HTTPS selection; enterprise CA and self-signed certificate trust provisioning/pinning; mandatory certificate validation; certificate renewal/rotation/overlap/revocation; service identities; request authentication/integrity/replay defense; secret source/rotation; database migrations; health/readiness; rolling upgrades; compatibility window; observability; log redaction; event/prompt retention; incident response; disaster recovery and operator access. Clarify whether SEM DB needs backup/restore and what data can be rebuilt. Workspace backup remains out of scope.
 
 ### D-10 — Implementation architecture and repository ownership
 
@@ -193,9 +184,9 @@ No item becomes Normative / Frozen solely because it is written in a draft or li
 
 - [ ] D-01 Runner identity trust chain approved.
 - [ ] D-02 Delegated grant/bootstrap approved.
-- [ ] D-03 Permanent Runner loss/process isolation approved.
-- [ ] D-04 Both wire protocols machine-readable and approved.
-- [ ] D-05 All lifecycle/state machines and crash races closed.
+- [ ] D-03 V1 permanent-host-loss operating mode (visible alert + quarantine + on-site operator disposition) user-confirmed; minimal manual-resolution audit/authorization behavior and process-isolation proof remain open.
+- [ ] D-04 Both wire protocols fully machine-readable, independently validated, cross-repository compatible and approved (initial Draft artifacts exist; not complete).
+- [ ] D-05 All lifecycle/state machines and crash races closed (detailed draft exists; open decisions and cross-contract ratification remain).
 - [ ] D-06 MCP operation/resource authorization contract approved.
 - [ ] D-07 Remote Git evidence and credentials approved.
 - [ ] D-08 Resource admission/fairness approved.
