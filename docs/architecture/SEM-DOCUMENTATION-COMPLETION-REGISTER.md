@@ -61,6 +61,8 @@ These are the current user-confirmed constraints and must not be reopened casual
 
 ### D-01 — Runner identity trust chain
 
+A concrete proposal is now recorded in [Runner Enrollment and Cryptographic Identity Draft](./runner-enrollment-and-cryptographic-identity-draft.md). It recommends a Runner-local keypair, human-approved enrollment intent, AI-PM-owned trust record, AI-PM-signed identity attestation, challenge-response WSS authentication and AI-PM-side proof verification during delegated bootstrap. It remains Draft / Review, not frozen.
+
 Current AI-PM source has a reusable `cpk_` device credential that authenticates as the device owner's HumanActor; device enrollment currently records device metadata and `is_runner`, not an independently trusted public key. It is not suitable as a per-execution Harness grant.
 
 The final design must choose and specify:
