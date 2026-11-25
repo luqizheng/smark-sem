@@ -125,7 +125,7 @@ Signature-Input: sig1=("@status" "content-digest" "x-sem-event-id" "@method";req
 
 These are Structured Fields serialization templates, not literal valid header values until placeholders are replaced. There is no whitespace around separators. Component identifiers and signature parameters are serialized using RFC 9421 / RFC 8941 rules; implementations MUST NOT hand-roll ad-hoc quoting or parse the field with comma/semicolon splitting.
 
-For a response with a representation body, `content-type` is additionally required by the operation contract and MUST be appended after `content-digest` in the covered-component list. It is not optional within a given operation response class. For a response class whose contract has no content type, it is omitted. This eliminates the prior ambiguous instruction to sign `content-type` only when present.
+For a response with a representation body, `content-type` is additionally required by the operation contract and MUST be placed immediately after the direction-specific correlation field (the fourth component), before the request-derived components. It is not optional within a given operation response class. For a response class whose contract has no content type, it is omitted. This eliminates the prior ambiguous instruction to sign `content-type` only when present.
 
 ### 8.3 Conditional 304 Signature-Input
 
@@ -149,7 +149,7 @@ Signature-Input: sig1=("@status" "content-digest" "x-sem-request-id" "etag" "@me
 
 The response `Content-Digest` for a 304 MUST be SHA-256 over zero content octets:
 `sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:`.
-The request-side `content-digest;req` is the digest of the actual request content bytes (zero octets for this GET profile). The client MUST verify the exact ETag value against the validator sent in `If-None-Match`; weak/strong comparison semantics must follow HTTP conditional request rules, not string equality invented by this protocol.
+The request-side `content-digest;req` is the digest of the actual request content bytes (zero octets for this GET profile). The client MUST verify that the 304 is valid for the associated request's `If-None-Match` condition using HTTP conditional request comparison semantics (including weak comparison for `If-None-Match`). The signed response ETag identifies the selected current representation validator; the protocol MUST NOT replace HTTP's list, wildcard, or weak-comparison semantics with raw string equality.
 
 ### 8.4 Signature base construction and request-context association
 
