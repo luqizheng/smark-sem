@@ -313,6 +313,12 @@ $defs:
         then: { required: [acknowledged_journal_id] }
       - if: { required: [acknowledged_journal_id] }
         then: { required: [acknowledged_event_sequence] }
+      - if:
+          properties:
+            disposition: { const: durably_recorded }
+          required: [disposition]
+        then:
+          required: [acknowledged_journal_id, acknowledged_event_sequence]
     additionalProperties: false
   ProtocolError:
     type: object
