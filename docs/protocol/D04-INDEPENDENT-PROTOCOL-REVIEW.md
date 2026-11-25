@@ -69,12 +69,13 @@ Maximum HTTP body, WSS frame, prompt and bootstrap sizes; compression; heartbeat
 
 Required closure: D-08/D-09 choose bounded values and the schema/OpenAPI expose any negotiated or configured limits.
 
-### P1-04 — OpenAPI/JSON Schema validation is not yet evidenced
+### P1-04 — Reproducible schema-validation CI is now present; payload fixtures remain absent
 
-The current branch contains YAML-serialized OpenAPI 3.1 and JSON Schema 2020-12 files, but no CI validation workflow or recorded validator output is available. The current PR commit has no reported workflow runs/status checks.
+A dedicated GitHub Actions workflow now validates the OpenAPI 3.1 document and external references with Redocly, checks each JSON Schema against the Draft 2020-12 meta-schema, and mechanically verifies that all 19 post-handshake Runner message types and all five SEM event types have corresponding schema branches.
 
-Required closure: add a reproducible offline validator and positive/negative fixture suite; CI must parse OpenAPI, validate each schema, resolve references and validate examples.
+The workflow completed successfully on commit `b25dcf79601e0c54bd53e48753ed88866a86e899` (run #2). This is schema/meta-schema and discriminator-coverage evidence only. It does not execute the 92 acceptance scenarios, validate positive/negative payload fixtures, verify cryptographic test vectors, or test the AI-PM callback receiver.
 
+Required closure: add positive/negative fixtures for every WSS and HTTP/event branch, run the fixture suite in CI, and record cross-repository contract test evidence.
 ## 3. Cross-contract invariants that must remain
 
 1. Runner WSS transport message_sequence is per direction and connection generation.
