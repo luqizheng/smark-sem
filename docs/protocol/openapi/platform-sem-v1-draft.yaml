@@ -50,7 +50,19 @@ paths:
               schema: { $ref: '#/components/schemas/ExecutionAcceptanceEnvelope' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '409':
+          description: Signed idempotency conflict; request_id correlation is mandatory.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/RateLimited' }
@@ -203,7 +215,15 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
-          description: Event ID/body conflict or execution event-sequence gap; inspect structured error code.
+          description: Signed event ID/body conflict or execution event-sequence gap; inspect structured error code.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Event-Id:
+              required: true
+              description: Echo of the authenticated callback event_id.
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' }
