@@ -353,11 +353,17 @@ Normative requirements:
 - RemainAfterExit=yes retains a successfully completed service in active/exited state; CollectMode=inactive avoids aggressive inactive-or-failed collection. The Supervisor must not stop/reset-failed/clean the unit before local terminal evidence and SEM reconciliation are durable. The Supervisor journal, not systemd unit retention, is the long-lived tombstone.
 - Configure no automatic restart, KillMode=control-group, no cgroup delegation, and no Harness access to host Docker/systemd control sockets. The final systemd property set and minimum supported systemd version require a D-10 contract and Linux integration tests.
 - Release/start is serialized through the durable Supervisor sequencer. While a systemd start job is unresolved, state remains local_uncertain and no effective stop-fence ACK is sent. Recovery queries the exact stable unit and outstanding jobs.
+- The Supervisor MUST subscribe to systemd Manager job signals before issuing StartTransientUnit and persist the returned job object path/identity when the reply is received. A lost D-Bus reply is reconciled by querying both the exact unit and the manager's outstanding job list; a second StartTransientUnit call is forbidden until this reconciliation resolves the first request.
+- systemd Job state distinguishes waiting (queued, not begun) from running (execution begun). CancelJob only cancels a queued job; it has no effect once job execution has begun. Therefore a stop/release path MUST NOT treat a CancelJob request or ACK as a process stop.
+- If the exact start job is still waiting, the broker may cancel that job, but must observe the matching JobRemoved result and then independently prove that no unit process/containment was created and no start job remains before returning an effective no-start fence.
+- If the exact start job is running, cancellation is not a valid stop mechanism. The broker must issue a StopUnit operation for the exact stable unit, observe its own job result, and then prove the matching invocation is terminal and its cgroup v2 subtree is populated=0. A StopUnit job result alone is not process-exit evidence.
+- Job IDs are unique only within one systemd manager runtime. Persist the host boot_id together with job ID/path; never interpret a job ID from a prior boot as current identity. On reconnect/restart, correlate by immutable unit name + boot_id + invocation identity + current outstanding job list.
+- JobRemoved result and unit ActiveState/SubState are separate observations. A successful start-job result is not proof of process completion; a canceled start-job result is not sufficient by itself to prove no process was spawned.
 - Positive exit requires matching systemd invocation identity, a retained terminal state (active/exited for a successful process with RemainAfterExit, or failed for a non-zero failure) with no restart/start job pending, and exact cgroup v2 populated=0 evidence; the Supervisor journals that evidence before sending it to SEM. Stop-job ACK and PID absence are insufficient.
 - Terminal unit/process evidence must remain queryable until the Supervisor journal and SEM reconciliation both durably acknowledge it. Garbage collection cannot erase the only evidence for an uncertain launch.
 - Host boot_id changes require old-boot launch-registry reconciliation. A boot boundary can prove old kernel processes cannot continue, but ambiguous host identity/boot lineage still remains quarantined.
 
-This is an architecture selection for V1, not an implementation proof. The exact systemd D-Bus call semantics, unit property set, garbage-collection behavior, cgroup population observation and restart/boot failure handling must pass the D-03 Linux integration and failure-injection suite before ratification. Permanent host loss remains governed by D-03 Profiles A/B/C; Linux-only does not imply a managed power-control plane.
+This is an architecture selection for V1, not an implementation proof. The exact systemd D-Bus call semantics, unit property set, garbage-collection behavior, cgroup population observation and restart/boot failure handling must pass the D-03 Linux integration and failure-injection suite before ratification. Permanent host loss follows the user-confirmed D-03 V1 policy: visible alert, retained quarantine and auditable on-site operator disposition; no cloud/BMC power-control integration.
 
 ## 4. Transition transaction contract
 
@@ -546,7 +552,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 - Local journal must be access-controlled and tamper-evident to the extent supported by the host profile. Host compromise is handled by D-03 trust and isolation policy, not by assuming the journal is infallible.
 - Clock timestamps are diagnostic; ordering and fencing use stable IDs, epochs and sequence numbers, not wall-clock ordering alone.
 
-## 10. Acceptance matrix (74 cases)
+## 10. Acceptance matrix (78 cases)
 
 | ID | Scenario | Required result |
 |---|---|---|
@@ -624,6 +630,10 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-72 | Successful Harness process exits and systemd unit would otherwise be garbage-collected | RemainAfterExit retains terminal unit until reconciliation; durable journal tombstone survives later cleanup |
 | D05-73 | Failed Harness unit is reset/garbage-collected before terminal evidence is durable and SEM reconciles | Test fails; cleanup/reset is blocked until both durable acknowledgements exist |
 | D05-74 | A cleaned/GC'd unit name is reused for an old launch_id after journal tombstone exists | Broker rejects reuse; launch_id and unit identity are immutable |
+| D05-75 | Release races while the exact systemd start job is still `waiting` | Cancel only that job; observe matching JobRemoved result; independently prove no process/unit start and no remaining start job before effective no-start ACK |
+| D05-76 | Release races after the exact systemd start job reaches `running` | CancelJob is not treated as cancellation; issue StopUnit for exact unit, await stop-job result, then verify invocation terminal and cgroup populated=0 |
+| D05-77 | StartTransientUnit reply is lost before job path/ID is persisted | Subscribe-before-call and reconcile exact unit plus ListJobs; no blind duplicate StartTransientUnit |
+| D05-78 | Supervisor reuses a systemd job ID across host reboot | Reject prior-boot job identity; correlate with boot_id and immutable launch/unit/invocation identity |
 
 ## 11. Open decisions required before ratification
 
