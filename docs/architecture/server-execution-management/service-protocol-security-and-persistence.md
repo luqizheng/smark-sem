@@ -1,5 +1,7 @@
 # SEM-02C — Service Protocol, Security and Persistence Baseline
 
+> **Authority-boundary revision (2026-11-25):** The former SEM→Platform Claim/Lease/business-state API path is SUPERSEDED by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Independent authentication, TLS, idempotency and durable delivery remain applicable; endpoint scopes and persistence must be redesigned.
+
 > **Authority-boundary revision (2026-11-25):** The former SEM→Platform Claim/Lease/business-state API path is **SUPERSEDED** by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Independent authentication, TLS, idempotency and durable delivery remain applicable; endpoint scopes and persistence must be redesigned.
 
 - Status: **User-ratified architecture baseline (ADR-SEM-21–25); not implemented**
