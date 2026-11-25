@@ -348,3 +348,10 @@ These cases define response-authentication classes only. They do not close D-04 
 | D04-H91 | AI-PM requests release with expected binding `unbound` while SEM execution is queued and no Runner binding exists | Required future behavior: atomically fence dispatch and return a distinct unbound-release disposition; no Runner stop fence or process-exit evidence is fabricated |
 | D04-H92 | Unbound release races with Runner dispatch and dispatch linearizes first | Reject/reconcile with the actual bound epoch; require normal fenced release, never report released_unbound |
 | D04-H93 | Unbound release linearizes before dispatch, followed by delayed/late dispatch attempt | Reject all later assignment for that execution; durable unbound-release event remains replayable and idempotent |
+| D04-H94 | expected_binding=unbound wins the SEM dispatch/release sequencer | Persist immutable dispatch fence and emit execution.unbound_release_applied with no Runner/binding/process-exit fields |
+| D04-H95 | dispatch wins against expected_binding=unbound | Return BINDING_ALREADY_ESTABLISHED with actual binding tuple; emit no unbound-release event |
+| D04-H96 | delayed dispatch/requeue after released_unbound tombstone | Reject permanently for the same execution_id |
+| D04-H97 | response lost after durable unbound-release fence; exact retry | Return/replay the same release outcome and event identity |
+| D04-H98 | same release_id reused with changed expected_binding or stop_policy | 409 IDEMPOTENCY_CONFLICT; no mutation |
+| D04-H99 | duplicate execution.unbound_release_applied callback | AI-PM exact duplicate ACK; no projection rewrite |
+| D04-H100 | new AI-PM attempt uses a new execution_id after old released_unbound | New execution is independent; old tombstone remains scoped to old execution_id |
