@@ -189,7 +189,7 @@ A resource report is bound to `runner_id`, `boot_id`, `connection_id`, `session_
 
 ## 7. Dispatch and delivery handshake
 
-1. AI-PM submits an idempotent execution request over the HTTPS contract.
+1. AI-PM submits an idempotent execution request over the versioned internal HTTP contract.
 2. SEM queues it and selects only a Runner whose authenticated session, liveness, Supervisor, admission and capacity satisfy the dispatch predicate.
 3. In one SEM database transaction, SEM creates/updates the binding, increments `binding_epoch`, creates a capacity reservation and persists a delivery record with stable `delivery_id`.
 4. Only after commit does SEM send `execution.deliver` over the current WSS connection.
