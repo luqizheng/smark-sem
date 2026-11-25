@@ -79,7 +79,7 @@ Only a failure proven to occur before the D-Bus request could have been sent per
 | `invocation_terminal` | Exact invocation terminal evidence observed | Capture exit evidence; no new start |
 | `launch_unknown` | No authoritative resolution | Quarantine; no retry/rebind |
 
-The broker must retain the raw D-Bus job result and the unit/invocation observations separately. They are different evidence types.
+The broker must retain the raw D-Bus job result and the unit/invocation observations separately. They are different evidence types. The complete evidence record is committed immutably before event emission; its evidence_id and JCS/SHA-256 digest are carried in the durable event as defined by the Runner–SEM WSS protocol.
 
 ## 4. Start/release serialization and linearization
 
@@ -153,6 +153,12 @@ The broker uses a conservative bracketed observation, not an assumed atomic cros
 If any value changes, the unit disappears before its identity can be revalidated, a job appears, cgroup state is unreadable, or the invocation cannot be correlated, discard the candidate proof and remain uncertain.
 
 This protocol is deliberately conservative. It still requires a real systemd >=250 integration test to demonstrate that the chosen unit properties, job lifecycle and cgroup observation semantics make the bracket meaningful under concurrent process exit, unit GC and manager activity.
+
+### 5.2.1 Durable evidence identity and SEM acknowledgement
+
+The complete evidence record in §5.1 is immutable once committed to the Runner journal. Its identity is `evidence_id`; its `evidence_digest` is SHA-256 over RFC 8785 JCS serialization of the complete record, and its `evidence_schema_version` is `1` for this draft. The digest and version accompany the minimum exit-proof summary in `harness.process_exited`.
+
+The WSS event itself is the transport for the summary and digest. No separate evidence-fetch endpoint is introduced in V1. SEM persists the complete event envelope before acknowledging the corresponding durable Runner journal sequence. Runner retains the full local record until that durable acknowledgement; after acknowledgement it follows the configured D-10 audit-retention policy. SEM's persisted event summary and digest remain the long-lived audit copy after local raw-record expiry. The digest is an integrity binding, not a digital signature; authenticated WSS provenance and the Supervisor trust boundary remain authoritative.
 
 ### 5.3 Exit status versus exit proof
 
