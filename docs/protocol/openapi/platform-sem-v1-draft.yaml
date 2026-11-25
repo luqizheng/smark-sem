@@ -37,6 +37,14 @@ paths:
       responses:
         '202':
           description: Request durably accepted or exact duplicate.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExecutionAcceptanceEnvelope' }
@@ -61,11 +69,20 @@ paths:
           in: header
           required: false
           schema: { type: string }
+        - $ref: '#/components/parameters/MessageId'
+        - $ref: '#/components/parameters/RequestId'
       responses:
         '200':
           description: Current infrastructure snapshot; never a business Task status.
           headers:
-            ETag: { schema: { type: string } }
+            ETag: { required: true, schema: { type: string } }
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExecutionSnapshotEnvelope' }
@@ -96,7 +113,7 @@ paths:
               schema: { type: string }
             X-SEM-Request-Id:
               required: true
-              description: Echo of the authenticated request message/correlation identity.
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
               schema: { type: string, format: uuid }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { description: Execution identifier is unknown to SEM. }
@@ -125,6 +142,14 @@ paths:
       responses:
         '202':
           description: Release intent durably accepted or exact duplicate.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Request-Id:
+              required: true
+              description: Echo of the authenticated request_id (Idempotency-Key), not message_id.
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReleaseAcceptanceEnvelope' }
@@ -164,6 +189,14 @@ paths:
       responses:
         '200':
           description: Event durably accepted or exact duplicate.
+          headers:
+            Content-Digest: { required: true, schema: { type: string } }
+            Signature-Input: { required: true, schema: { type: string } }
+            Signature: { required: true, schema: { type: string } }
+            X-SEM-Event-Id:
+              required: true
+              description: Echo of the authenticated callback event_id.
+              schema: { type: string, format: uuid }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EventAcknowledgementEnvelope' }
