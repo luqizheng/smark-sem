@@ -120,3 +120,16 @@ Before ratification, AI-PM PR #9 must choose and specify one of:
 The contract must explicitly cover first bind, exact duplicate, same-epoch conflicting identity, lower/stale epoch, higher-epoch rebind after positive prior release/exit or authorized host-isolation disposition, and rebind while prior process state remains uncertain (must reject/retain quarantine). SEM remains authoritative for binding allocation; the AI-PM projection is only the consumer's last accepted binding reference and must never authorize a new Runner or change business Run/Task state.
 
 No implementation is authorized by this finding. AI-PM PR #9 remains Draft / Changes Required until the projection and acceptance cases are specified. The event-catalogue and dedupe-tag corrections are documentation-only.
+
+
+### 6.4 Corrected: release status must not require a stop-fence ID before the fence exists
+
+The Platform `ReleaseStatusPayload` previously required `stop_fence_id` for every state, including `requested`, `release_uncertain` and `stale_rejected`. That is not sound: the Runner creates the immutable local fence journal record only after it has processed the release command; an accepted request or a stale rejection may occur before such a record exists. The schema now requires `stop_fence_id` only for post-fence states (`stop_fenced`, `termination_requested`, `process_exited`, `released`, `cleanup_failed`), and the protocol text defines this boundary. Added D04-H89/H90 and positive/negative fixture checks. `process_exited` continues to require `process_exit_evidence_id`.
+
+### 6.5 P0-07 OPEN: release cannot cancel an execution that has not yet been bound
+
+The execution lifecycle explicitly says `binding_epoch` is allocated only when SEM establishes a Runner binding. However, `ExecutionReleaseRequest` requires `expected_binding_epoch >= 1`, and the release-status event schema requires `binding_epoch` plus Runner identity fields. An accepted execution may still be queued/unbound when AI-PM cancels the Task/attempt. There is currently no representable release request that asserts “this execution is still unbound; cancel it and prevent any later dispatch,” nor an event that confirms that unbound cancellation.
+
+This is a dispatch/release race, not a harmless optional-field issue. A safe contract must define a linearization point shared with dispatch: an unbound-release request must atomically fence future assignment, and if assignment already won the race it must return/reconcile the actual bound epoch and require the normal fenced release path. The response/event contract must distinguish `released_unbound` (no Runner was ever bound and future dispatch is fenced) from process-exit states; it must not fabricate a Runner stop fence or process-exit evidence.
+
+Before ratification, specify the request union (for example, an explicit expected-binding condition of `unbound` versus `bound(epoch)`), the SEM dispatch sequencer behavior, replay/idempotency, and a Platform event shape that can report unbound release without inventing Runner identity. Add tests for cancel-before-dispatch, dispatch-wins race, lost response/retry, and no late Runner assignment after unbound release. This is P0-07 / Changes Required; no implementation is authorized.
