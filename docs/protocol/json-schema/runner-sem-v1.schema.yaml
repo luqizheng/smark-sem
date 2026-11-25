@@ -248,7 +248,10 @@ $defs:
       cgroup_populated: { const: 0 }
       evidence_id: { type: string, format: uuid }
       evidence_schema_version: { const: 1 }
-      evidence_digest: { type: string, pattern: '^[a-f0-9]{64}
+      evidence_digest:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
+      exit_status:
         oneOf:
           - type: object
             required: [kind, code]
