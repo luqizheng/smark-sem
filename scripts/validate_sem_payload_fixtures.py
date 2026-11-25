@@ -63,6 +63,14 @@ for item in data["runner_messages"]:
         missing_sequence.pop("event_sequence", None)
         expect_invalid(runner_validator, missing_sequence, label + " missing durable event_sequence")
 
+    if item["message_type"] == "protocol.ack":
+        ack_missing_journal = json.loads(json.dumps(item))
+        ack_missing_journal["payload"].pop("acknowledged_journal_id", None)
+        expect_invalid(runner_validator, ack_missing_journal, label + " event ACK missing journal_id")
+        ack_missing_sequence = json.loads(json.dumps(item))
+        ack_missing_sequence["payload"].pop("acknowledged_event_sequence", None)
+        expect_invalid(runner_validator, ack_missing_sequence, label + " event ACK missing event_sequence")
+
 for item in data["platform_requests"]:
     label = f"Platform request {item['message_type']}"
     expect_valid(platform_validator, item, label)
