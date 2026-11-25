@@ -289,3 +289,16 @@ See [D-04 RFC 8785 Full JCS Conformance Addendum](./D04-RFC8785-FULL-JCS-CONFORM
 | D04-W61 | Replayed challenge_id or server_nonce | Reject atomically; no second session |
 | D04-W62 | Challenge expires while proof is in flight | Reject according to server receipt-time freshness rule |
 | D04-W63 | Selected protocol version is unsupported or downgrade-forced | Reject; no fallback to weaker/older protocol |
+
+
+### 4.3 Cross-protocol process-exit and uncertainty invariants (Draft)
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-H63 | Runner reports Harness termination by OS signal | Runner WSS schema accepts `exit_status.kind=signal`; SEM maps the exact signal into Platform `exit_evidence.exit_signal` without fabricating an exit code |
+| D04-H64 | Runner reports `exit_status.kind=unknown` with a numeric code or signal | Reject contradictory status; unknown means no numeric status is available |
+| D04-H65 | SEM emits `execution.infrastructure_uncertain` without `reservation_retained=true` | Schema rejects; uncertainty must retain the durable capacity reservation until reconciliation or an explicitly authorized terminal disposition |
+| D04-H66 | SEM emits `harness.process_observed` with `observation=exit_status_unknown` and a numeric exit code/signal | Reject contradictory evidence; accept only exact containment-empty evidence without numeric status |
+| D04-H67 | SEM emits `harness.process_observed` with `observation=exit_status_unknown` and no numeric exit status | Accept only as infrastructure process-exit evidence with unknown numeric status; never infer business success |
+
+These are protocol/fixture requirements. They do not prove that the production Runner Supervisor, SEM event producer or AI-PM receiver implements the mapping.
