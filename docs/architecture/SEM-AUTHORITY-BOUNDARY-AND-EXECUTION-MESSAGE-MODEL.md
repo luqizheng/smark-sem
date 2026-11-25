@@ -128,4 +128,7 @@ AI-PM authorization_generation fences delegated Harness MCP business operations;
 7. Map each existing ai-pm control endpoint, Worker loop, MCP tool and database entity to retain, move, replace or retire. Do not change code or migrations until this mapping is reviewed.
 8. Add contract tests for duplicate request, duplicate delivery, delayed release, process exit before business completion, business completion before process exit, Runner disconnect, SEM restart and MCP authorization denial.
 
+
+8. Define the remote Runner Git evidence contract: unique execution branch/ref, pushed SHA verification, baseline ancestry and independently calculated changed-file facts. Do not assume AI-PM can access Runner-local worktrees or treat Harness declarations as independent evidence.
+
 No implementation, migration, Phase 0 start or production-readiness claim is authorized by this document.
