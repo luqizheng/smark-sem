@@ -26,7 +26,7 @@
     "signature_base64": "6ZjlCDseidRv1xIM3hZB0VV2gu+BFvo3WIEIYy9YSrNaYp0AEMRN+rT2A3KjqkOp47+Mv1Qr3sgHBHStbH80Ag=="
   },
   "wss": {
-    "domain_separation_prefix": "SEM-RUNNER-WSS-AUTH-V1\\n",
+    "domain_separation_prefix": "SEM-RUNNER-WSS-AUTH-V1\n",
     "transcript": {
       "audience": "sem.internal.example",
       "authority": "sem.internal.example",
