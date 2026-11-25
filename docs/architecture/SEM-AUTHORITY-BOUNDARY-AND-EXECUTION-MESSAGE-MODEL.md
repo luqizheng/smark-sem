@@ -12,7 +12,7 @@
 - AI-PM Platform is the sole authority for Project, Task, Run/business execution state, approvals, business commands, business results, and task completion.
 - SEM receives execution messages from AI-PM, routes the opaque prompt/body to an eligible Runner, coordinates infrastructure delivery/release messages, records Runner-reported observations, and reports infrastructure facts.
 - Runner starts or attaches to the configured AI Harness and delivers the prompt.
-- Harness obtains Task context and performs all business operations through AI-PM MCP.
+- Harness obtains Task context and performs authorized business operations through AI-PM MCP using a per-execution delegated identity (exact credential exchange remains under review).
 - Harness does not use SEM as a business-context provider or business-state writer.
 - AI-PM decides when the business task is complete and explicitly instructs SEM to release the associated execution resources.
 
@@ -105,11 +105,17 @@ Platform MCP remains mandatory for Harness business context and business operati
 ## 8. Security requirements
 
 - SEM-to-Runner and Platform-to-SEM authentication remain mandatory, scoped, short-lived/rotatable and auditable.
-- Harness-to-AI-PM MCP authentication is independent of SEM service identity. Never forward SEM service credentials as a human or project principal.
+- Harness-to-AI-PM MCP authentication is independent of SEM service identity. Never forward SEM service credentials as a human or project principal. A per-execution delegated grant must be scoped to one Task/attempt and must not impersonate a human.
 - AI-PM must bind Harness MCP credentials to the intended tenant/project/principal and enforce permissions on every call.
 - Prompt bodies may contain secrets or untrusted instructions: encrypt in transit and at rest where persisted, redact logs, constrain size/content type, and never execute them inside SEM.
 - SEM routing metadata is not authorization. AI-PM-issued execution authorization and Harness MCP authorization remain separate controls.
 - Correlation IDs are not credentials and must not be accepted as proof of business identity.
+
+
+
+## 8.1 Dual fencing and uncertain Runner recovery
+
+AI-PM authorization_generation fences delegated Harness MCP business operations; SEM execution_epoch/binding_epoch fences Runner delivery/release messages. These are separate authority domains and neither substitutes for the other. If a Runner disconnects without positive process-exit evidence, SEM must retain infrastructure uncertainty and must not dispatch a competing Harness for the same attempt. AI-PM may revoke the old delegated grant, but that does not prove the old process can no longer mutate Git remotes or external systems.
 
 ## 9. Required follow-up before implementation
 
