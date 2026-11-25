@@ -21,7 +21,7 @@
     ],
     "signature_params": "(\"@method\" \"@authority\" \"@path\" \"content-digest\" \"content-type\" \"idempotency-key\" \"x-sem-message-id\");created=1795608000;expires=1795608060;nonce=\"dGhpcy1pcy1hLXRlc3Qtbm9uY2UtMDE\";keyid=\"ai-pm-test-key-v1\";alg=\"ed25519\"",
     "signature_base": "\"@method\": POST\n\"@authority\": sem.internal.example\n\"@path\": /internal/sem/v1/executions\n\"content-digest\": sha-256=:B9/Xgat16ZF0blN8mDPGmsiW7oF7bMYcvOd06nZnta8=:\n\"content-type\": application/json\n\"idempotency-key\": 33333333-3333-4333-8333-333333333333\n\"x-sem-message-id\": 22222222-2222-4222-8222-222222222222\n\"@signature-params\": (\"@method\" \"@authority\" \"@path\" \"content-digest\" \"content-type\" \"idempotency-key\" \"x-sem-message-id\");created=1795608000;expires=1795608060;nonce=\"dGhpcy1pcy1hLXRlc3Qtbm9uY2UtMDE\";keyid=\"ai-pm-test-key-v1\";alg=\"ed25519\"",
-    "test_private_seed_base64": "n4Ni-HpISpVObnQMW0wOhCKROaIKqKtW_2ZYb2p9KcU",
+    "test_private_seed_base64": "n4Ni-Hh6SEqVTm50DFtMDoQikTmiCqirVv9mWG9qfSk",
     "public_key_base64": "bQnCOHoAPXfpR3g8OAtJH5pz8rDnwtsiYb9xfd8DZK0=",
     "signature_base64": "6ZjlCDseidRv1xIM3hZB0VV2gu+BFvo3WIEIYy9YSrNaYp0AEMRN+rT2A3KjqkOp47+Mv1Qr3sgHBHStbH80Ag=="
   },
