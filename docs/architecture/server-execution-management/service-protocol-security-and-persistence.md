@@ -1,5 +1,8 @@
 # SEM-02C — Service Protocol, Security and Persistence Baseline
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 > **Authority-boundary revision (2026-11-25):** The former SEM→Platform Claim/Lease/business-state API path is SUPERSEDED by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Independent authentication, TLS, idempotency and durable delivery remain applicable; endpoint scopes and persistence must be redesigned.
 
 > **Authority-boundary revision (2026-11-25):** The former SEM→Platform Claim/Lease/business-state API path is **SUPERSEDED** by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Independent authentication, TLS, idempotency and durable delivery remain applicable; endpoint scopes and persistence must be redesigned.
