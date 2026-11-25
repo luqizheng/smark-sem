@@ -64,6 +64,21 @@ The SEM-to-AI-PM infrastructure callback is not the Harness-to-AI-PM MCP busines
 - Existing lease-token tools cannot be assumed to accept the future delegated grant without a separately reviewed D-06 application-service design.
 - Formal review, approval and acceptance remain human-only.
 
+## 7. Bilateral receiver design proposal
+
+A downstream draft has now been added to the AI-PM documentation branch:
+[AI-PM SEM Callback and Inbox Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/ai-pm-sem-callback-inbox-design-draft.md).
+
+It proposes (not ratifies) the following:
+- `execution_id == delivery.task_run.id` for one attempt row;
+- a dedicated service-authenticated callback route;
+- a SEM-specific application port that does not enqueue the generic `ai_analysis` job;
+- reuse of the shared `integration.inbound_event` only if a safe no-analysis path, event-ID uniqueness and contiguous execution cursor can be guaranteed; otherwise a dedicated SEM Inbox;
+- one transaction for Inbox deduplication, Run observation, cursor advance and success ACK;
+- no TaskStatus, Submitted, Completed, approval or acceptance mutation from infrastructure callbacks.
+
+This proposal is Draft and requires bilateral review against the canonical SEM D-04 contract. It does not close P0-05 or authorize implementation.
+
 ## 6. Disposition
 
 **P0-05 remains OPEN.** The OpenAPI callback route is not source-aligned with current AI-PM because it does not yet exist. The strict SEM event payload schemas are now drafted in `platform-sem-v1.schema.yaml`, but this does not close receiver ownership, Inbox transaction, ACK cursor or retry semantics.
