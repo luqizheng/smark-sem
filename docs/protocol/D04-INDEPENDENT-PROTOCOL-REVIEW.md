@@ -135,3 +135,16 @@ A further source-to-schema comparison found two contract gaps:
 The Platform process observation schema now rejects numeric exit fields when `observation=exit_status_unknown`. Fixtures add a signal-terminated Runner message, an exited Platform event with `exit_signal`, and an unknown-status event with exact containment-empty evidence but no numeric status. The validator adds negative checks for contradictory unknown status and missing reservation retention. Acceptance IDs D04-H63..H67 record these requirements.
 
 This is a Draft contract/fixture hardening change. The latest commit at the time of this review update has not yet produced a CI run. It does not prove the production Runner Supervisor emits signal termination correctly, SEM maps it losslessly, or AI-PM persists the observation. P0-04 remains OPEN until producer/receiver semantic mapping and bilateral runtime tests are complete.
+
+
+## 5.4 Follow-up: handshake/application frame ownership overlap — 2026-11-25
+
+A schema-level ownership defect was found: `runner.session.superseded` was declared both in the pre-application handshake schema and the post-handshake Runner application schema. The protocol narrative says the old authenticated connection receives this frame after a newer session wins, so it is a post-handshake application frame. The duplicate ownership made the frame phase ambiguous and contradicted the validator's stated goal of keeping handshake and application frames separate.
+
+Corrected the Draft:
+- Removed `SessionSuperseded` from the handshake schema.
+- Kept `runner.session.superseded` only in the post-handshake application schema.
+- Strengthened contract validation to require the handshake and application message-type sets to be disjoint, while requiring `runner.session.ack` handshake-only and `runner.session.superseded` application-only.
+- Added D04-W64 to the acceptance matrix and clarified the phase in the WSS protocol catalogue.
+
+This is a schema/validator correction. The latest commit has not yet been validated by CI at the time of this note. P0/P1 disposition is not changed until CI passes and the live WSS session-supersession behavior is tested.
