@@ -252,3 +252,32 @@ Proposed:
 - Bilateral CI mechanism and compatibility support window.
 
 **Disposition: proposed public API contract is now detailed enough for bilateral review, but remains Draft / Changes Required until the blockers and acceptance criteria close. No SDK implementation is authorized by this document.**
+
+
+## 11. Normative blockers — review clarification (2026-11-25)
+
+The following are hard blockers to API ratification, not optional post-ratification implementation polish:
+
+1. **D-04 HTTP authentication and signed responses:** freeze request and response covered components for every operation, response correlation fields, key identifiers and trust lookup, created/expires/nonce validation, replay retention, key rotation/overlap/revocation, and callback ACK signing. The independent D-04 review still marks P0-01/P0-05 open. TLS is not a substitute because restricted-internal HTTP is a supported transport.
+2. **Conditional GET 304:** OpenAPI currently defines ETag on 200 but not on 304. Before freezing `ExecutionRead::NotModified`, specify whether 304 echoes ETag (recommended), whether it carries a signed response, exact signed response components/correlation, mandatory empty-body semantics, and positive/negative vectors. Until then this API branch is provisional.
+3. **Transport proof:** Tokio 1 + reqwest 0.12/native-tls remains a candidate. No integrated SEM workspace dependency resolution or certificate/public-key pin proof has run. Enterprise CA, explicit pin match, hostname mismatch, expiry, rotation and fail-closed tests are separate acceptance cases.
+4. **Distribution proof:** Kellnr is only a candidate. No SEM CI publish/read permission, immutable publication, credential handling or rollback proof exists.
+5. **Consumer proof:** no published immutable SDK has been consumed by AI-PM; no bilateral compile or fixture test exists.
+
+## 12. SDK-to-wire traceability matrix (draft mapping)
+
+This matrix maps the proposed API to the current D-04 candidate. It is intentionally marked provisional: acceptance-case identifiers must be reconciled against the final D-04 matrix before ratification.
+
+| SDK method | OpenAPI operation | Request / response model | Required headers / identity | Status and typed outcome | D-04 evidence required |
+|---|---|---|---|---|---|
+| `submit_execution` | `submitExecutionRequest` — `POST /internal/sem/v1/executions` | `ExecutionRequestedEnvelope` → `ExecutionAcceptanceEnvelope` | `Signature`, `Signature-Input`, `Content-Digest`, `Idempotency-Key == request_id`, `X-SEM-Message-Id == message_id` | 202 accepted/duplicate; 400 validation; 401 auth; 409 idempotency conflict; 413 too large; 422 invariant; 429 rate limited; 500 explicit service failure; ambiguous post-transmission result → `OutcomeUnknown` | D-04 HTTP request signature/digest/replay; request identity/header equality; duplicate same body; changed-body conflict; response signature and correlation; 429/5xx retry semantics |
+| `get_execution` | `getExecutionInfrastructureState` — `GET /internal/sem/v1/executions/{execution_id}` | 200 `ExecutionSnapshotEnvelope`; 304 no body; 404 unknown execution | `Signature`, `Signature-Input` for authenticated response; `If-None-Match` when conditional; exact response correlation/signature profile still open | 200 → `Modified(snapshot, etag)`; 304 → provisional `NotModified`; 404 → `NotFound`; 401/500 typed auth/service error | Signed GET response; ETag/If-None-Match semantics; 304 ETag echo decision, signed empty response and no-body proof; 404 authenticated response |
+| `request_release` | `requestExecutionRelease` — `POST /internal/sem/v1/executions/{execution_id}/release` | `ExecutionReleaseRequestedEnvelope` → `ReleaseAcceptanceEnvelope` | `Signature`, `Signature-Input`, `Content-Digest`, `Idempotency-Key == request_id`, `X-SEM-Message-Id == message_id`; path `execution_id` must equal body | 202 accepted/duplicate; 400 validation; 401 auth; 404 unknown execution; 409 idempotency conflict; 412 fencing conflict; 422 invariant; 500 service failure; ambiguous result → `OutcomeUnknown` | Signed request/response; path/body identity; same-key duplicate; changed-body conflict; stale binding_epoch non-retryable; authenticated 412 response |
+
+### 12.1 Cross-cutting rules
+
+- All authenticated responses, including error responses and 304, must have a precisely defined verification/correlation contract before a typed response is exposed as trusted.
+- The table's header names reflect the current OpenAPI draft; the final signed-component set and response-header names are not yet frozen.
+- SDK default remains **no automatic retry**. AI-PM owns durable retry scheduling. A future per-call helper must be explicitly invoked and bounded; no hidden retry may mask an ambiguous result.
+- The D-04 acceptance matrix currently contains protocol case identifiers, but the SDK-specific mapping above must be joined to the final case IDs after D-04 closure. Do not invent or treat provisional case IDs as normative.
+- The SDK API, package version and implementation remain Draft / NOT RATIFIED until all blockers and bilateral consumer tests pass.
