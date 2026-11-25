@@ -190,6 +190,8 @@ The SEM→AI-PM callback 200 ACK case is now represented by `http_callback_ack` 
 
 The Platform→SEM signed 409 `IDEMPOTENCY_CONFLICT` case is now represented by `http_error_409` in the same fixture file. Python and Node verify the structured error body, exact request/response digests and signature, and reject a mutated `X-SEM-Request-Id` that substitutes `message_id` for `request_id`. D04-H70/H71 cover this positive and negative pair. The required 202, 409, callback ACK 200 and 304 deterministic response fixtures now exist; signed error classes beyond this 409, a third implementation and live HTTP-stack/replay-store tests remain open.
 
+The request-association negative vector is also executable: Python and Node mutate method, authority, path and request Content-Digest one at a time and prove the response signature fails; for 304 they additionally mutate `If-None-Match`. D04-H72 records this. These are deterministic signature-base tests, not a live HTTP client's transport-response association proof.
+
 Each positive fixture must be generated independently by at least two implementations and cross-verified by a third implementation or a separately implemented verifier. Python, Node and Rust are candidate languages; library names and versions must be pinned in the fixture manifest after actual compatibility tests, not assumed in advance. Negative vectors must mutate one component at a time and prove verification failure.
 
 ### 8.7 Freshness and replay are separate acceptance gates
