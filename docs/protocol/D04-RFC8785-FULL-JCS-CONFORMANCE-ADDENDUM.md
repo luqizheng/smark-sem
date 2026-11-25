@@ -67,13 +67,13 @@ The Node-side validator now adds executable checks for:
 - The fixed/scientific notation boundary values around 1e-6, 1e-7, 1e20 and 1e21.
 - Malformed JSON, lone high/low surrogate values, and non-finite numbers.
 
-The existing Python verifier still independently validates only the fixed ASCII/integer WSS transcript. The new Unicode/number edge vectors and duplicate-member check are currently Node-only and therefore do **not** satisfy the two-independent-implementation requirement in §4. The Node validator now performs a pre-parse object-member scan, decodes member-name string tokens before uniqueness comparison (so escaped-equivalent names collide), and delegates final JSON syntax validation to JSON.parse. This is a test helper, not a production parser or proof of zero authentication side effects; D04-W56 remains open until the behavior is independently cross-checked and integrated at the real WSS JSON parsing boundary.
+The Python verifier now includes an independent test-only JCS canonicalizer: UTF-16BE property ordering, shortest-round-trip binary64 number rendering with ECMAScript fixed/scientific thresholds, string/control escaping, recursive object sorting and array-order preservation. It independently executes the same Unicode property-ordering vector, the representative RFC 8785 Appendix B binary64 cases, exponent boundaries, malformed JSON, duplicate-member, unpaired-surrogate and non-finite-number negatives. It does not call Node or reuse the Node canonicalizer. This closes the deterministic Python/Node cross-check for the committed edge corpus at test-helper level, but does not prove every possible binary64 input or a production Rust parser. The Node validator now performs a pre-parse object-member scan, decodes member-name string tokens before uniqueness comparison (so escaped-equivalent names collide), and delegates final JSON syntax validation to JSON.parse. This is a test helper, not a production parser or proof of zero authentication side effects; D04-W56 remains open until the behavior is independently cross-checked and integrated at the real WSS JSON parsing boundary.
 
 CI run #157 on commit `8b3eec5aa5711edee98b9da7dc1102c7c094040d` completed successfully, including the Node JCS edge-vector step. This proves the committed Node checks execute successfully; it does not prove cross-language JCS conformance or close P0-02.
 
 CI run #197 on commit `1367ecc3eb4d78b1484ad1b279df6ae55b251d12` completed all validation steps successfully. It includes Node UTF-16/number/duplicate-member vectors, Python duplicate-member rejection, RFC 9421 `sf` Content-Digest canonicalization, and Python/Node signed 202/304 response verification.
 
-Updated disposition: **PARTIAL PROGRESS / P0-02 OPEN / CHANGES REQUIRED**. Remaining gates include a second independent implementation for the same Unicode and numeric fixtures, production parser integration and no-session-side-effect proof for duplicate members, reference-byte fixtures, transcript semantic checks, and challenge replay/expiry tests with no-side-effect assertions.
+Updated disposition: **PARTIAL PROGRESS / P0-02 OPEN / CHANGES REQUIRED**. Remaining gates include third/reference-implementation cross-checks, production Rust canonicalizer and raw-parser integration, no-session-side-effect proof for duplicate members, additional reference-byte/differential vectors, transcript semantic binding, and challenge replay/expiry tests with no-side-effect assertions.
 
 
 ## 8. Shared Platform → AI-PM callback envelope vector (2026-11-25)
@@ -92,3 +92,10 @@ This remains protocol test evidence, not a production parser, database migration
 
 
 CI evidence update: the optional-correlation-id value and omission assertions passed in runs #224 and #225; the latest PR head `cda9912d106cd0bb90f67da42c3f971f9147b8b7` passed runs #226 (push) and #227 (pull_request), all ten validation steps green.
+
+
+## 9. Independent Python JCS edge verifier added (2026-11-25)
+
+The Python verifier now independently mirrors the Node edge corpus without using `json.dumps(sort_keys=True)` as a JCS substitute. It sorts property names by UTF-16BE code units and implements ECMAScript notation thresholds over shortest-round-trip IEEE-754 binary64 values. It passes the same RFC supplementary-plane/BMP property-ordering example, 15 representative Appendix B bit-pattern values, negative zero, subnormal values, large magnitudes, the 1e-6/1e-7 and 1e20/1e21 boundaries, recursive object/array/control escaping, malformed JSON, duplicate decoded member names, lone surrogates and non-finite numbers.
+
+This provides independent Python/Node deterministic coverage for the committed edge corpus. It remains test-only and does not select or implement the production Rust JCS dependency. It also does not establish zero-side-effect behavior at the actual HTTP/WSS parsing boundary. P0-02 remains open pending production integration, third/reference implementation, expanded differential vectors and challenge replay/expiry semantics.
