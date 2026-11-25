@@ -5,6 +5,8 @@ on:
     paths:
       - "docs/protocol/**"
       - "scripts/validate_sem_contracts.py"
+      - "scripts/validate_sem_crypto_vectors.py"
+      - "tests/protocol/**"
       - ".github/workflows/sem-contracts.yml"
   push:
     branches:
