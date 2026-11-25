@@ -62,6 +62,7 @@ for (const name of ["http_response", "http_304"]) {
   const responseDigest = "sha-256=:" + crypto.createHash("sha256").update(responseBody).digest("base64") + ":";
   if (responseDigest !== response.content_digest) throw new Error(name + " Content-Digest mismatch");
   if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
+  if (response.request_id === request.message_id) throw new Error(name + " response correlation must use request_id, not message_id");
   let pairs;
   if (name === "http_response") {
     pairs = [
