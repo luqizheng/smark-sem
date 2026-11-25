@@ -31,7 +31,7 @@ These are the current user-confirmed constraints and must not be reopened casual
 - SEM owns its execution/delivery/release ledger, Runner connectivity/registration metadata, resource telemetry/reservations and binding_epoch.
 - Runner Supervisor owns local Harness process start/stop, process identity and positive process-exit evidence.
 - AI-PM and SEM use independent databases; SEM has no AI-PM DB access.
-- AI-PM→SEM is versioned HTTPS with durable Outbox/Inbox; Runner↔SEM is authenticated WSS.
+- AI-PM→SEM is versioned internal HTTP over the company private network, with durable Outbox/Inbox and idempotent reconciliation; HTTPS is not a V1 requirement and no public internet ingress is provided. Runner↔SEM remains authenticated WSS.
 - No cross-database transaction; delivery is at-least-once, idempotent and reconciled.
 - Runner default supervision is unattended; supervised mode is explicit.
 - Runner CPU/memory/workspace-volume telemetry informs SEM admission/concurrency.
@@ -64,7 +64,7 @@ These are the current user-confirmed constraints and must not be reopened casual
 The current proposal is recorded in [Runner Enrollment and Cryptographic Identity Draft](./runner-enrollment-and-cryptographic-identity-draft.md). It adopts the GitLab-Runner-style operator workflow:
 
 1. An SEM administrator creates a scoped, short-lived, single-use registration credential in SEM.
-2. The operator runs `sem-runner register --registry https://sem.example.com --registration-token <TOKEN>` on the Runner host.
+2. The operator runs `sem-runner register --registry http://sem.internal.example --registration-token <TOKEN>` on the Runner host.
 3. Runner generates its own Ed25519 keypair locally; only the public key is sent to SEM.
 4. SEM atomically consumes the registration credential, assigns immutable `runner_id`, and binds the public key.
 5. The installed Runner authenticates its long-lived outbound WSS connection with challenge-response proof of possession. The registration token is never reused for WSS or MCP.
