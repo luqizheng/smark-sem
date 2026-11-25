@@ -218,7 +218,7 @@ This closes the identified schema/fixture gap only. It does not prove SEM persis
 
 ### Remaining D-04 cross-audit items confirmed
 
-- **Direction enforcement remains open:** the narrative catalogue assigns direction to every message, but the shared bidirectional application schema validates payload shape without rejecting a message sent by the wrong peer. The current review's P0-03/P1 direction cross-check must be closed by a mechanical direction matrix/validator and negative fixtures.
+- **Direction catalogue consistency is now mechanically checked:** `validate_sem_contracts.py` parses the normative WSS direction table and requires an exact, duplicate-free mapping for every application message type. The shared bidirectional JSON Schema still cannot reject a wrong-peer sender by itself; SEM/Runner receive-path enforcement and live wrong-direction rejection tests remain open.
 - **Cross-message identity remains incomplete:** execution/binding/launch/containment/boot/Supervisor identity is not uniformly required across every lifecycle, release and replay branch; retain P1-01.
 - **Version negotiation and operational bounds remain prose-level:** retain P1-02/P1-03.
 - **Platform↔SEM HTTP authentication/replay and AI-PM callback Inbox remain P0 blockers:** schema/fixture CI does not close live middleware, nonce replay, durable Inbox, producer/receiver mapping or bilateral runtime behavior.
