@@ -1,0 +1,12 @@
+[package]
+name = "sem-application"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+thiserror.workspace = true
+sem-domain = { path = "../sem-domain" }
+sem-protocol = { path = "../sem-protocol" }
