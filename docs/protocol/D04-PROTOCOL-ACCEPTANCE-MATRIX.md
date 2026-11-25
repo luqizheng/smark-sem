@@ -91,6 +91,16 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | D04-W49 | Remove the domain-separation prefix | Signature verification fails |
 | D04-W50 | Derive public key and signature again from the TEST-ONLY seed | Derived key and deterministic signature exactly match fixture |
 
+### 2.3 Executable payload-schema fixture coverage
+
+[Payload fixtures](../../tests/protocol/fixtures/payload-fixtures-v1.json) and [their validator](../../scripts/validate_sem_payload_fixtures.py) cover every current strict payload branch. The suite contains 26 valid examples (19 Runner WSS messages, 2 Platform requests and 5 SEM infrastructure events). For each example it asserts rejection of an unknown top-level field, an unknown payload field and an empty payload missing required fields: 78 negative mutations. Total: **104 executable schema fixture assertions**, in addition to the 102 scenario-level acceptance cases above.
+
+| Fixture group | Positive examples | Negative mutations | Coverage |
+|---|---:|---:|---|
+| Runner WSS application messages | 19 | 57 | Every post-handshake message type |
+| Platform HTTP requests | 2 | 6 | Execution request and release request |
+| SEM infrastructure events | 5 | 15 | All five event types |
+
 ## 3. Runner↔SEM WSS contract cases
 
 | ID | Scenario | Expected result |
