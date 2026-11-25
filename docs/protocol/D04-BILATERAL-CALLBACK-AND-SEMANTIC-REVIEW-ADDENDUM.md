@@ -139,3 +139,49 @@ The first CI run against an intermediate commit exposed a missing `supervisor_in
 - P0-BI-02 and P0-BI-03: **open** — exact AI-PM DDL, PostgreSQL atomicity/concurrency and cross-repository transaction fixtures remain unimplemented/unproven.
 
 No runtime code, database migration or route was changed. No PR was merged or ratified.
+
+
+## 8. AI-PM Inbox DDL/source audit update — 2026-11-25
+
+AI-PM PR #9 now contains [Exact DDL and Concurrency Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/sem-callback-inbox-ddl-and-concurrency-design.md), based on a source audit of its PR base commit `d0e72fa6805aebeadf1b282e430deba493072fd6`, including the squashed baseline DDL, `pm-application/src/ingestion.rs`, and `migrations/0013_task_run_event.sql`.
+
+### Corrected P0-BI-02 facts
+
+The earlier wording that a new partial unique index is needed for global SEM event-ID uniqueness was inaccurate. The existing `integration.inbound_event.id` is already a global UUID primary key. The proposed mapping is therefore `SEM event_id → integration.inbound_event.id`; no second global unique index is needed.
+
+The actual missing storage invariants are:
+
+- unique `(execution_id, execution_event_sequence)` for SEM events;
+- a nonnegative per-attempt contiguous cursor on `delivery.task_run`;
+- an append-only `sem_infrastructure_observed` Run event type and unique sequence slot;
+- exact tenant/project/execution identity enforcement;
+- service-principal identity without HumanActor synthesis;
+- canonical payload fingerprint agreement.
+
+The existing generic `submit_event()` is definitively unsuitable: it hashes a language serializer representation and inserts an `integration.job(job_type='ai_analysis')` in the same transaction. The SEM-specific callback port must bypass it.
+
+The new AI-PM design proposes RFC 8785 JCS UTF-8 bytes followed by SHA-256 for payload equality, explicit Run-row locking, and atomic Inbox + Run observation + cursor commit. These are proposals, not yet bilateral ratification. The proposed FK still needs a final composite tenant/project/run proof; `run_kind='delivery'` requires locked-row semantic validation or an equivalent database invariant.
+
+### P0-BI-03 executable transaction/concurrency scope
+
+The AI-PM design now specifies 24 deterministic PostgreSQL acceptance cases, including:
+
+- same event ID/body duplicate and changed-body/changed-sequence conflicts;
+- same execution sequence with different event IDs under concurrency;
+- N+1 before N and concurrent N/N+1;
+- crash before commit and crash after commit before ACK;
+- wrong tenant/project, unknown execution and review-run non-enumeration;
+- stale binding/key/boot identity and missing exit/release evidence;
+- no `ai_analysis` job, no HumanActor fabrication, and no Task/business success mutation;
+- preservation of generic non-SEM ingestion semantics.
+
+This closes the **design specification gap**, not the implementation-proof gap. No live PostgreSQL two-connection test, migration replay, bilateral fixture runner, callback implementation, or ACK interoperability test has been run.
+
+### Updated P0 disposition
+
+- P0-BI-01: SEM-side ACK field is hardened to `execution_event_sequence`; AI-PM draft now adopts it. Bilateral executable response/interop proof remains open.
+- P0-BI-02: **DDL proposal now exists and corrects the global-ID uniqueness analysis.** Still open pending live catalog/migration replay, final composite identity constraints, ratification, and PostgreSQL proof.
+- P0-BI-03: **24-case executable test specification now exists.** Still open pending actual two-connection PostgreSQL tests and cross-repository fixture execution.
+- P0-BI-04: schema-level identity fields exist; exact current-binding and evidence-reference semantic validation remains open.
+
+No runtime code, route, migration, database schema, or deployment was changed. No PR was merged or ratified. D-04 remains **CHANGES REQUIRED / NOT READY FOR IMPLEMENTATION**.
