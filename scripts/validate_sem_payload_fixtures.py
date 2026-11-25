@@ -70,6 +70,15 @@ for item in data["runner_messages"]:
         ack_missing_sequence = json.loads(json.dumps(item))
         ack_missing_sequence["payload"].pop("acknowledged_event_sequence", None)
         expect_invalid(runner_validator, ack_missing_sequence, label + " event ACK missing event_sequence")
+        ack_missing_both = json.loads(json.dumps(item))
+        ack_missing_both["payload"].pop("acknowledged_journal_id", None)
+        ack_missing_both["payload"].pop("acknowledged_event_sequence", None)
+        expect_invalid(runner_validator, ack_missing_both, label + " durably_recorded ACK missing both cursor fields")
+        non_durable_without_cursor = json.loads(json.dumps(item))
+        non_durable_without_cursor["payload"]["disposition"] = "accepted"
+        non_durable_without_cursor["payload"].pop("acknowledged_journal_id", None)
+        non_durable_without_cursor["payload"].pop("acknowledged_event_sequence", None)
+        expect_valid(runner_validator, non_durable_without_cursor, label + " non-durable ACK without journal cursor")
 
 for item in data["platform_requests"]:
     label = f"Platform request {item['message_type']}"
