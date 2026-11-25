@@ -91,6 +91,7 @@ for name in ("http_response", "http_304"):
     expected_response_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(response_body).digest()).decode("ascii") + ":"
     assert expected_response_digest == response["content_digest"], name + " response Content-Digest mismatch"
     assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
+    assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
     if name == "http_response":
         pairs = [
             ('"@status"', str(response["status"])),
