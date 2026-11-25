@@ -43,32 +43,80 @@ SEM may retain `execution_id`, opaque payload bytes, routing metadata and its ow
 
 ## 3. State machines
 
-### 3.1 AI-PM Run/attempt lifecycle (business authority)
+### 3.1 AI-PM Task, Run/attempt and authorization lifecycles (business authority)
 
-The following is the proposed Run/attempt model. Exact names must be reconciled with the current AI-PM domain model before ratification; it does not replace Task's existing guarded state machine.
+This section is corrected against the AI-PM source baseline reviewed on 2026-11-25:
 
-| State | Meaning | Authority / permitted transition |
+- Repository: `luqizheng/ai-pm`
+- Branch: `master`
+- Commit: `d0e72fa6805aebeadf1b282e430deba493072fd6`
+- Source files: `crates/pm-domain/src/task.rs`, `crates/pm-domain/src/task_run.rs`, `crates/pm-application/src/run_transition_guard.rs`, `crates/pm-application/src/run_dispatch/port.rs`.
+
+The current AI-PM model has three separate business concepts. They must not be collapsed into one proposed Run state machine.
+
+**Task lifecycle — current source `TaskStatus` (13 states):**
+
+`Draft`, `Ready`, `Claimed`, `Running`, `AwaitingDecision`, `Blocked`, `Submitted`, `Reviewing`, `Completed`, `ChangesRequested`, `Failed`, `Cancelled`, `Superseded`.
+
+Task transition legality is enforced by the AI-PM domain transition validator and application guards. SEM observations never directly set Task status.
+
+**Run lifecycle — current source `RunKind` and `RunStatus`:**
+
+Run kind is `Delivery` or `Review`. Current Run status is one of:
+
+`Queued`, `Claimed`, `Running`, `Succeeded`, `Failed`, `TimedOut`, `Cancelled`.
+
+The currently guarded transition matrix is:
+
+| Run kind | Current status | Allowed next statuses |
 |---|---|---|
-| `created` | Business attempt and execution intent persisted, not yet known accepted by SEM | AI-PM transaction creates attempt + Outbox request |
-| `authorized` | Current attempt has active `authorization_generation`; delegated grant may be issued after valid Runner binding | AI-PM only |
-| `active` | Attempt is authorized and may execute; infrastructure process evidence is correlated but does not decide business outcome | AI-PM only |
-| `result_submitted` | Validated delivery submitted through typed MCP operation | AI-PM application service only |
-| `awaiting_review` | Business result awaits review/acceptance | Existing AI-PM workflow only |
-| `succeeded` | AI-PM accepted the business result under its acceptance rules | AI-PM review/acceptance authority only |
-| `failed` | AI-PM determined the attempt failed under an explicit business policy | AI-PM only |
-| `cancelled` | AI-PM revoked the attempt and business authority | AI-PM only |
-| `superseded` | A newer business attempt replaced this attempt | AI-PM only |
+| Delivery | Queued | Claimed, Failed, Cancelled |
+| Delivery | Claimed | Running, Queued, Succeeded, Failed, TimedOut, Cancelled |
+| Delivery | Running | Queued, Succeeded, Failed, TimedOut, Cancelled |
+| Review | Queued | Running, Cancelled |
+| Review | Running | Succeeded, Failed, TimedOut, Cancelled |
+
+Terminal Run statuses are immutable. Delivery lease reacquisition while `Claimed` is a separately validated same-state operation, not a status transition. The matrix above is the current AI-PM source contract, not a SEM-owned state machine.
+
+**Run outcome — current source `RunOutcome`:**
+
+`Succeeded`, `Failed`, `TimedOut`, `Cancelled`.
+
+RunOutcome is outcome data and is not interchangeable with RunStatus or TaskStatus. A process exit observation is evidence supplied to AI-PM; the AI-PM application service applies its own outcome and Task transition rules.
+
+**Attempt identity and executor lease — current source mapping:**
+
+- One created Delivery Run is the durable execution attempt.
+- `run_id` is its stable identity; `attempt_no` is the task-local ordinal.
+- The current executor lease uses `lease_generation` and a lease token.
+- `lease_generation` fences executor lease ownership. It is not delegated business authorization.
+
+**Delegated authorization — proposed separate AI-PM-owned dimension:**
+
+The future `authorization_generation` proposed by the SEM architecture is not a current RunStatus and is not a replacement for `lease_generation`. It must be represented as an independently owned AI-PM authorization/grant generation, correlated to the exact `run_id` (and therefore its `attempt_no`), execution identity, Runner key and allowed MCP operations. Its issue, expiry, revocation and per-call validation semantics belong to D-02/D-06.
+
+| Concept | Current/proposed owner | Must not be confused with |
+|---|---|---|
+| TaskStatus | AI-PM current domain | RunStatus, process state |
+| RunKind / RunStatus | AI-PM current application model | TaskStatus, RunOutcome |
+| RunOutcome | AI-PM current domain | RunStatus, exit code alone |
+| `run_id` / `attempt_no` | AI-PM current persistence model | SEM delivery ID |
+| `lease_generation` | AI-PM current executor lease | delegated `authorization_generation` |
+| `authorization_generation` | AI-PM proposed delegated grant | Runner key version, SEM binding_epoch |
+| `binding_epoch` | SEM | AI-PM lease or authorization generation |
 
 Rules:
 
-- AI-PM persists a Run/attempt business decision and its corresponding SEM Outbox intent in the same AI-PM database transaction.
-- A new business retry creates a new attempt, new `execution_id` and new `authorization_generation`; it is not a transport retry.
+- AI-PM persists a business Run/attempt decision and its corresponding SEM Outbox intent in the same AI-PM database transaction.
+- A business retry creates a new Run/attempt identity and new execution identity. It is not a transport retry.
 - Re-delivering the same Outbox message preserves `message_id`, `request_id`, `execution_id` and canonical payload.
-- A Runner process exit is an observation supplied through SEM. AI-PM correlates it to the Run/attempt and applies its own outcome policy.
-- `exit_code = 0` cannot directly transition an attempt to `succeeded`.
+- A Runner process exit is an infrastructure observation supplied through SEM. AI-PM correlates it to the Run and applies its own RunOutcome/RunStatus and TaskStatus policy.
+- `exit_code = 0` cannot directly transition a Run to `Succeeded` or a Task to `Completed`.
 - Harness may use only explicitly granted MCP operations, such as exact-scope context read, progress report and result submission. It cannot perform formal review/acceptance or arbitrary status setting.
-- Task transitions remain the existing AI-PM contract: valid delivery submission may advance Running → Submitted; Submitted → Reviewing and Reviewing → Completed remain guarded; acceptance evidence is required for completion; manual Ready → Completed remains human-only.
+- The current result-submission operation is an AI-PM application-service operation; valid delivery submission may advance Task `Running → Submitted`, but does not decide final acceptance.
+- Task `Submitted → Reviewing` and `Reviewing → Completed` remain guarded by AI-PM; acceptance evidence and human-only gates remain authoritative.
 - AI-PM may decide to release infrastructure while Task is submitted/reviewing or awaiting a human decision. Release is not synonymous with business completion.
+- This mapping is verified only against the source commit listed above. Re-check the AI-PM source revision before D-05 ratification and update this table if its Run contract changes.
 
 ### 3.2 SEM Execution lifecycle (infrastructure authority)
 
