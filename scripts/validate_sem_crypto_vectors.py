@@ -51,6 +51,15 @@ http_sig = b64d(http["signature_base64"])
 assert verify(http_pub, http_sig, signature_base.encode("ascii")), "HTTP Ed25519 signature failed"
 assert not verify(http_pub, http_sig, signature_base.replace("POST", "PUT", 1).encode("ascii")), "HTTP method mutation unexpectedly verified"
 assert not verify(http_pub, http_sig, (signature_base + " ").encode("ascii")), "HTTP signature-base mutation unexpectedly verified"
+for changed in [
+    signature_base.replace("sem.internal.example", "evil.internal.example", 1),
+    signature_base.replace("/internal/sem/v1/executions", "/internal/sem/v1/other", 1),
+    signature_base.replace("application/json", "text/plain", 1),
+    signature_base.replace(http["idempotency_key"], "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", 1),
+]:
+    assert not verify(http_pub, http_sig, changed.encode("ascii")), "HTTP covered-component mutation unexpectedly verified"
+mutated_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").digest()).decode("ascii") + ":"
+assert not verify(http_pub, http_sig, signature_base.replace(http["content_digest"], mutated_digest).encode("ascii")), "HTTP digest-header mutation unexpectedly verified"
 assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").digest()).decode("ascii") + ":", "Body mutation did not change digest"
 
 wss = data["wss"]
@@ -69,6 +78,16 @@ mutated["runner_id"] = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 mutated_jcs = json.dumps(mutated, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 assert not verify(wss_pub, wss_sig, wss["domain_separation_prefix"].encode("ascii") + mutated_jcs.encode("utf-8")), "WSS runner_id mutation unexpectedly verified"
 assert not verify(wss_pub, wss_sig, jcs.encode("utf-8")), "WSS domain-separation removal unexpectedly verified"
+for field, value in [
+    ("audience", "other.internal.example"),
+    ("authority", "other.internal.example"),
+    ("challenge_id", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+    ("protocol", "sem.runner.v2"),
+]:
+    changed = dict(transcript)
+    changed[field] = value
+    changed_jcs = json.dumps(changed, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    assert not verify(wss_pub, wss_sig, wss["domain_separation_prefix"].encode("ascii") + changed_jcs.encode("utf-8")), f"WSS {field} mutation unexpectedly verified"
 
 # Recreate public keys from the test-only private seeds to ensure fixtures
 # are internally consistent and signatures are reproducible.
@@ -83,4 +102,5 @@ assert wss_private.sign(message) == wss_sig
 
 print("crypto-vectors-ok: HTTP Content-Digest + RFC 9421 Ed25519 signature")
 print("crypto-vectors-ok: WSS RFC 8785 JCS + domain-separated Ed25519 proof")
-print("negative-vectors-ok: HTTP method/base mutation; WSS runner_id/domain-prefix mutation")
+print("negative-vectors-ok: HTTP method/authority/path/content-type/idempotency/digest mutations")
+print("negative-vectors-ok: WSS runner_id/audience/authority/challenge/protocol/domain-prefix mutations")
