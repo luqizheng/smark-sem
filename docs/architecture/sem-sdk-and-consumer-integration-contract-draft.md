@@ -97,6 +97,9 @@ The SDK must not conflate TLS server authentication, SEM service request signing
 - A timeout after request transmission is an uncertain outcome, not proof of rejection. The SDK returns an outcome that lets AI-PM reconcile/retry the same operation.
 - SDK retries must never generate a new execution ID or a new business attempt.
 - The SDK must expose server correlation/request identifiers and preserve structured SEM error codes.
+- Read operations also carry caller-generated `message_id` and `request_id`; the signed `X-SEM-Request-Id` response header echoes `request_id`, never `message_id`.
+- A GET snapshot 200 response's ETag is a signed component. A conditional 304 signs both the response ETag and the originating `If-None-Match` request header. The SDK must verify the response signature against the exact originating method, authority, path, request Content-Digest and applicable conditional validator before exposing the snapshot/ETag or accepting a 304 as unchanged.
+- A response ETag must never be cached or used to construct a subsequent `If-None-Match` request until the response signature and request-context association have been verified. The signed-response profile is still D-04 Draft and must be ratified before runtime implementation.
 
 ## 7. Reverse direction: SEM events into AI-PM
 
@@ -133,6 +136,9 @@ Before SDK implementation is approved, define executable tests for:
 
 1. Typed serialization/deserialization matches canonical JSON Schema fixtures.
 2. HTTP and HTTPS carry identical protocol semantics.
+3. Signed GET snapshot 200 verifies ETag as a covered response component; tampered ETag rejects.
+4. Conditional 304 verifies both response ETag and request `If-None-Match`; tampered ETag or validator rejects.
+5. Response signature verification binds the exact originating method, authority, path and request Content-Digest; replay against another request context rejects.
 3. Enterprise CA and explicitly pinned self-signed certificate validation succeed.
 4. Invalid CA, pin mismatch, hostname mismatch and expired certificate fail closed.
 5. Request signing, digest and replay protection match D-04 vectors and final production contract.
