@@ -84,6 +84,7 @@ $defs:
     required: [event_id, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
       event_id: { type: string, format: uuid }
+      event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
       execution_id: { type: string, format: uuid }
