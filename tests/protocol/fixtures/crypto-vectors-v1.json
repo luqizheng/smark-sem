@@ -49,5 +49,52 @@
     "public_key_base64": "JrQLj5P/89iXES9+vFgrIy29clF9CC/oPPsw3c5D0bs=",
     "signature_base": "\"date\": Tue, 20 Apr 2021 02:07:55 GMT\n\"@method\": POST\n\"@path\": /foo\n\"@authority\": example.com\n\"content-type\": application/json\n\"content-length\": 18\n\"@signature-params\": (\"date\" \"@method\" \"@path\" \"@authority\" \"content-type\" \"content-length\");created=1618884473;keyid=\"test-key-ed25519\"",
     "signature_base64": "wqcAqbmYJ2ji2glfAMaRy4gruYYnx2nEFN2HN6jrnDnQCK1u02Gb04v9EDgwUPiu4A0w6vuQv5lIp5WPpBKRCw=="
+  },
+  "http_response": {
+    "source": "D-04 deterministic TEST-ONLY response signature vector; request context and response body are exact bytes",
+    "request": {
+      "method": "POST",
+      "authority": "sem.internal.example",
+      "path": "/internal/sem/v1/executions",
+      "content_digest": "sha-256=:nwoHO77PwYDohmtQM6lld46WrBoq4OJqxlmmdVzUzFw=:",
+      "message_id": "22222222-2222-4222-8222-222222222222",
+      "request_id": "33333333-3333-4333-8333-333333333333"
+    },
+    "response": {
+      "status": 202,
+      "content_type": "application/json",
+      "request_id": "33333333-3333-4333-8333-333333333333",
+      "body": "{\"acceptance\":\"accepted\",\"execution_id\":\"11111111-1111-4111-8111-111111111111\",\"message_id\":\"22222222-2222-4222-8222-222222222222\",\"request_id\":\"33333333-3333-4333-8333-333333333333\"}",
+      "content_digest": "sha-256=:z/KgmXPF8y4AvGK9p64dE6gC63Hw+dtkolXc45BnrH8=:"
+    },
+    "signature_params": "(\"@status\" \"content-digest\" \"x-sem-request-id\" \"content-type\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req);created=1795608000;expires=1795608060;nonce=\"c2VtLXJlc3BvbnNlLXRlc3Qtbm9uY2UtMDE\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "signature_base": "\"@status\": 202\n\"content-digest\": sha-256=:z/KgmXPF8y4AvGK9p64dE6gC63Hw+dtkolXc45BnrH8=:\n\"x-sem-request-id\": 33333333-3333-4333-8333-333333333333\n\"content-type\": application/json\n\"@method\";req: POST\n\"@authority\";req: sem.internal.example\n\"@path\";req: /internal/sem/v1/executions\n\"content-digest\";req: sha-256=:nwoHO77PwYDohmtQM6lld46WrBoq4OJqxlmmdVzUzFw=:\n\"@signature-params\": (\"@status\" \"content-digest\" \"x-sem-request-id\" \"content-type\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req);created=1795608000;expires=1795608060;nonce=\"c2VtLXJlc3BvbnNlLXRlc3Qtbm9uY2UtMDE\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "test_private_seed_base64": "ECEyQ1RldoeYqbrL3O3+DxAhMkNUZXaHmKm6y9zt/g8=",
+    "public_key_base64": "Div31gXVZQXm91pGO94GP7V2JcxHAJx0BWvrAZ0z910=",
+    "signature_base64": "8oST6B6xoptnHMs0AEygPLmYQM7ycWxSqqvvEp4/3Noay5l+T9dwHMt7tLAl/rBXpfmsbdAVoSxWYY98RIZ9Dw=="
+  },
+  "http_304": {
+    "source": "D-04 deterministic TEST-ONLY 304 response signature vector; empty request and response content",
+    "request": {
+      "method": "GET",
+      "authority": "sem.internal.example",
+      "path": "/internal/sem/v1/executions/11111111-1111-4111-8111-111111111111/infrastructure-state",
+      "content_digest": "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:",
+      "if_none_match": "\"state-v1\"",
+      "message_id": "22222222-2222-4222-8222-222222222222",
+      "request_id": "33333333-3333-4333-8333-333333333333"
+    },
+    "response": {
+      "status": 304,
+      "etag": "\"state-v1\"",
+      "request_id": "33333333-3333-4333-8333-333333333333",
+      "body": "",
+      "content_digest": "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:"
+    },
+    "signature_params": "(\"@status\" \"content-digest\" \"x-sem-request-id\" \"etag\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req \"if-none-match\";req);created=1795608000;expires=1795608060;nonce=\"c2VtLTMwNC10ZXN0LW5vbmNlLTAx\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "signature_base": "\"@status\": 304\n\"content-digest\": sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:\n\"x-sem-request-id\": 33333333-3333-4333-8333-333333333333\n\"etag\": \"state-v1\"\n\"@method\";req: GET\n\"@authority\";req: sem.internal.example\n\"@path\";req: /internal/sem/v1/executions/11111111-1111-4111-8111-111111111111/infrastructure-state\n\"content-digest\";req: sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:\n\"if-none-match\";req: \"state-v1\"\n\"@signature-params\": (\"@status\" \"content-digest\" \"x-sem-request-id\" \"etag\" \"@method\";req \"@authority\";req \"@path\";req \"content-digest\";req \"if-none-match\";req);created=1795608000;expires=1795608060;nonce=\"c2VtLTMwNC10ZXN0LW5vbmNlLTAx\";keyid=\"sem-test-key-v1\";alg=\"ed25519\"",
+    "test_private_seed_base64": "ECEyQ1RldoeYqbrL3O3+DxAhMkNUZXaHmKm6y9zt/g8=",
+    "public_key_base64": "Div31gXVZQXm91pGO94GP7V2JcxHAJx0BWvrAZ0z910=",
+    "signature_base64": "c7fbGjVhRsqcIZjnCjmyVoGOU1AomBqw8U/A+WQaAJG29uW3/t9RNgrgKhjRyRfxOBPjo3nc6LhA+ZtwQJGaBA=="
   }
 }
