@@ -88,6 +88,32 @@ for item in data["sem_events"]:
     empty_payload["payload"] = {}
     expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
 
+# Cross-field process/release evidence invariants.
+process_event = next(item for item in data["sem_events"] if item["event_type"] == "harness.process_observed")
+exited_both = json.loads(json.dumps(process_event))
+exited_both["payload"]["observation"] = "exited"
+exited_both["payload"]["process_identity"] = {
+    "pid": 4312, "process_start_identity": "proc-start-4312",
+    "cgroup_path": "/system.slice/sem-exec-111",
+    "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+}
+exited_both["payload"]["exit_evidence"] = {
+    "evidence_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "cgroup_populated": 0,
+    "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    "exit_code": 0, "exit_signal": 9
+}
+expect_invalid(platform_validator, exited_both, "process exit with both exit_code and exit_signal")
+
+exited_missing = json.loads(json.dumps(exited_both))
+del exited_missing["payload"]["exit_evidence"]
+expect_invalid(platform_validator, exited_missing, "process exit without exit evidence")
+
+release_event = next(item for item in data["sem_events"] if item["event_type"] == "execution.release_status")
+release_missing = json.loads(json.dumps(release_event))
+release_missing["payload"]["release_state"] = "process_exited"
+expect_invalid(platform_validator, release_missing, "process_exited release without evidence reference")
+
 print(f"ack-fixtures-ok: {len(data.get('event_acknowledgements', []))} SEM event acknowledgements")
 print(f"payload-fixtures-ok: {len(runner_types)} Runner messages, {len(data['platform_requests'])} Platform requests, {len(event_types)} SEM events")
 print(f"negative-fixtures-ok: unknown top-level, unknown payload and missing required payload fields for every branch")
