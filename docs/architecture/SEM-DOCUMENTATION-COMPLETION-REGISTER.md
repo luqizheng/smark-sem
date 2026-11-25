@@ -31,7 +31,7 @@ These are the current user-confirmed constraints and must not be reopened casual
 - SEM owns its execution/delivery/release ledger, Runner connectivity/registration metadata, resource telemetry/reservations and binding_epoch.
 - Runner Supervisor owns local Harness process start/stop, process identity and positive process-exit evidence.
 - AI-PM and SEM use independent databases; SEM has no AI-PM DB access.
-- AI-PM→SEM is versioned internal HTTP over the company private network, with durable Outbox/Inbox and idempotent reconciliation; HTTPS is not a V1 requirement and no public internet ingress is provided. Runner↔SEM remains authenticated WSS.
+- AI-PM→SEM is a versioned internal HTTP/HTTPS contract over the company private network, with durable Outbox/Inbox and idempotent reconciliation; HTTPS is optional in V1 and supports enterprise CA or self-signed certificates. No public internet ingress is provided. Runner↔SEM remains authenticated WSS with the same internal certificate trust options.
 - No cross-database transaction; delivery is at-least-once, idempotent and reconciled.
 - Runner default supervision is unattended; supervised mode is explicit.
 - Runner CPU/memory/workspace-volume telemetry informs SEM admission/concurrency.
@@ -64,14 +64,14 @@ These are the current user-confirmed constraints and must not be reopened casual
 The current proposal is recorded in [Runner Enrollment and Cryptographic Identity Draft](./runner-enrollment-and-cryptographic-identity-draft.md). It adopts the GitLab-Runner-style operator workflow:
 
 1. An SEM administrator creates a scoped, short-lived, single-use registration credential in SEM.
-2. The operator runs `sem-runner register --registry http://sem.internal.example --registration-token <TOKEN>` on the Runner host.
+2. The operator runs `sem-runner register --registry https://sem.internal.example --registration-token <TOKEN> --ca-cert /etc/sem/internal-ca.crt` (or use an explicitly configured certificate/public-key pin for a self-signed endpoint) on the Runner host.
 3. Runner generates its own Ed25519 keypair locally; only the public key is sent to SEM.
 4. SEM atomically consumes the registration credential, assigns immutable `runner_id`, and binds the public key.
 5. The installed Runner authenticates its long-lived outbound WSS connection with challenge-response proof of possession. The registration token is never reused for WSS or MCP.
 
 Authority is split deliberately: SEM owns infrastructure enrollment, Runner identity, key versions, connection/admission state and revocation. AI-PM owns business grants and exact Task/Run authorization. SEM-issued Runner identity is not business authorization.
 
-The same WSS connection is the dispatch channel; SEM must not open a fresh connection or poll Runner for every task. Dispatch eligibility is a derived predicate, not a socket-open boolean. It requires an authenticated current WSS session, fresh application heartbeat, fresh same-boot resource telemetry, healthy Supervisor, accepting-work admission state and sufficient capacity after durable reservations. Transport ping/pong alone is insufficient. A delivery is sent only after reservation and binding epoch are durable; missing ACK or WSS loss causes reconciliation, not blind reassignment.
+Platform↔SEM supports HTTP or HTTPS on the private network; HTTPS certificate validation accepts explicitly trusted enterprise/self-signed certificates and never permits silent verification bypass. Runner registration and WSS also accept explicitly provisioned internal trust material. See the transport deployment profile in the architecture README. The same WSS connection is the dispatch channel; SEM must not open a fresh connection or poll Runner for every task. Dispatch eligibility is a derived predicate, not a socket-open boolean. It requires an authenticated current WSS session, fresh application heartbeat, fresh same-boot resource telemetry, healthy Supervisor, accepting-work admission state and sufficient capacity after durable reservations. Transport ping/pong alone is insufficient. A delivery is sent only after reservation and binding epoch are durable; missing ACK or WSS loss causes reconciliation, not blind reassignment.
 
 The proposal remains pending ratification and D-04/D-09 contract closure. Open details include exact API/CLI schemas, token hashing and idempotency, key storage, WSS challenge canonicalization, heartbeat intervals/deadlines, identity assertion/key distribution, and rotation/recovery procedures.
 
@@ -148,7 +148,7 @@ Specify CPU, memory and workspace-volume reservation units; telemetry freshness;
 
 ### D-09 — Deployment and operations
 
-Specify service topology, network ingress/egress, TLS/mTLS, service identities, secret source/rotation, database migrations, health/readiness, rolling upgrades, compatibility window, observability, log redaction, event/prompt retention, incident response, disaster recovery and operator access. Clarify whether SEM DB needs backup/restore and what data can be rebuilt. Workspace backup remains out of scope.
+Specify service topology and private-network ingress/egress; HTTP/HTTPS selection; enterprise CA and self-signed certificate trust provisioning/pinning; mandatory certificate validation; certificate renewal/rotation/overlap/revocation; service identities; request authentication/integrity/replay defense; secret source/rotation; database migrations; health/readiness; rolling upgrades; compatibility window; observability; log redaction; event/prompt retention; incident response; disaster recovery and operator access. Clarify whether SEM DB needs backup/restore and what data can be rebuilt. Workspace backup remains out of scope.
 
 ### D-10 — Implementation architecture and repository ownership
 
