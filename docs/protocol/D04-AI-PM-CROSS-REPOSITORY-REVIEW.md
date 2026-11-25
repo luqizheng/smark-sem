@@ -95,3 +95,28 @@ The AI-PM PR #9 callback design had one stale response-field alias in §5.2 step
 P0-05 remains OPEN. The callback route, service authentication, shared-Inbox application port, transaction/cursor behavior, exact response schema, retry semantics and bilateral runtime tests still require ratification and separate implementation authorization.
 
 A second cross-document mismatch was found in the AI-PM PR #9 callback proposal: §5.2 and OI-02/OI-03 named the attempt cursor sem_last_event_sequence, while its exact DDL/concurrency proposal names the column delivery.task_run.execution_event_sequence. The callback proposal has been corrected to use execution_event_sequence consistently. This is the same per-execution SEM→AI-PM cursor defined by D-04 and is distinct from Runner journal event_sequence and WSS message_sequence.
+
+
+## 6. SEM event catalogue and AI-PM Inbox cross-audit — 2026-11-25
+
+### 6.1 Corrected: protocol prose omitted the binding-established event
+
+The normative Platform event JSON Schema defines five event variants, including `execution.binding_established`, but the §8 prose catalogue listed only four. The catalogue now explicitly lists all five and points to the discriminated-union schema as normative.
+
+### 6.2 Corrected: AI-PM Run-observation dedupe key contradicted its DDL
+
+AI-PM PR #9 callback prose said `task_run_event.dedupe_tag = event_id`. Its companion exact DDL requires `detail.execution_event_sequence = dedupe_tag` and creates the partial unique index `(run_id, dedupe_tag)` to enforce one observation per Run sequence. These cannot both be true. The callback design now uses canonical base-10 `execution_event_sequence` as `dedupe_tag`; event-ID idempotency remains enforced by `integration.inbound_event.id` and `idempotency_key`. This aligns the prose with the SQL CHECK, index and INBOX-46 acceptance case.
+
+### 6.3 P0-06 OPEN: AI-PM has no specified current-binding projection or first-bind rule
+
+The callback transaction algorithm says it validates every event against the “current SEM infrastructure binding tuple” (`runner_id`, `runner_key_version`, `boot_id`, `supervisor_instance_id`, `binding_epoch`, plus process/launch/containment identities). However, the proposed DDL adds only the per-attempt event cursor to `delivery.task_run`; it adds no binding projection/table, and it specifies no deterministic query/replay algorithm over `task_run_event` to derive the current binding.
+
+This is especially visible for the first `execution.binding_established` event: there is no prior current binding tuple against which to validate it. The generic step-2 rule is therefore not implementable as written. Without a defined projection/first-bind rule, the receiver cannot reliably distinguish initial binding, exact duplicate, stale lower epoch, conflicting same epoch, and authorized rebind after prior binding release/isolation. This is a stale-binding acceptance and fencing gap, not merely a reporting omission.
+
+Before ratification, AI-PM PR #9 must choose and specify one of:
+1. a minimal AI-PM-owned current-binding projection keyed by `task_run.id`, updated atomically with Inbox + Run observation + cursor; or
+2. a fully specified deterministic event-history replay/query algorithm that identifies the latest accepted binding and proves allowed rebind transitions without relying on unspecified “current” state.
+
+The contract must explicitly cover first bind, exact duplicate, same-epoch conflicting identity, lower/stale epoch, higher-epoch rebind after positive prior release/exit or authorized host-isolation disposition, and rebind while prior process state remains uncertain (must reject/retain quarantine). SEM remains authoritative for binding allocation; the AI-PM projection is only the consumer's last accepted binding reference and must never authorize a new Runner or change business Run/Task state.
+
+No implementation is authorized by this finding. AI-PM PR #9 remains Draft / Changes Required until the projection and acceptance cases are specified. The event-catalogue and dedupe-tag corrections are documentation-only.
