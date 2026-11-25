@@ -28,7 +28,10 @@ SEM must not connect to or share the AI-PM PostgreSQL database. SEM has its own 
 
 ## 3. Confirmed deployment and operating constraints
 
-- AI-PM ↔ SEM: versioned internal HTTP service contract over the company private network; no V1 HTTPS or public internet ingress. Durable Outbox/Inbox and idempotent reconciliation remain mandatory.
+- AI-PM ↔ SEM: versioned HTTP or HTTPS service contract over the company private network; HTTPS is optional and supports enterprise CA or explicitly trusted self-signed certificates. No public internet ingress. Durable Outbox/Inbox and idempotent reconciliation remain mandatory.
+- Platform↔SEM message schemas are transport-independent. HTTPS clients must validate an explicitly configured trust chain or certificate/public-key pin; self-signed certificates are supported, but disabling verification is not.
+- HTTP is allowed only on a restricted internal network and has no wire confidentiality; authentication, request integrity, replay defense and audit remain mandatory. Sensitive fields requiring confidentiality need HTTPS or application-layer protection.
+- Runner registration and WSS accept enterprise CA or explicitly pinned self-signed server certificates. Certificate lifecycle and trust distribution are D-09 requirements.
 - Runner ↔ SEM: authenticated persistent WSS connection for delivery and infrastructure observations.
 - The two services use independent databases; no cross-database transaction is assumed.
 - Platform Outbox has one authoritative consumer in AI-PM. SEM does not consume the Platform database directly.
