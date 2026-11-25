@@ -10,7 +10,8 @@ servers:
   - url: https://sem.internal.example
     description: HTTPS with explicitly configured trust; HTTP deployment may override the scheme.
 security:
-  - serviceRequestSignature: []
+  - httpMessageSignature: []
+    signatureInputHeader: []
 tags:
   - name: Executions
   - name: SEM Events
