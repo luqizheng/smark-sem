@@ -522,6 +522,22 @@ Telemetry includes observation time and Runner boot identity. SEM applies a conf
 
 If AI-PM does not know the current binding_epoch, it must first query/reconcile the execution by execution_id. SEM rejects a stale expected_binding_epoch and never applies it to a newer binding. Release arriving while launch is in progress must be persisted as a stop fence so the Supervisor cannot launch a late process after the release.
 
+### 13.9 SEM event delivery acknowledgement and per-execution cursor
+
+The SEM callback is at-least-once and carries one event per request in the current Draft. AI-PM must commit its durable Inbox row and permitted infrastructure observation in one transaction before returning a success acknowledgement.
+
+A successful acknowledgement contains:
+- `event_id`: exact event acknowledged;
+- `execution_id`: event stream identity;
+- `event_sequence`: sequence of this event;
+- `contiguous_through_sequence`: highest contiguous sequence durably committed by AI-PM for this execution;
+- `disposition`: `accepted` or `duplicate`;
+- `acknowledged_at`: receiver timestamp.
+
+If a later sequence arrives before the missing predecessor, AI-PM returns a structured `409 EVENT_SEQUENCE_GAP` with `execution_id` and `expected_sequence`; it does not advance the contiguous cursor. SEM retains and retries/replays the missing event. A duplicate event_id with the same canonical body returns `duplicate`; the same event_id with a different body returns `409 IDEMPOTENCY_CONFLICT`. A duplicate older event may return the current contiguous cursor, but must not change it.
+
+The success ACK is never returned before Inbox + permitted Run-observation commit. The generic AI-PM `POST /api/v1/events` endpoint is not this callback receiver; a dedicated AI-PM route and Inbox contract remain to be designed and approved bilaterally.
+
 ### 13.8 Ordering and duplicate handling
 
 - Every sender supplies a unique message_id; every logical operation also has its stable request_id, delivery_id or release_id.
