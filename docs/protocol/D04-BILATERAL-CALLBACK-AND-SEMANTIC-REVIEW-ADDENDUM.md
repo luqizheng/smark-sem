@@ -278,7 +278,7 @@ Latest GET snapshot ETag vector evidence: PR head `1b81fb2cc5f92ef43ae09e4654758
 
 ## 17. Authenticated GET 404 response shape
 
-The OpenAPI draft now models an authenticated unknown-execution 404 as a structured `ProtocolErrorEnvelope` with Content-Digest, Signature-Input, Signature and `X-SEM-Request-Id = request_id`. This is distinct from pre-authentication or unparseable-request failures, whose safe signed/unsigned correlation policy remains open. A deterministic signed 404 response vector and live not-found interoperability test have not yet been added; the broader signed-error coverage gate remains open.
+The OpenAPI draft now models an authenticated unknown-execution 404 as a structured `ProtocolErrorEnvelope` with Content-Digest, Signature-Input, Signature and `X-SEM-Request-Id = request_id`. This is distinct from pre-authentication or unparseable-request failures, whose safe signed/unsigned correlation policy remains open. Deterministic signed 404 vectors now exist for both Platform GET and SEM callback directions; Python and Node verify their response signatures and exact request-context association. Live not-found interoperability remains untested; broader signed-error coverage is still open.
 
 
 D04-H77 separately requires that pre-authentication or malformed-request errors not echo untrusted request/event identifiers as authenticated correlation when no canonical request context exists. The generic error signing/correlation policy remains an explicit open decision.
@@ -323,4 +323,17 @@ If the server has authenticated a request but cannot produce the required respon
 
 The OpenAPI draft now distinguishes reusable `SignedPlatformError`, `SignedCallbackError`, `SignedPlatformRateLimitError`, `SignedCallbackRateLimitError` and `PreAuthenticationError` response components. Authenticated error responses require the correct signature headers and direction-specific correlation. Pre-authentication responses have no such headers and use a schema that structurally excludes request/event identifiers. 429 is post-authentication and requires Retry-After; 413 is an early pre-authentication rejection.
 
-This is a candidate protocol rule, not a ratified bilateral implementation. Deterministic signed 400/404/412/422/429/500 vectors, pre-auth unsigned negative fixtures, OpenAPI CI, and live HTTP middleware tests remain required.
+This is a candidate protocol rule, not a ratified bilateral implementation. Deterministic signed 404 vectors now cover Platform GET and SEM callback; Python/Node also validate unsigned pre-authentication 401/413 fixtures. Signed 400/412/422/429/500 vectors and live HTTP middleware tests remain required.
+
+
+## 19. Signed 404 and unsigned pre-authentication fixtures (2026-11-25)
+
+Added two deterministic Ed25519 response vectors to `tests/protocol/fixtures/crypto-vectors-v1.json`:
+- `http_error_404`: authenticated Platform GET for an unknown execution; signs 404, `X-SEM-Request-Id`, response Content-Digest and exact GET request context.
+- `http_callback_error_404`: authenticated SEM callback for an unknown/wrong-scope execution; signs 404, `X-SEM-Event-Id`, response Content-Digest and exact callback request context.
+
+Python and Node independently reconstruct and verify both signatures, recompute exact request/response digests, and reject mutations to the request method, authority, path, request digest and direction-specific correlation header.
+
+Added unsigned `pre_authentication_error_responses` fixtures for 401 invalid authentication and early 413 payload-size rejection. Python and Node assert that these have no protocol signature/correlation headers and that their minimal error bodies contain no message_id, in_reply_to, request_id or event_id.
+
+Acceptance cases D04-H86..H88 record these fixtures. This closes deterministic positive/negative fixture coverage for the two 404 directions and structural pre-auth error envelope shape only. It does not prove middleware ordering, that the callback receiver emits 404 only after authentication, early body-limit behavior, or live HTTP response/request association. Signed 400/412/422/429/500 vectors remain open.
