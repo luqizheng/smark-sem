@@ -313,3 +313,30 @@ expectReject(() => canonicalize(Number.NEGATIVE_INFINITY), "negative infinity");
 console.log("jcs-edge-vectors-ok: UTF-16 ordering, Unicode, recursive objects and arrays");
 console.log("jcs-number-vectors-ok: RFC 8785 Appendix B IEEE-754 samples and exponent boundaries");
 console.log("jcs-negative-vectors-ok: malformed JSON, lone surrogates and non-finite numbers");
+
+
+// Shared Platform -> AI-PM callback envelope vector. The fixture is loaded
+// with the strict parser so duplicate object members are rejected before
+// canonicalization, just as they must be at the production callback boundary.
+const callbackFixtureText = fs.readFileSync(
+  "tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json",
+  "utf8"
+);
+const callbackFixture = parseStrictJson(callbackFixtureText);
+const callbackEnvelope = callbackFixture.envelope;
+const callbackExpected = callbackFixture.expected;
+const payloadJcs = canonicalize(callbackEnvelope.payload);
+const envelopeJcs = canonicalize(callbackEnvelope);
+if (payloadJcs !== callbackExpected.payload_jcs_utf8) {
+  throw new Error("Callback payload JCS bytes differ from shared fixture");
+}
+if (crypto.createHash("sha256").update(payloadJcs, "utf8").digest("hex") !== callbackExpected.payload_hash_sha256) {
+  throw new Error("Callback payload_hash differs from shared fixture");
+}
+if (envelopeJcs !== callbackExpected.event_envelope_jcs_utf8) {
+  throw new Error("Callback complete-envelope JCS bytes differ from shared fixture");
+}
+if (crypto.createHash("sha256").update(envelopeJcs, "utf8").digest("hex") !== callbackExpected.event_envelope_hash_sha256) {
+  throw new Error("Callback event_envelope_hash differs from shared fixture");
+}
+console.log("callback-jcs-ok: payload and complete authenticated envelope bytes + SHA-256");
