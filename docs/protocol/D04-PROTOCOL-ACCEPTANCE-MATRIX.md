@@ -275,6 +275,7 @@ See [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-R
 | D04-H73 | GET snapshot 200 response includes ETag and a valid signature covering the exact ETag value | Python and Node verify response digest/signature and request context; ETag is a covered component |
 | D04-H74 | GET snapshot 200 response ETag is modified while all other response fields remain unchanged | Signature verification fails; client rejects the altered cache validator |
 | D04-H75 | Conditional 304 response ETag is modified while request `If-None-Match` and all other response fields remain unchanged | Signature verification fails; client rejects the altered cache validator |
+| D04-H76 | Authenticated GET for an unknown execution returns a signed structured 404 with `X-SEM-Request-Id = request_id` | Client verifies response signature, digest and exact request context before returning typed `NotFound` |
 
 These cases do not close P0-01 until they are represented in executable independent vectors and live request/response/replay integration tests.
 
