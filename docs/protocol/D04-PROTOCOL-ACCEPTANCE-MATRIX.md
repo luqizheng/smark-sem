@@ -211,12 +211,12 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | ID | Scenario | Expected result |
 |---|---|---|
 | D04-H40 | SEM callback ACK echoes event sequence | ACK uses `execution_event_sequence` exactly; legacy `event_sequence` is rejected |
-| D04-H41 | Delivery/process/release/uncertainty event omits runner_key_version, boot_id or supervisor_instance_id | Strict schema rejects the event |
-| D04-H42 | Process observation is exited with both exit_code and exit_signal | Reject; exactly one exit-status discriminator is allowed |
-| D04-H43 | Process observation is exited without exact process identity or exit evidence | Reject; no process-exited fact is accepted |
-| D04-H44 | Release state is process_exited without process_exit_evidence_id | Reject; no release completion/capacity release |
-| D04-H45 | Evidence reference resolves to another execution/runner/boot/supervisor/binding/launch/containment | Semantic validation rejects or quarantines; cursor must not advance |
-| D04-H46 | Structurally valid event has stale binding_epoch | Reject/quarantine as stale; do not overwrite newer binding observation |
+| D04-H101 | Delivery/process/release/uncertainty event omits runner_key_version, boot_id or supervisor_instance_id | Strict schema rejects the event |
+| D04-H102 | Process observation is exited with both exit_code and exit_signal | Reject; exactly one exit-status discriminator is allowed |
+| D04-H103 | Process observation is exited without exact process identity or exit evidence | Reject; no process-exited fact is accepted |
+| D04-H104 | Release state is process_exited without process_exit_evidence_id | Reject; no release completion/capacity release |
+| D04-H105 | Evidence reference resolves to another execution/runner/boot/supervisor/binding/launch/containment | Semantic validation rejects or quarantines; cursor must not advance |
+| D04-H106 | Structurally valid event has stale binding_epoch | Reject/quarantine as stale; do not overwrite newer binding observation |
 | D04-H47 | exit_status_unknown has positive exact containment-empty evidence but no numeric status | Accept only as unknown process exit status; never infer exit code 0 or business success |
 
 
