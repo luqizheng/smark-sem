@@ -152,7 +152,7 @@ These are new boundary artifacts, not copies. Protocol V1 is the implementation 
 
 - Historical and design document extraction: **complete for the two inventoried source directories**.
 - Code ownership inventory: **documented**.
-- Previous Protocol V1: **superseded; replacement opaque execution-message protocol under design/review**.
+- Previous Protocol V1: **superseded; replacement opaque execution-message protocol draft created and under review**.
 - Rust SEM service skeleton: **not created**.
 - Runtime code migration: **not started by design**; current Platform-coupled code remains in ai-pm.
 - SEM-02J Platform transaction audit: **still Changes Required / Audit In Progress**.
