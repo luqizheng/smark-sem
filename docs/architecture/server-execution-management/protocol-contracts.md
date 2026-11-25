@@ -1,5 +1,7 @@
 # SEM V1 Protocol Contracts
 
+> **Authority-boundary revision (2026-11-25):** This protocol is SUPERSEDED as an implementation contract by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Its SEM→Platform Claim/Lease/business-command proxy path and SEM-owned business workflow semantics are not normative.
+
 > **Authority-boundary revision (2026-11-25):** This protocol document is **SUPERSEDED as an implementation contract** by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Its SEM→Platform Claim/Lease/business-command proxy path and SEM-owned business workflow semantics are not normative.
 
 Status: normative design target. Exact route/function names must be reconciled with code before implementation.
