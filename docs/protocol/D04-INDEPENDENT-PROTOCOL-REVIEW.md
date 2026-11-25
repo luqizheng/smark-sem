@@ -148,3 +148,18 @@ Corrected the Draft:
 - Added D04-W64 to the acceptance matrix and clarified the phase in the WSS protocol catalogue.
 
 This is a schema/validator correction. The latest commit has not yet been validated by CI at the time of this note. P0/P1 disposition is not changed until CI passes and the live WSS session-supersession behavior is tested.
+
+
+## 5.5 Follow-up: RFC 9421 response-derived component correction — 2026-11-25
+
+A standards-level review of the signed-response addendum found that its proposed response signature base listed bare `@authority`. RFC 9421 §2.2 defines `@authority` as the authority of a request target; when signing a response, request-derived components must use the `req` parameter (RFC 9421 §2.4). A bare response-derived `@authority` cannot be resolved as proposed and would make the profile invalid/non-interoperable.
+
+Corrected the Draft response profile:
+- Response-derived components: `@status`, response `content-digest`, and the response correlation header.
+- Request-derived components: `@method;req`, `@authority;req`, `@path;req`, and `content-digest;req`.
+- Conditional GET additionally covers request `if-none-match;req` and response `etag`.
+- Updated D04-SEC-01 wording to use the same distinction.
+
+Reference: [RFC 9421 §§2.2 and 2.4](https://www.rfc-editor.org/rfc/rfc9421.html).
+
+This corrects a concrete standards mismatch in the proposed profile. Exact serialized Signature-Input examples, verifier request-context association, canonical vectors, and runtime interoperability remain open. P0-01 remains **OPEN / CHANGES REQUIRED**.
