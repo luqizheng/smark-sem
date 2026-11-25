@@ -353,3 +353,17 @@ The stale D-05 §3.3 generic OS-adapter alternatives have also been replaced wit
 - **P1 event stream scope remains Draft-closed pending full branch-by-branch schema/cursor cross-check.
 
 **Overall disposition remains CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT.** The host-loss decision and stale OS-profile contradiction are resolved, but the Linux integration/failure-injection evidence and D-04 bilateral protocol closure are still missing.
+## 12. systemd D-Bus job semantics verification — 2026-11-25
+
+Reviewed the official systemd 250 D-Bus API contract. It confirms that StartTransientUnit returns a job object path; the Manager exposes JobNew/JobRemoved, ListJobs and GetJob; job state is waiting or running; and CancelJob has no effect once execution of that job has begun. The API also documents that a canceled JobRemoved result does not by itself prove the associated operation had no process side effect. See the [systemd 250 D-Bus API](https://www.freedesktop.org/software/systemd/man/250/org.freedesktop.systemd1.html).
+
+The official systemd control-group interface documents that RemainAfterExit retains a completed transient service in `SubState=exited`, allowing status properties to be read before StopUnit cleanup. See [systemd Control Group Interface](https://systemd.io/CONTROL_GROUP_INTERFACE/).
+
+Consequences now incorporated into D-05 §3.6 and acceptance cases D05-75–78:
+- Subscribe to job signals before StartTransientUnit and persist returned job identity/path; lost replies require exact unit + ListJobs reconciliation, never blind duplicate start.
+- A `waiting` start job may be canceled, but no effective no-start ACK is allowed until the matching JobRemoved result and independent no-process/no-pending-start proof are observed.
+- A `running` start job cannot be canceled with CancelJob. The broker must issue StopUnit against the exact unit, observe its stop job, then verify exact invocation terminal state and cgroup v2 `populated=0`.
+- Job IDs are manager-runtime scoped and must be bound to host boot_id; old-boot IDs cannot be reused as current evidence.
+- JobRemoved result, unit ActiveState/SubState and cgroup emptiness are distinct observations; none alone substitutes for the full exit/no-late-start proof.
+
+This is authoritative documentation research, not a live systemd integration test. It sharpens the contract but does not close P0-03/P0-04. A systemd 250+ failure-injection harness remains mandatory.
