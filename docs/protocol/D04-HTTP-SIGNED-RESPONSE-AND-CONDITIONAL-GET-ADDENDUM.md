@@ -215,3 +215,15 @@ The fixture stores exact request bytes and response bytes. Python and Node valid
 The Python and Node response-vector verification steps passed in CI run #197 on commit `1367ecc3eb4d78b1484ad1b279df6ae55b251d12`, including RFC 9421 `sf` canonicalization of request and response Content-Digest fields. This is a deterministic fixture check, not a live HTTP-stack test.
 
 This does **not** prove an RFC 9421 HTTP stack's live request-context association, duplicate-header handling, proxy behavior, redirect rejection, signed 4xx/5xx behavior, response nonce replay storage, or production client/server interoperability. The vectors are primitive/signature-base fixtures, not a complete RFC 9421 parser or runtime verifier. D04-H52 and D04-H57 have deterministic fixture coverage only; the rest of H52–H62 remain open, and P0-01 remains **OPEN / CHANGES REQUIRED** until live bilateral tests and replay-policy closure.
+
+
+## 8.9 OpenAPI correlation-header alignment correction (2026-11-25)
+
+The response correlation identity is now explicit:
+
+- Platform→SEM: `X-SEM-Request-Id` MUST echo the authenticated request `request_id` (the `Idempotency-Key`), not `message_id`. The response body may independently echo `message_id`.
+- SEM→AI-PM callback: `X-SEM-Event-Id` MUST echo the authenticated callback `event_id`.
+
+The earlier prose incorrectly named `message_id` for the Platform→SEM response correlation header, while the deterministic 202/304 fixtures and validators already used `request_id`. The prose and D04-H56 case have been corrected; Python and Node fixtures explicitly require response.request_id == request.request_id and prove it differs from message_id.
+
+The OpenAPI draft now requires MessageId and RequestId on conditional GET, declares the common signature/digest and direction-specific correlation headers on successful 202/200/304/callback-200 responses, and corrects the 304 correlation-header description. Direction-specific signed error-response header declarations remain open; the shared error response components must not imply both correlation headers or omit the required one. D-04 remains Draft / Changes Required.
