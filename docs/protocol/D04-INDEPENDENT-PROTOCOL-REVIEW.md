@@ -114,3 +114,12 @@ A focused addendum was added after reviewing the OpenAPI response surface:
 - D04-H52..H62 were added to the acceptance matrix for signed success/errors, correlation mismatch, missing signatures, digest mismatch, 304 ETag/no-body behavior, response replay and revoked keys.
 
 This is a Draft-level completeness improvement only. The exact RFC 9421 component identifiers/canonical signature bases, response nonce replay scope, freshness bounds, key lifecycle, proxy/HTTP-version behavior, error correlation policy, independent response vectors and live verifier/replay-store tests remain open. Therefore **P0-01 remains OPEN / CHANGES REQUIRED**. The new acceptance cases are specifications, not executed tests.
+
+
+## 5.2 Follow-up: full JCS source-level conformance review — 2026-11-25
+
+Review of `scripts/validate_sem_crypto_vectors.py` confirms the current Python WSS serializer uses `json.dumps(sort_keys=True, separators=(",", ":"))`. The checked-in fixture is intentionally ASCII-only with integer values; for that restricted fixture the bytes match, but Python code-point key ordering is not RFC 8785 UTF-16 code-unit ordering. Therefore this validator is a fixed-fixture smoke test, not a general JCS implementation. The Node CI check likewise only proves the fixed fixture subset in the current evidence.
+
+Added [D-04 RFC 8785 Full JCS Conformance Addendum](./D04-RFC8785-FULL-JCS-CONFORMANCE-ADDENDUM.md) and D04-W52..W63 cases covering UTF-16 ordering, escaping, number formatting, negative zero, non-finite values, duplicate object members, invalid surrogates, nested structures, challenge/proof binding, replay, expiry and downgrade rejection.
+
+This is a review/specification correction. No validator implementation was changed and these new cases have not been executed. P0-02 remains **OPEN / CHANGES REQUIRED** until independent RFC 8785 implementations produce matching reference bytes and handshake lifecycle tests prove no session is created on rejection.
