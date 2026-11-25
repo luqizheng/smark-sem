@@ -257,13 +257,27 @@ $defs:
       binding_epoch: { type: integer, minimum: 1 }
       uncertainty_code: { enum: [wss_disconnected, heartbeat_stale, supervisor_unavailable, delivery_ack_unknown, process_state_unknown, host_unreachable, journal_gap, evidence_conflict] }
       uncertainty_scope: { enum: [delivery, process, release, runner_host, event_stream] }
-      runner_id: { type: string, format: uuid }
-      runner_key_version: { type: integer, minimum: 1 }
-      boot_id: { type: string, minLength: 1 }
-      supervisor_instance_id: { type: string, format: uuid }
+      runner_id:
+        type: string
+        format: uuid
+        description: Last authenticated Runner identity for this binding; do not infer current host reachability from this field.
+      runner_key_version:
+        type: integer
+        minimum: 1
+        description: Key version used by the last authenticated Runner session associated with this binding.
+      boot_id:
+        type: string
+        minLength: 1
+        description: Last authenticated boot identity observed for this binding; when host_unreachable, this is historical identity, not a claim that the host is currently reporting.
+      supervisor_instance_id:
+        type: string
+        format: uuid
+        description: Last authenticated Supervisor instance associated with this binding; when supervisor_unavailable or host_unreachable, this is the last-known instance.
       since: { type: string, format: date-time }
       reconciliation_required: { const: true }
-      reservation_retained: { const: true }
+      reservation_retained:
+        const: true
+        description: SEM MUST keep the durable capacity reservation held until authoritative reconciliation or a separately authorized terminal disposition.
       operator_action_required: { type: boolean }
       evidence_refs: { type: array, maxItems: 64, items: { type: string, minLength: 1 } }
     additionalProperties: false
