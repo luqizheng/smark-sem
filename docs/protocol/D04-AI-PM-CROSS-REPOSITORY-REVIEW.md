@@ -133,3 +133,8 @@ The execution lifecycle explicitly says `binding_epoch` is allocated only when S
 This is a dispatch/release race, not a harmless optional-field issue. A safe contract must define a linearization point shared with dispatch: an unbound-release request must atomically fence future assignment, and if assignment already won the race it must return/reconcile the actual bound epoch and require the normal fenced release path. The response/event contract must distinguish `released_unbound` (no Runner was ever bound and future dispatch is fenced) from process-exit states; it must not fabricate a Runner stop fence or process-exit evidence.
 
 Before ratification, specify the request union (for example, an explicit expected-binding condition of `unbound` versus `bound(epoch)`), the SEM dispatch sequencer behavior, replay/idempotency, and a Platform event shape that can report unbound release without inventing Runner identity. Add tests for cancel-before-dispatch, dispatch-wins race, lost response/retry, and no late Runner assignment after unbound release. This is P0-07 / Changes Required; no implementation is authorized.
+
+
+### 6.6 Required acceptance coverage for P0-07
+
+Added D04-H91/H92/H93 to make the unbound-release race explicit: cancel-before-dispatch must atomically fence future dispatch; dispatch-wins must return the actual bound epoch and require normal fenced release; release-wins must reject any delayed assignment and remain replayable/idempotent. These are required future contract behaviors, not passing implementation tests; P0-07 remains open until the request/event schema and SEM dispatch sequencer define them.
