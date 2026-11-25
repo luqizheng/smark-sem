@@ -68,6 +68,9 @@ for name in ("http_response", "http_304"):
     vector = data[name]
     request = vector["request"]
     response = vector["response"]
+    request_body = request["body"].encode("utf-8")
+    expected_request_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(request_body).digest()).decode("ascii") + ":"
+    assert expected_request_digest == request["content_digest"], name + " associated request Content-Digest mismatch"
     response_body = response["body"].encode("utf-8")
     expected_response_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(response_body).digest()).decode("ascii") + ":"
     assert expected_response_digest == response["content_digest"], name + " response Content-Digest mismatch"
