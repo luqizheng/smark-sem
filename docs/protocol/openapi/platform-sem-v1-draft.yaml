@@ -141,7 +141,11 @@ paths:
               schema: { $ref: '#/components/schemas/EventAcknowledgementEnvelope' }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '409': { $ref: '#/components/responses/IdempotencyConflict' }
+        '409':
+          description: Event ID/body conflict or execution event-sequence gap; inspect structured error code.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProtocolErrorEnvelope' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '500': { $ref: '#/components/responses/ServerError' }
 components:
@@ -213,12 +217,7 @@ components:
         payload: { type: object }
       additionalProperties: false
     ExecutionRequestedEnvelope:
-      allOf:
-        - $ref: '#/components/schemas/BaseEnvelope'
-        - type: object
-          properties:
-            message_type: { const: execution.requested }
-            payload: { $ref: '#/components/schemas/ExecutionRequest' }
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/ExecutionRequestedEnvelope'
     ExecutionRequest:
       type: object
       required: [execution_id, prompt, harness_profile, runner_requirements]
@@ -251,12 +250,7 @@ components:
         accepted_at: { type: string, format: date-time }
       additionalProperties: false
     ExecutionReleaseRequestedEnvelope:
-      allOf:
-        - $ref: '#/components/schemas/BaseEnvelope'
-        - type: object
-          properties:
-            message_type: { const: execution.release_requested }
-            payload: { $ref: '#/components/schemas/ExecutionReleaseRequest' }
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/ExecutionReleaseRequestedEnvelope'
     ExecutionReleaseRequest:
       type: object
       required: [execution_id, release_id, expected_binding_epoch, stop_policy]
@@ -284,19 +278,7 @@ components:
         accepted_at: { type: string, format: date-time }
       additionalProperties: false
     SemInfrastructureEventEnvelope:
-      type: object
-      required: [event_id, event_type, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
-      properties:
-        event_id: { type: string, format: uuid }
-        event_type:
-          enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain]
-        schema_version: { const: 1 }
-        occurred_at: { type: string, format: date-time }
-        execution_id: { type: string, format: uuid }
-        execution_event_sequence: { type: integer, minimum: 1 }
-        correlation_id: { type: string, format: uuid }
-        payload: { type: object, minProperties: 1 }
-      additionalProperties: false
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/SemInfrastructureEventEnvelope'
     ExecutionSnapshotEnvelope:
       type: object
       required: [execution_id, infrastructure_state, observed_at, version]
@@ -310,13 +292,7 @@ components:
         version: { type: integer, minimum: 1 }
       additionalProperties: false
     EventAcknowledgementEnvelope:
-      type: object
-      required: [event_id, disposition, acknowledged_at]
-      properties:
-        event_id: { type: string, format: uuid }
-        disposition: { enum: [accepted, duplicate] }
-        acknowledged_at: { type: string, format: date-time }
-      additionalProperties: false
+      $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/EventAcknowledgementEnvelope'
     ProtocolErrorEnvelope:
       type: object
       required: [error]
@@ -332,5 +308,7 @@ components:
             retryable: { type: boolean }
             retry_after_ms: { type: [integer, 'null'], minimum: 0 }
             detail: { type: string, maxLength: 512 }
+            execution_id: { type: string, format: uuid }
+            expected_sequence: { type: integer, minimum: 1 }
           additionalProperties: false
       additionalProperties: false
