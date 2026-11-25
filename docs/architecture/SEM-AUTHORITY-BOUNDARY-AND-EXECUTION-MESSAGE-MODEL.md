@@ -107,7 +107,7 @@ Platform MCP remains mandatory for Harness business context and business operati
 - SEM-to-Runner and Platform-to-SEM authentication remain mandatory, scoped, short-lived/rotatable and auditable.
 - Harness-to-AI-PM MCP authentication is independent of SEM service identity. Never forward SEM service credentials as a human or project principal. A per-execution delegated grant must be scoped to one Task/attempt and must not impersonate a human.
 - AI-PM must bind Harness MCP credentials to the intended tenant/project/principal and enforce permissions on every call.
-- Prompt bodies may contain secrets or untrusted instructions: V1 Platform↔SEM transport is internal plain HTTP and therefore does not provide wire confidentiality; keep this traffic on a restricted company network, authenticate and integrity-protect every request, encrypt sensitive payload fields at the application layer if the internal-network threat model requires it, encrypt persisted data at rest, redact logs, constrain size/content type, and never execute them inside SEM.
+- Prompt bodies may contain secrets or untrusted instructions: V1 Platform↔SEM transport is restricted to the company private network and may use HTTP or HTTPS. HTTP provides no wire confidentiality; authenticate and integrity-protect every request, apply timestamp/nonce replay defense, and protect sensitive fields at the application layer when HTTP is selected. HTTPS must validate an explicitly trusted enterprise CA or pinned self-signed certificate; verification bypass is forbidden. Encrypt persisted data at rest, redact logs, constrain size/content type, and never execute prompt bodies inside SEM.
 - SEM routing metadata is not authorization. AI-PM-issued execution authorization and Harness MCP authorization remain separate controls.
 - Correlation IDs are not credentials and must not be accepted as proof of business identity.
 
@@ -117,7 +117,11 @@ Platform MCP remains mandatory for Harness business context and business operati
 
 AI-PM authorization_generation fences delegated Harness MCP business operations; SEM execution_epoch/binding_epoch fences Runner delivery/release messages. These are separate authority domains and neither substitutes for the other. If a Runner disconnects without positive process-exit evidence, SEM must retain infrastructure uncertainty and must not dispatch a competing Harness for the same attempt. AI-PM may revoke the old delegated grant, but that does not prove the old process can no longer mutate Git remotes or external systems.
 
-## 9. Required follow-up before implementation
+## 9. Transport deployment profile
+
+Platform↔SEM supports internal HTTP and HTTPS without changing message schemas. HTTPS accepts public CA, enterprise CA or explicitly trusted self-signed certificates. Clients validate the trust chain or configured certificate/public-key pin and hostname; no insecure bypass is permitted. HTTP is restricted to the private network and has no wire confidentiality. Runner registration and WSS use the same trust-material policy, while Runner key proof-of-possession remains a separate identity layer. Certificate distribution, renewal, rotation, overlap and revocation are D-09 requirements.
+
+## 10. Required follow-up before implementation
 
 1. Replace the previous Protocol V1 wire contract with request/delivery/release/runtime-observation messages.
 2. Decide whether AI-PM sends the prompt inline or by a short-lived content reference; SEM must still treat it as opaque.
@@ -132,6 +136,6 @@ AI-PM authorization_generation fences delegated Harness MCP business operations;
 No implementation, migration, Phase 0 start or production-readiness claim is authorized by this document.
 
 
-## 10. Companion contract
+## 11. Companion contract
 
 The detailed [Execution Identity, Lifecycle, Fencing and Delivery Contract](../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md) specifies the proposed delegated grant, two-stage Runner-bound credential bootstrap, AI-PM Run / SEM Execution correlation, inbox/outbox idempotency, process evidence, dual fencing, uncertain Runner quarantine and remote Git evidence. It is a design draft and does not authorize implementation.
