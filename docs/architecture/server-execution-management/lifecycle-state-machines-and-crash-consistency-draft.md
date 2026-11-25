@@ -341,17 +341,19 @@ AI-PM remains the sole authority for TaskStatus, RunKind, RunStatus, RunOutcome 
 
 User decision (2026-11-25): V1 Runner hosts are Linux-only. Windows and other operating systems are out of scope for V1.
 
-The selected V1 architecture candidate is a host systemd manager owning one transient service unit and dedicated cgroup v2 subtree per execution binding. The Runner Supervisor is a host-managed systemd service and invokes the manager through its system D-Bus API. A Runner container without a trusted host-side broker is unsupported. Harness processes run under a distinct unprivileged Unix identity, receive no cgroup delegation or manager access, and cannot move themselves/descendants out of their execution cgroup.
+The selected V1 architecture candidate is a host systemd manager owning one transient service unit and dedicated cgroup v2 subtree per execution binding. The Runner Supervisor is a host-managed systemd service and invokes the manager through its system D-Bus API. A Runner container without a trusted host-side broker is unsupported. The candidate systemd service properties are Type=exec, ExitType=cgroup, RemainAfterExit=yes, CollectMode=inactive, Restart=no and KillMode=control-group, with no cgroup delegation. ExitType=cgroup requires systemd 250 or later, making v250 the minimum candidate version pending distro integration tests. Harness processes run under a distinct unprivileged Unix identity, receive no cgroup delegation or manager access, and cannot move themselves/descendants out of their execution cgroup.
 
 Normative requirements:
 
-- Host admission requires Linux unified cgroup v2, systemd as PID 1, reachable system D-Bus manager, and the required cgroup/systemd security controls. Unsupported hosts are never dispatch-ready.
+- Host admission requires Linux unified cgroup v2, systemd 250 or later as PID 1, reachable system D-Bus manager, and the required cgroup/systemd security controls. Unsupported hosts are never dispatch-ready.
 - Each binding has a stable launch_id, containment_id and systemd unit identity derived from runner_id + execution_id + binding_epoch. The exact encoding is a D-10 implementation detail; identities must be collision-resistant and immutable.
 - The Supervisor commits start_intent and the stable unit identity before calling systemd. A retry queries/adopts the same unit and invocation; it never creates a second independent unit for the same launch_id.
-- The systemd manager owns the process across Supervisor restart; the Supervisor journal owns command idempotency and event durability. Both are required for recovery.
+- The systemd manager owns the live process across Supervisor restart; the Supervisor journal owns command idempotency and event durability. Both are required for recovery.
+- The broker resolves the exact unit with GetUnit and inspects InvocationID, ControlGroup, ActiveState/SubState and outstanding jobs before retrying. It never blindly repeats StartTransientUnit after an ambiguous reply. Unit names are unique only while loaded; a durable journal tombstone prevents launch_id/unit identity reuse after unit cleanup or garbage collection.
+- RemainAfterExit=yes retains a successfully completed service in active/exited state; CollectMode=inactive avoids aggressive inactive-or-failed collection. The Supervisor must not stop/reset-failed/clean the unit before local terminal evidence and SEM reconciliation are durable. The Supervisor journal, not systemd unit retention, is the long-lived tombstone.
 - Configure no automatic restart, KillMode=control-group, no cgroup delegation, and no Harness access to host Docker/systemd control sockets. The final systemd property set and minimum supported systemd version require a D-10 contract and Linux integration tests.
 - Release/start is serialized through the durable Supervisor sequencer. While a systemd start job is unresolved, state remains local_uncertain and no effective stop-fence ACK is sent. Recovery queries the exact stable unit and outstanding jobs.
-- Positive exit requires matching systemd invocation identity, terminal inactive state with no restart pending, and exact cgroup v2 populated=0 evidence; the Supervisor journals that evidence before sending it to SEM. Stop-job ACK and PID absence are insufficient.
+- Positive exit requires matching systemd invocation identity, a retained terminal state (active/exited for a successful process with RemainAfterExit, or failed for a non-zero failure) with no restart/start job pending, and exact cgroup v2 populated=0 evidence; the Supervisor journals that evidence before sending it to SEM. Stop-job ACK and PID absence are insufficient.
 - Terminal unit/process evidence must remain queryable until the Supervisor journal and SEM reconciliation both durably acknowledge it. Garbage collection cannot erase the only evidence for an uncertain launch.
 - Host boot_id changes require old-boot launch-registry reconciliation. A boot boundary can prove old kernel processes cannot continue, but ambiguous host identity/boot lineage still remains quarantined.
 
@@ -544,7 +546,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 - Local journal must be access-controlled and tamper-evident to the extent supported by the host profile. Host compromise is handled by D-03 trust and isolation policy, not by assuming the journal is infallible.
 - Clock timestamps are diagnostic; ordering and fencing use stable IDs, epochs and sequence numbers, not wall-clock ordering alone.
 
-## 10. Acceptance matrix (70 cases)
+## 10. Acceptance matrix (74 cases)
 
 | ID | Scenario | Required result |
 |---|---|---|
@@ -618,6 +620,10 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-68 | terminal systemd unit is garbage-collected before SEM reconciliation completes | Test must fail; retention contract must preserve recoverable terminal evidence |
 | D05-69 | Runner Supervisor runs inside a container without host systemd broker | Runner is unsupported and cannot become dispatch-ready |
 | D05-70 | Host boot_id changes and old process registry cannot be correlated to host identity | Old execution remains quarantined; no automatic reassignment |
+| D05-71 | Supervisor receives ambiguous StartTransientUnit reply and retries without resolving the unit/job | Test fails; broker must query exact unit/job first and never blindly issue a second start |
+| D05-72 | Successful Harness process exits and systemd unit would otherwise be garbage-collected | RemainAfterExit retains terminal unit until reconciliation; durable journal tombstone survives later cleanup |
+| D05-73 | Failed Harness unit is reset/garbage-collected before terminal evidence is durable and SEM reconciles | Test fails; cleanup/reset is blocked until both durable acknowledgements exist |
+| D05-74 | A cleaned/GC'd unit name is reused for an old launch_id after journal tombstone exists | Broker rejects reuse; launch_id and unit identity are immutable |
 
 ## 11. Open decisions required before ratification
 
