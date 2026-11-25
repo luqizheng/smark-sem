@@ -5,7 +5,7 @@
 - Owner: SEM (Runner transport, identity, admission and infrastructure delivery).
 - Companion: [Platform–SEM Execution Message Protocol Draft](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md).
 - Scope: Runner registration follow-up, authenticated WSS session, liveness, dispatch, delivery ACK, telemetry, reconnect and replay.
-- Machine-readable schema: [Runner–SEM WSS v1 JSON Schema](./json-schema/runner-sem-v1.schema.yaml).
+- Machine-readable schemas: [Runner–SEM WSS v1 JSON Schema](./json-schema/runner-sem-v1.schema.yaml) and [Runner–SEM handshake JSON Schema](./json-schema/runner-sem-handshake-v1.schema.yaml).
 - Explicit non-goals: AI-PM business authorization, Task state, Harness MCP grant semantics, business retry policy, process-exit inference from connection state.
 
 ## 1. Protocol invariants
@@ -41,7 +41,9 @@ Candidate handshake:
 6. SEM sends `runner.session.established` with a new random `connection_id`, server-issued `session_generation`, negotiated protocol version and heartbeat policy.
 7. Runner acknowledges the session and begins application heartbeats.
 
-The exact canonical byte encoding, signature algorithm parameters, TLS policy, challenge TTL and key-rotation overlap must be frozen in D-01/D-09 before implementation. TLS trust configuration must support an enterprise CA bundle or an explicitly pinned self-signed certificate/public key; hostname/identity validation remains mandatory and verification bypass is forbidden. Ed25519 is the current D-01 candidate, not a ratified cryptographic profile.
+Candidate transcript profile for review: Ed25519 signs UTF-8 bytes consisting of the domain-separation prefix `SEM-RUNNER-WSS-AUTH-V1\\n` followed by the RFC 8785 JSON Canonicalization Scheme (JCS) serialization of an object containing audience, endpoint_authority, runner_id, key_version, challenge_id, server_nonce, client_nonce and selected_protocol_version. The challenge is single-use; candidate TTL is 30 seconds; server_nonce and client_nonce are each 32 cryptographically random bytes encoded base64url without padding. The signature is the 64-byte Ed25519 signature encoded base64url without padding. The candidate handshake shapes are in [Runner–SEM handshake JSON Schema](./json-schema/runner-sem-handshake-v1.schema.yaml). These values are proposals pending D-01 ratification and test vectors.
+
+TLS trust configuration must support an enterprise CA bundle or an explicitly pinned self-signed certificate/public key; hostname/identity validation remains mandatory and verification bypass is forbidden. Runner key proof-of-possession remains separate from TLS server authentication.
 
 ### 2.3 Session fencing
 
