@@ -379,6 +379,22 @@ for name in ("http_response", "http_error_409", "http_error_404", "http_snapshot
     assert response_private.sign(response_base.encode("ascii")) == response_sig
 
 
+
+# Pre-authentication errors are deliberately unsigned and carry no protocol IDs.
+for response in data["pre_authentication_error_responses"]:
+    assert response["status"] in (401, 413), "unexpected pre-authentication status"
+    assert response["headers"] == [], "pre-authentication response must have no protocol signature/correlation headers"
+    error_envelope = json.loads(response["body"], object_pairs_hook=reject_duplicate_object_members)
+    assert set(error_envelope) == {"error"}, "pre-authentication body must contain only the generic error"
+    error = error_envelope["error"]
+    assert set(error) == {"class", "code", "detail", "retryable"}, "pre-authentication error contains extra fields"
+    assert error["retryable"] is False, "pre-authentication error must not authorize automatic retry"
+    if response["status"] == 401:
+        assert error["class"] == "auth" and error["code"] == "AUTHENTICATION_FAILED"
+    else:
+        assert error["class"] == "protocol" and error["code"] == "PAYLOAD_TOO_LARGE"
+    assert not ({"message_id", "in_reply_to", "request_id", "event_id"} & set(error_envelope)), "pre-authentication error leaked a protocol identity"
+
 rfc = data["rfc9421_official_ed25519"]
 rfc_pub = b64d(rfc["public_key_base64"])
 rfc_sig = b64d(rfc["signature_base64"])
