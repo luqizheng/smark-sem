@@ -106,6 +106,8 @@ Define which evidence is trusted, who can issue it, how it is signed/audited, an
 
 ### D-04 — Complete bilateral protocol
 
+A detailed Runner↔SEM WSS candidate is now recorded in [Runner–SEM WebSocket Protocol and Dispatch Contract Draft](../protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md). It defines the authenticated long-lived session, connection-generation fencing, heartbeat/health separation, telemetry, durable delivery ACK, reconnect/replay, backpressure and dispatch eligibility. It remains Draft; exact crypto canonicalization, timers, resource policy and machine-readable schemas remain open.
+
 Publish machine-readable OpenAPI/JSON Schema and examples for:
 - execution.requested / accepted / rejected;
 - execution.binding_established;
