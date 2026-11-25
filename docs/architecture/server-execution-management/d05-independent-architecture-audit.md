@@ -271,7 +271,7 @@ This is a design decision, not implementation evidence. The Linux profile is not
 5. How a host-side broker is packaged and authenticated if Runner control-plane components are containerized.
 6. Failure-injection evidence for every start/release/exit boundary in D-03 §13.5 and D-05 D05-61–74.
 
-Permanent host loss is still unresolved: Linux-only does not imply a managed VM or BMC. Until the deployment's host-management profile is selected and tested, permanent host loss remains quarantine plus operator intervention.
+(Superseded by §11) At the earlier review snapshot, permanent host loss had no selected deployment profile. The user subsequently confirmed the V1 visible-status + quarantine + manual on-site handling policy; no managed VM/BMC integration is required.
 
 **Updated audit disposition: CHANGES REQUIRED.** The OS scope and architecture candidate are selected, but P0-02/P0-03/P0-04 remain open pending Linux integration/failure-injection proof; P0-01 still requires independent source/matrix review. No ratification or implementation is authorized.
 
@@ -315,7 +315,7 @@ Remaining blockers:
 - Freeze exact systemd properties and D-Bus query sequence used to bind the observation to the immutable invocation: InvocationID, ControlGroup, ActiveState, SubState, Result, ExecMainCode, ExecMainStatus, job state and cgroup.events populated value.
 - Define how evidence is captured atomically enough to avoid querying one invocation and reading cgroup state after a unit-name reuse/race. The journal tombstone and invocation check must fence reuse.
 - Prove retention/GC behavior for successful and failed units until both local journal and SEM reconciliation acknowledge evidence.
-- Define host reboot and permanent host loss separately under D-03 Profiles A/B/C; systemd state from the prior boot may not be queryable after reboot.
+- Define host reboot reconciliation separately from the user-confirmed D-03 manual host-loss procedure; systemd state from the prior boot may not be queryable after reboot.
 
 ### P1 observations
 
@@ -339,14 +339,14 @@ Remaining blockers:
 
 The user has explicitly confirmed the V1 permanent-host-loss operating model: the deployment is inside the company network; SEM only needs to make an unreachable Runner visible; an on-site person handles physical investigation. No cloud/VM power API, BMC/IPMI or remote power-off integration is required.
 
-D-03 now specifies visible durable alerting, `unreachable` Runner state, `infrastructure_uncertain` affected executions, retained quarantine/reservations, and an auditable on-site operator inspection/disposition. Alert acknowledgement, timeout, WSS disconnect, heartbeat expiry, MCP revocation and stop ACK do not release capacity. Ambiguous physical condition remains quarantined. No automatic permanent-host-loss failover is promised.
+D-03 now specifies a durable `unreachable` status in the SEM operator-facing surface, `infrastructure_uncertain` affected executions, retained quarantine/reservations, and a minimal audited manual resolution action only when normal Runner reconnect/reconciliation cannot resolve the incident. No email/SMS/IM integration, evidence-upload subsystem, cloud/BMC control or automatic permanent-host-loss failover is required. Alert/status acknowledgement, timeout, WSS disconnect, heartbeat expiry, MCP revocation and stop ACK do not release capacity.
 
 The stale D-05 §3.3 generic OS-adapter alternatives have also been replaced with the already user-approved Linux-only systemd 250+/cgroup v2 profile. Windows Job Object and alternate Linux launch mechanisms are explicitly out of V1 scope. This closes the documentation contradiction identified in the previous review; it does not close the systemd integration proof.
 
 ### Updated findings
 
 - **P0-02 stale generic OS profile text: CLOSED at Draft-contract level.** D-05 §3.3 now consistently selects the Linux systemd transient-unit/cgroup v2 profile. Exact D-Bus properties, StartTransientUnit job semantics, hostile-descendant containment and crash injection remain open.
-- **D-03 permanent-host-loss deployment choice: CLOSED at user-decision level.** V1 is visible alert + quarantine + manual on-site operator disposition. There is no open choice among managed VM/BMC/unmanaged profiles. The operator evidence and administrative workflow still require detailed design and acceptance tests.
+- **D-03 permanent-host-loss deployment choice: CLOSED at user-decision level.** V1 is visible alert + quarantine + manual on-site operator disposition. There is no open choice among managed VM/BMC/unmanaged profiles. The minimal administrative disposition/audit record and its authorization still require acceptance tests; no separate evidence-management workflow is required.
 - **P0-03 release/start race: PARTIAL.** systemd job accepted/queued versus ExecStart/process-spawn linearization and cancellation/fencing proof remain open.
 - **P0-04 process exit after Supervisor crash: PARTIAL.** Exact systemd D-Bus evidence query, cgroup observation consistency, unit retention/GC and reboot reconciliation remain open.
 - **P0-01 remains closed only at Draft-contract level; AI-PM source recheck is required immediately before ratification.
