@@ -115,7 +115,7 @@ Rules:
 | SEM → Runner | `runner.session.superseded` | Close stale connection |
 | Runner → SEM | `runner.replay.request` | Request reconciliation after reconnect |
 
-The `runner.session.ack` frame belongs to the pre-application handshake schema and is not part of the post-handshake application envelope. The application-message schema has a dedicated strict payload definition for every post-handshake message type. Direction is normative as shown in this catalogue.
+The `runner.session.ack` frame belongs to the pre-application handshake schema and is not part of the post-handshake application envelope. `runner.session.superseded` is sent on an already authenticated, older connection and therefore belongs only to the post-handshake application schema; it is not a handshake frame. The handshake and application schema message-type sets MUST be disjoint. The application-message schema has a dedicated strict payload definition for every post-handshake message type. Direction is normative as shown in this catalogue.
 
 Application heartbeat is not replaced by WebSocket ping/pong. Ping/pong is a transport keepalive and fast dead-peer hint only.
 
