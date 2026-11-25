@@ -10,7 +10,7 @@
 **SEM is an independent execution-message transport and runtime-management service. It does not own or interpret AI-PM business semantics.**
 
 - AI-PM Platform is the sole authority for Project, Task, Run/business execution state, approvals, business commands, business results, and task completion.
-- SEM receives execution messages from AI-PM, routes the opaque prompt/body to an eligible Runner, manages Runner/Harness runtime resources, and reports infrastructure observations.
+- SEM receives execution messages from AI-PM, routes the opaque prompt/body to an eligible Runner, coordinates infrastructure delivery/release messages, records Runner-reported observations, and reports infrastructure facts.
 - Runner starts or attaches to the configured AI Harness and delivers the prompt.
 - Harness obtains Task context and performs all business operations through AI-PM MCP.
 - Harness does not use SEM as a business-context provider or business-state writer.
@@ -29,7 +29,7 @@ SEM may parse and validate its own transport envelope and infrastructure-routing
 | Prompt content and business instructions | AI-PM authors; SEM transports opaquely |
 | Execution request delivery ledger | SEM |
 | Runner registration/connection and routing eligibility | SEM infrastructure boundary, subject to AI-PM-issued authorization |
-| Harness process start/stop supervision and OS observations | Runner Supervisor / SEM |
+| Harness process start/stop supervision and OS observations | Runner Supervisor |
 | Runner CPU, memory, disk and capacity telemetry | Runner reports; SEM stores/uses for infrastructure admission |
 | Execution resource reservation/release | SEM |
 | Business-to-execution correlation | AI-PM owns the mapping; SEM stores only opaque correlation identifiers |
@@ -44,7 +44,7 @@ A transport acknowledgement is not a business acknowledgement. A process exit is
 4. **Harness → AI-PM MCP: business work.** Harness authenticates independently to AI-PM MCP, fetches the referenced Task and all required context, and performs authorized Task transitions and business operations directly in AI-PM.
 5. **Harness → AI-PM MCP: business result.** Harness reports progress/results through MCP. AI-PM validates and commits business state. Only AI-PM decides whether the Task is complete.
 6. **AI-PM → SEM: release instruction.** After its own business decision, AI-PM sends an idempotent release/stop instruction for the opaque execution ID.
-7. **SEM → Runner: runtime cleanup.** SEM asks Runner to gracefully stop/close the associated Harness process, applies the configured timeout/force-stop policy, releases infrastructure reservations only when safe, and records the cleanup outcome.
+7. **SEM → Runner: runtime cleanup.** SEM sends the release/stop instruction to Runner. Runner Supervisor performs graceful/forced local process termination under its policy and reports exact process/cleanup observations. SEM records the result and releases its infrastructure reservation only when evidence and reconciliation policy permit.
 8. **SEM → AI-PM: infrastructure result.** SEM reports released, still-releasing, failed, or uncertain infrastructure status. AI-PM records this separately from Task status.
 
 The execution request does not grant Harness permission to bypass AI-PM MCP authorization. Installing/configuring the AI-PM MCP is a Harness prerequisite, but each MCP operation still uses an independently authenticated, project-scoped identity and AI-PM authorization.
@@ -81,7 +81,7 @@ SEM must not expose Platform Claim, Lease Renewal, business command ACK, Task tr
 
 - **Harness exits naturally:** Runner reports exact process-exit observation to SEM; SEM reports it to AI-PM. AI-PM decides the business consequence.
 - **Harness crashes/non-zero exit:** SEM reports exit code and evidence. AI-PM decides retry or human intervention.
-- **AI-PM releases:** SEM performs runtime cleanup and reports the cleanup result.
+- **AI-PM releases:** SEM forwards the release instruction; Runner Supervisor performs local Harness cleanup and reports process facts through SEM.
 - **Runner disconnects:** SEM marks infrastructure state uncertain and reconciles when Runner reconnects. It must not infer process death from heartbeat loss or workspace deletion.
 - **Duplicate or late messages:** idempotency and generation fencing prevent duplicate starts and stale stops.
 - **SEM restarts:** durable inbox/outbox and execution ledger recover message delivery and runtime reconciliation. No business state is reconstructed from SEM data.
