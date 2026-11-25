@@ -114,6 +114,37 @@ release_missing = json.loads(json.dumps(release_event))
 release_missing["payload"]["release_state"] = "process_exited"
 expect_invalid(platform_validator, release_missing, "process_exited release without evidence reference")
 
+# Cross-protocol process-exit and uncertainty invariants.
+runner_exit = next(item for item in data["runner_messages"] if item["message_type"] == "harness.process_exited")
+assert runner_exit["payload"]["exit_status"]["kind"] in {"code", "signal", "unknown"}
+runner_signal = json.loads(json.dumps(runner_exit))
+runner_signal["payload"]["exit_status"] = {"kind": "signal", "signal": 9}
+expect_valid(runner_validator, runner_signal, "Runner process terminated by signal")
+runner_unknown_with_code = json.loads(json.dumps(runner_exit))
+runner_unknown_with_code["payload"]["exit_status"] = {"kind": "unknown", "code": 137}
+expect_invalid(runner_validator, runner_unknown_with_code, "Runner unknown exit status with numeric code")
+runner_unknown_with_signal = json.loads(json.dumps(runner_exit))
+runner_unknown_with_signal["payload"]["exit_status"] = {"kind": "unknown", "signal": 9}
+expect_invalid(runner_validator, runner_unknown_with_signal, "Runner unknown exit status with numeric signal")
+
+unknown_event = next(
+    item for item in data["sem_events"]
+    if item["event_type"] == "harness.process_observed"
+    and item["payload"]["observation"] == "exit_status_unknown"
+)
+expect_valid(platform_validator, unknown_event, "SEM process exit with unknown numeric status")
+unknown_with_code = json.loads(json.dumps(unknown_event))
+unknown_with_code["payload"]["exit_evidence"]["exit_code"] = 137
+expect_invalid(platform_validator, unknown_with_code, "SEM unknown exit status carrying exit_code")
+unknown_with_signal = json.loads(json.dumps(unknown_event))
+unknown_with_signal["payload"]["exit_evidence"]["exit_signal"] = 9
+expect_invalid(platform_validator, unknown_with_signal, "SEM unknown exit status carrying exit_signal")
+
+uncertain_event = next(item for item in data["sem_events"] if item["event_type"] == "execution.infrastructure_uncertain")
+uncertain_without_reservation = json.loads(json.dumps(uncertain_event))
+del uncertain_without_reservation["payload"]["reservation_retained"]
+expect_invalid(platform_validator, uncertain_without_reservation, "Infrastructure uncertainty without retained reservation")
+
 print(f"ack-fixtures-ok: {len(data.get('event_acknowledgements', []))} SEM event acknowledgements")
 print(f"payload-fixtures-ok: {len(runner_types)} Runner messages, {len(data['platform_requests'])} Platform requests, {len(event_types)} SEM events")
 print(f"negative-fixtures-ok: unknown top-level, unknown payload and missing required payload fields for every branch")
