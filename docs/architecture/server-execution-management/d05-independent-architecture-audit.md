@@ -367,3 +367,31 @@ Consequences now incorporated into D-05 §3.6 and acceptance cases D05-75–78:
 - JobRemoved result, unit ActiveState/SubState and cgroup emptiness are distinct observations; none alone substitutes for the full exit/no-late-start proof.
 
 This is authoritative documentation research, not a live systemd integration test. It sharpens the contract but does not close P0-03/P0-04. A systemd 250+ failure-injection harness remains mandatory.
+
+## 13. Challenge review — Linux launch/release/exit proof addendum
+
+A focused challenge addendum was added at [D-05 Linux Launch, Release and Exit-Proof Addendum](./d05-linux-launch-release-exit-proof-addendum.md). It does not mark any P0 closed. It converts the remaining ambiguity into explicit, testable contract obligations.
+
+### P0-02 — Launch idempotency across lost D-Bus replies
+
+The addendum now makes the safety rule explicit: once a StartTransientUnit request may have crossed the D-Bus send boundary, a lost reply is an ambiguous side effect. The broker may adopt a matching job/invocation, but if neither can be proven it must quarantine; an empty ListJobs result or missing unit is not proof that the original call was never accepted. Blind retry is prohibited.
+
+It also makes the sole-broker privilege boundary mandatory: Harness cannot access systemd/D-Bus/cgroup controls, and no ordinary competing actor may create or replace units in the reserved namespace.
+
+**Disposition: DESIGN CONSTRAINTS CLARIFIED; P0 remains OPEN pending D-10 implementation and systemd >=250 failure injection.**
+
+### P0-03 — Start/release linearization
+
+The addendum separates the durable release fence from systemd manager acceptance of a start job. It defines outcomes for pre-send, call-in-flight, waiting job, running job, running invocation, terminal invocation and unresolved evidence. A waiting job can only be canceled with exact-job correlation plus independent no-process/no-pending-start proof. A running job requires StopUnit for the exact unit; CancelJob is not a stop.
+
+**Disposition: DECISION TABLE ADDED; P0 remains OPEN pending race injection at D-Bus send, JobNew, waiting→running, process spawn and StopUnit boundaries.**
+
+### P0-04 — Exit proof after Supervisor restart
+
+The addendum specifies an identity-bound evidence record and a conservative bracketed observation: exact unit/invocation properties, job snapshots, cgroup.events populated=0, then re-read unit/jobs/cgroup and require stable identity and no pending start/restart. It explicitly does not claim an atomic cross-interface snapshot. Unit retention through SEM acknowledgement is still an unresolved implementation proof obligation; CollectMode/RemainAfterExit alone must not be assumed sufficient.
+
+**Disposition: EVIDENCE PROTOCOL SPECIFIED AS A CHALLENGE; P0 remains OPEN pending proof of bracket semantics, unit retention/GC behavior and restart failure injection.**
+
+### Overall
+
+No Linux integration harness or runtime code was added in this documentation-only step. D-05 remains **CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT**. P0-01 remains Draft-contract closed against the pinned AI-PM source revision and must be rechecked immediately before ratification. D-04 schema cross-reference and D-03 operator-resolution acceptance remain separate gates.
