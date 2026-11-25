@@ -104,3 +104,13 @@ Recommended next sequence:
 5. Add identity reusable schema definitions and version negotiation (P1-01/P1-02).
 6. Add validator tooling and fixture suite; record CI evidence (P1-04).
 7. Freeze operational bounds with D-08/D-09 before ratification.
+
+## 5.1 Follow-up: signed response and conditional GET hardening — 2026-11-25
+
+A focused addendum was added after reviewing the OpenAPI response surface:
+
+- [D-04 HTTP Signed Response and Conditional GET Addendum](./D04-HTTP-SIGNED-RESPONSE-AND-CONDITIONAL-GET-ADDENDUM.md) now defines a proposed response coverage matrix for all four HTTP operations and explicitly requires signed success, error and callback-ACK responses.
+- The OpenAPI GET 304 response now declares required ETag, Content-Digest, Signature-Input, Signature and X-SEM-Request-Id headers; it states no message content and the empty-content digest rule.
+- D04-H52..H62 were added to the acceptance matrix for signed success/errors, correlation mismatch, missing signatures, digest mismatch, 304 ETag/no-body behavior, response replay and revoked keys.
+
+This is a Draft-level completeness improvement only. The exact RFC 9421 component identifiers/canonical signature bases, response nonce replay scope, freshness bounds, key lifecycle, proxy/HTTP-version behavior, error correlation policy, independent response vectors and live verifier/replay-store tests remain open. Therefore **P0-01 remains OPEN / CHANGES REQUIRED**. The new acceptance cases are specifications, not executed tests.
