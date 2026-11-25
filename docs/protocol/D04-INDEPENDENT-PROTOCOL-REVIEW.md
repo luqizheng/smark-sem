@@ -27,9 +27,9 @@ Required closure: ratify or revise the Ed25519 + RFC 9421 + RFC 9530 candidate; 
 
 ### P0-02 — WSS authentication transcript is still prose-only
 
-The WSS JSON Schema covers post-auth application frames only. Challenge, proof-of-possession, session establishment and supersession handshake envelopes do not yet have machine-readable schemas or fixed canonical transcript bytes.
+A separate WSS handshake JSON Schema now defines challenge, proof-of-possession, session establishment, acknowledgement and supersession envelopes. The narrative proposes Ed25519 over a domain-separated RFC 8785 JCS transcript, with 32-byte server/client nonces and a single-use 30-second challenge. This remains a candidate: transcript test vectors, exact TLS audience/authority binding, key-version overlap and full implementation semantics are not ratified.
 
-Required closure: freeze challenge/proof/session schemas, audience/domain separation, Ed25519 signing bytes, challenge TTL, nonce rules, key version behavior and handshake error responses. Add signature test vectors and replay tests.
+Required closure: ratify or revise the Ed25519/JCS transcript candidate; add positive/negative signature test vectors, nonce/challenge replay tests, key-version overlap/revocation behavior and handshake error responses.
 
 ### P0-03 — WSS schema does not yet define every message payload
 
