@@ -215,7 +215,7 @@ AI-PM PR #9 now carries a two-hash callback identity contract:
 - `payload_hash`: JCS SHA-256 of the payload object.
 - `event_envelope_hash`: JCS SHA-256 of the complete authenticated event envelope (`event_id`, `event_type`, `schema_version`, `occurred_at`, `execution_id`, `execution_event_sequence`, `payload`).
 
-The SEM repository added the shared vector `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` at commit `ad09195d44d557b5a5d174d6bdfdef687dcef4b5`. SEM Python and Node independently verify exact canonical bytes and both hashes, and prove that changing `event_type`, `occurred_at` or optional `correlation_id` changes the envelope hash while member reordering does not. CI runs #208 and #209 passed all ten validation steps.
+The SEM repository added the shared vector `tests/protocol/fixtures/platform-sem-callback-envelope-jcs-v1.json` at commit `ad09195d44d557b5a5d174d6bdfdef687dcef4b5`. SEM Python and Node independently verify exact canonical bytes and both hashes, and prove that changing `event_type`, `occurred_at` or optional `correlation_id` (including omitting a previously present optional field) changes the envelope hash while member reordering does not. CI runs #208 and #209 passed all ten validation steps.
 
 AI-PM PR #9 pins this fixture and adds INBOX-35, requiring the eventual Rust implementation to match it exactly. The vector is ASCII/integer-only and does not close full RFC 8785 Unicode/numeric edge coverage or production Rust parser behavior.
 
