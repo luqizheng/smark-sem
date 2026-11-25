@@ -203,3 +203,23 @@ This is deterministic fixture evidence only. It does not prove live authenticati
 ### CI evidence update for §5.7 — 2026-11-25
 
 The signed Platform GET 404, signed SEM callback 404 and unsigned pre-authentication 401/early-413 fixture changes passed SEM Protocol Contract Validation run #413 on commit `dfe00314c65b3899c65da495e8f866678d2b2739`. All ten steps succeeded, including OpenAPI/external references, JSON Schema, cryptographic vectors, payload fixtures and independent Node JCS/Ed25519 verification. This remains deterministic contract CI; live HTTP middleware and replay behavior remain open.
+
+
+## 5.8 Follow-up: durable Runner ACK cursor must be mandatory — 2026-11-25
+
+A focused cross-check of the D-04 WSS narrative against the application JSON Schema found that the schema required acknowledged_journal_id and acknowledged_event_sequence to appear together only when either field was present. It still accepted a protocol.ack with disposition=durably_recorded and neither cursor field. That contradicted the WSS contract: a durable ACK is the exact retention/cleanup gate for one Runner journal position and MUST echo both cursor fields.
+
+Corrected on the D-05 follow-up branch:
+- The ProtocolAck schema now requires both cursor fields whenever disposition=durably_recorded.
+- The payload-fixture validator now rejects a durable ACK with both cursor fields absent, while retaining acceptance of a non-durable accepted ACK without a journal cursor.
+- Existing negative cases continue to reject either half of an incomplete cursor pair.
+
+This closes the identified schema/fixture gap only. It does not prove SEM persists the complete event envelope before ACK, that Runner gates evidence cleanup on the exact cursor, or that replay/deduplication works under a live WSS session. Those remain integration obligations under D-05 and the Linux systemd failure-injection plan.
+
+### Remaining D-04 cross-audit items confirmed
+
+- **Direction enforcement remains open:** the narrative catalogue assigns direction to every message, but the shared bidirectional application schema validates payload shape without rejecting a message sent by the wrong peer. The current review's P0-03/P1 direction cross-check must be closed by a mechanical direction matrix/validator and negative fixtures.
+- **Cross-message identity remains incomplete:** execution/binding/launch/containment/boot/Supervisor identity is not uniformly required across every lifecycle, release and replay branch; retain P1-01.
+- **Version negotiation and operational bounds remain prose-level:** retain P1-02/P1-03.
+- **Platform↔SEM HTTP authentication/replay and AI-PM callback Inbox remain P0 blockers:** schema/fixture CI does not close live middleware, nonce replay, durable Inbox, producer/receiver mapping or bilateral runtime behavior.
+- **No process lifecycle P0 is closed by this ACK correction:** P0-02/P0-03/P0-04 still require executable Linux systemd >=250 failure-injection evidence.
