@@ -37,17 +37,17 @@ Heartbeat, resource report, delivery receipt, Harness start/exit, delivery and r
 
 Required closure: every catalogue message must map to exactly one complete schema branch, including required payload fields, identity tuple, duplicate semantics and legal sender direction. No untyped opaque payload is allowed for state-changing messages except explicitly opaque business material.
 
-### P0-04 — SEM→AI-PM event payloads remain generic
+### P0-04 — SEM→AI-PM event payloads are now discriminated; bilateral receiver contract remains unimplemented
 
 The event schema defines the envelope and event type enum, but payload is only a generic object. Binding-established, delivery-status, process-observed, release-status and infrastructure-uncertain payloads need exact versioned schemas and required fields.
 
-Required closure: add per-event payload schemas, source/evidence provenance, binding_epoch, runner identity, process evidence reference and explicit unknown/null semantics. Ensure infrastructure events cannot express TaskStatus or approval decisions.
+Required closure: source-map every event field to SEM durable ledger and Runner evidence; verify event sequence/outbox producer; define AI-PM Inbox table/unique key, authorization, transaction and response cursor semantics; add cross-repository fixtures. Ensure infrastructure events cannot express TaskStatus or approval decisions.
 
-### P0-05 — Endpoint ownership and callback delivery handshake are candidates, not cross-repository facts
+### P0-05 — Proposed SEM callback route does not exist in current AI-PM source; bilateral Inbox contract is not implemented
 
-The callback path and server ownership are proposed in OpenAPI but have not been verified against AI-PM route conventions or an actual receiver implementation. The callback acknowledgement currently returns event_id/disposition only; retry policy, durable inbox transaction boundary, ordering cursor response and backpressure are not frozen.
+Read-only source audit against AI-PM master `d0e72fa6805aebeadf1b282e430deba493072fd6` confirms the proposed `/internal/ai-pm/v1/sem-events` route is not registered in `apps/pm-api/src/routes.rs`. The existing `/api/v1/events` route is a generic project-event ingestion endpoint with a different contract; it is not a SEM infrastructure-event Inbox and must not be repurposed by assumption. AI-PM has a transactional `integration.outbox_event` producer/worker framework, but that is outbound event handling and does not establish an inbound SEM event receiver. No SEM event Inbox table, unique `event_id` constraint, per-execution cursor, or callback handler is evidenced in the inspected source. The existing MCP Run tools also remain lease-token-based; they are a separate Harness business channel and cannot substitute for this callback.
 
-Required closure: review the exact route and authentication middleware in ai-pm; define event batch/single-event behavior, ACK cursor, 2xx/4xx/5xx retry classification, dead-letter/operator recovery and transactional inbox/outcome semantics.
+Required closure: AI-PM must separately design and implement (only after bilateral ratification and authorization) a dedicated authenticated callback route, SEM event Inbox/deduplication store and transactional application handler. Freeze single-event vs batch behavior, ACK cursor, 2xx/4xx/5xx retry classification, dead-letter/operator recovery, event ordering/gap handling and atomic Inbox+Run-observation transaction. Do not treat the existing generic `/api/v1/events` endpoint or Outbox worker as this receiver.
 
 ### P1-01 — Cross-message identity requirements are not yet uniformly represented
 
