@@ -245,7 +245,7 @@ assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").dige
 
 
 # Deterministic response-signature vectors bind the exact associated request.
-for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304", "http_callback_ack"):
+for name in ("http_response", "http_error_409", "http_error_404", "http_snapshot_200", "http_304", "http_callback_ack", "http_callback_error_404"):
     vector = data[name]
     request = vector["request"]
     response = vector["response"]
@@ -255,7 +255,10 @@ for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304",
     response_body = response["body"].encode("utf-8")
     expected_response_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(response_body).digest()).decode("ascii") + ":"
     assert expected_response_digest == response["content_digest"], name + " response Content-Digest mismatch"
-    if name == "http_callback_ack":
+    if name in ("http_callback_ack", "http_callback_error_404"):
+        if name == "http_callback_error_404":
+            error_body = json.loads(response["body"])
+            assert response["status"] == 404 and error_body["error"]["code"] == "EXECUTION_NOT_FOUND", "signed callback 404 fixture must be a structured not-found error"
         assert response["event_id"] == request["event_id"] == request["idempotency_key"], "callback ACK correlation must equal authenticated event_id"
         assert response["event_id"] != request["message_id"], "callback event_id must remain distinct from transport message_id"
         pairs = [
@@ -268,10 +271,11 @@ for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304",
             ('"@path";req', request["path"]),
             ('"content-digest";req;sf', request["content_digest"]),
         ]
-    elif name in ("http_response", "http_error_409", "http_snapshot_200"):
-        if name == "http_error_409":
+    elif name in ("http_response", "http_error_409", "http_error_404", "http_snapshot_200"):
+        if name in ("http_error_409", "http_error_404"):
             error_body = json.loads(response["body"])
-            assert response["status"] == 409 and error_body["error"]["code"] == "IDEMPOTENCY_CONFLICT", "signed 409 fixture must be a structured idempotency conflict"
+            expected_status, expected_code = (409, "IDEMPOTENCY_CONFLICT") if name == "http_error_409" else (404, "EXECUTION_NOT_FOUND")
+            assert response["status"] == expected_status and error_body["error"]["code"] == expected_code, "signed error fixture status/code mismatch"
         assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
         if name == "http_snapshot_200":
             assert response["status"] == 200 and response["etag"], "snapshot 200 must carry a signed ETag"
@@ -356,19 +360,19 @@ for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304",
         wrong_validator_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_validator_base.encode("ascii")), "304 response accepted a different If-None-Match context"
 
-    if name in ("http_response", "http_error_409", "http_snapshot_200"):
+    if name in ("http_response", "http_error_409", "http_error_404", "http_snapshot_200"):
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-request-id"', request["message_id"])
         wrong_base = "\n".join(f"{component}: {value}" for component, value in wrong_pairs)
         wrong_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), name + " signature unexpectedly accepted message_id as request correlation"
 
-    if name == "http_callback_ack":
+    if name in ("http_callback_ack", "http_callback_error_404"):
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-event-id"', request["message_id"])
         wrong_base = "\n".join(f"{component}: {value}" for component, value in wrong_pairs)
         wrong_base += f'\n"@signature-params": {vector["signature_params"]}'
-        assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), "callback ACK signature unexpectedly accepted wrong event correlation"
+        assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), "callback response signature unexpectedly accepted wrong event correlation"
     response_seed = base64.b64decode(vector["test_private_seed_base64"])
     response_private = Ed25519PrivateKey.from_private_bytes(response_seed)
     assert response_private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) == response_pub
