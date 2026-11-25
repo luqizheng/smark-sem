@@ -32,6 +32,7 @@ platform = load("platform-sem-v1.schema.yaml")
 # normative WSS catalogue assigns exactly one sender set to every app message.
 wss_protocol = (ROOT / "docs/protocol/RUNNER-SEM-WSS-PROTOCOL-DRAFT.md").read_text(encoding="utf-8")
 direction_map = {}
+application_message_types = set(runner["properties"]["message_type"]["enum"])
 for line in wss_protocol.splitlines():
     if not line.startswith("|"):
         continue
@@ -48,6 +49,10 @@ for line in wss_protocol.splitlines():
         else {"SEM", "Runner"}
     )
     for message_type in message_types:
+        # The catalogue also lists four pre-application handshake frames;
+        # this validator covers only the post-handshake application schema.
+        if message_type not in application_message_types:
+            continue
         if message_type in direction_map:
             raise SystemExit(f"duplicate WSS direction entry: {message_type}")
         direction_map[message_type] = allowed_senders
