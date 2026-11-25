@@ -636,18 +636,34 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-76 | Release races after the exact systemd start job reaches `running` | CancelJob is not treated as cancellation; issue StopUnit for exact unit, await stop-job result, then verify invocation terminal and cgroup populated=0 |
 | D05-77 | StartTransientUnit reply is lost before job path/ID is persisted | Subscribe-before-call and reconcile exact unit plus ListJobs; no blind duplicate StartTransientUnit |
 | D05-78 | Supervisor reuses a systemd job ID across host reboot | Reject prior-boot job identity; correlate with boot_id and immutable launch/unit/invocation identity |
+| D05-79 | StartTransientUnit request may have crossed D-Bus send boundary but reply is lost and no job/unit is currently visible | Remain local_uncertain and quarantined; no blind retry; missing ListJobs/GetUnit result is not proof of non-acceptance |
+| D05-80 | Supervisor crashes after durable start intent but before D-Bus request is sent, with durable proof that send was not attempted | Retry same immutable launch_id through the single-writer broker; at most one unit |
+| D05-81 | A second actor attempts to create or replace a unit in the reserved SEM namespace | Privilege boundary blocks it; detected interference quarantines the execution |
+| D05-82 | Release commits while StartTransientUnit is call_in_flight | Persist release fence but do not ACK; reconcile exact job/unit until no-start or started-and-stopped is positively proven |
+| D05-83 | Exact waiting start job receives CancelJob | No effective no-start ACK until matching JobRemoved plus no invocation, no pending start job and cgroup populated=0 |
+| D05-84 | Exact start job is running when release arrives | CancelJob is not treated as stop; StopUnit exact unit, await stop job and verify invocation terminal plus cgroup populated=0 |
+| D05-85 | StartTransientUnit call has ambiguous outcome and exact unit has a conflicting InvocationID or launch digest | Integrity conflict; quarantine; never adopt or retry |
+| D05-86 | Exit evidence bracket observes different InvocationID or ControlGroup on second unit query | Reject candidate evidence; remain uncertain |
+| D05-87 | cgroup.events populated changes between first and second reads | Reject candidate evidence; remain uncertain |
+| D05-88 | A start/restart job appears between the two job snapshots used for exit proof | Reject candidate evidence; remain uncertain |
+| D05-89 | Unit disappears or is garbage-collected before terminal evidence is durably journaled and SEM reconciles | No process-exited event; retention test fails; quarantine |
+| D05-90 | Supervisor restarts after process exit with exact containment empty but numeric wait status unavailable | Report positive exit only if invocation-bound durable evidence is reconstructed; exit_status=unknown |
+| D05-91 | Disk full or fsync failure before start/release/exit evidence commit | No ACK and no unsafe side effect; retain uncertainty/quarantine |
+| D05-92 | Harness attempts system-bus, systemd control or cgroup mutation | Access denied; if containment integrity cannot be proven, quarantine |
+| D05-93 | Out-of-band administrator changes or replaces the reserved unit | Detect identity/property mismatch; quarantine and audit; no silent adoption |
+| D05-94 | Broker sees no matching job/unit after ambiguous D-Bus request but cannot prove request was never sent | Remain local_uncertain; operator reconciliation; no second StartTransientUnit |
 
 ## 11. Open decisions required before ratification
 
-1. Exact AI-PM Run/attempt state names and their mapping to current source model.
+1. Recheck the pinned AI-PM Run/attempt source revision immediately before ratification; any source drift requires a new compatibility review.
 2. Whether SEM persists a single execution aggregate with transition history or separate delivery/binding/release tables; uniqueness constraints and retention.
 3. Runner journal storage engine, fsync policy, corruption recovery and disk-full behavior.
-4. OS-specific process containment and durable discovery mechanism for the process-create-before-journal window (Linux cgroup/container; Windows Job Object or equivalent).
-5. How the Supervisor can prove exit after its own crash or host reboot, including limits of OS wait/reap evidence.
-6. Event sequence scope: this draft recommends a durable Runner event stream keyed by `runner_id + journal_id`, with `execution_id + binding_epoch` carried on each event. This avoids requiring two different Runner hosts to allocate one shared per-execution sequence after rebind. D-04 must freeze the stream/cursor schema and retention semantics.
+4. Exact D-Bus StartTransientUnit request/property serialization, non-replacing job mode, JobNew/JobRemoved correlation, GetUnit/GetJob/ListJobs recovery behavior and systemd >=250 distro compatibility; D-10 must prove these with failure injection.
+5. Durable terminal-unit evidence retention through both local journal and SEM acknowledgement, including successful exit, failed exit, StopUnit-driven termination, unit garbage collection and Supervisor restart.
+6. Event sequence scope is proposed as a durable Runner event stream keyed by `runner_id + journal_id`, with `execution_id + binding_epoch` carried on each event. D-04 must freeze the stream/cursor schema and retention semantics and cross-check every state-changing WSS message.
 7. Snapshot/replay API exact schemas, cursor semantics and maximum journal retention.
-8. Reservation expiry/recovery rules and whether quarantined capacity can ever be manually released under each D-03 host profile.
-9. Whether a process exit event must carry signed evidence in addition to authenticated WSS provenance.
+8. Reservation expiry/recovery rules and the minimal audited manual operator disposition under the user-confirmed D-03 host-loss profile.
+9. Whether a process exit event must carry signed evidence in addition to authenticated WSS provenance, and whether the current evidence_id reference is sufficient for SEM audit/reconciliation.
 10. Exact reconciliation deadlines are operational SLOs, not correctness shortcuts; timeout must never resolve uncertainty by assumption.
 
 ## 12. Readiness conclusion
