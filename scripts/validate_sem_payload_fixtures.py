@@ -64,6 +64,17 @@ event_types = set(platform_schema["$defs"]["EventBase"]["properties"]["event_typ
 fixture_event_types = {item["event_type"] for item in data["sem_events"]}
 assert event_types == fixture_event_types, f"SEM event fixture coverage mismatch: missing={event_types-fixture_event_types}, extra={fixture_event_types-event_types}"
 
+ack_schema = {"$schema": "https://json-schema.org/draft/2020-12/schema", **platform_schema["$defs"]["EventAcknowledgementEnvelope"]}
+ack_validator = Draft202012Validator(ack_schema, format_checker=FORMAT)
+for item in data.get("event_acknowledgements", []):
+    expect_valid(ack_validator, item, "SEM event acknowledgement")
+    legacy = dict(item)
+    legacy["event_sequence"] = legacy.pop("execution_event_sequence")
+    expect_invalid(ack_validator, legacy, "ACK legacy ambiguous event_sequence field")
+    extra = dict(item)
+    extra["unexpected"] = True
+    expect_invalid(ack_validator, extra, "ACK unknown field")
+
 for item in data["sem_events"]:
     label = f"SEM event {item['event_type']}"
     expect_valid(platform_validator, item, label)
@@ -77,5 +88,6 @@ for item in data["sem_events"]:
     empty_payload["payload"] = {}
     expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
 
+print(f"ack-fixtures-ok: {len(data.get("event_acknowledgements", []))} SEM event acknowledgements")
 print(f"payload-fixtures-ok: {len(runner_types)} Runner messages, {len(data['platform_requests'])} Platform requests, {len(event_types)} SEM events")
 print(f"negative-fixtures-ok: unknown top-level, unknown payload and missing required payload fields for every branch")
