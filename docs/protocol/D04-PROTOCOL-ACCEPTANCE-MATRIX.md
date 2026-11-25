@@ -56,7 +56,7 @@
 
 ## 2.1 Approved cryptographic profile acceptance cases
 
-The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cryptographic cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases add 12 cases, for 92. The executable crypto-vector cases add 10, for 102 total. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
+The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cryptographic cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases add 12 cases, for 92. The executable crypto-vector cases add 12, for 104 total. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
 
 | ID | Scenario | Expected result |
 |---|---|---|
@@ -85,6 +85,8 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | D04-H43 | Change HTTP method or authority | Signature verification fails |
 | D04-H44 | Change path or Content-Type | Signature verification fails |
 | D04-H45 | Change Idempotency-Key or Content-Digest | Signature verification fails |
+| D04-H46 | Verify the official RFC 9421 Appendix B.2.6 Ed25519 signature-base vector in Python and Node | Both independent verifiers accept the published signature and reproduce it from the TEST-ONLY key |
+| D04-W51 | Serialize and verify the fixed WSS JCS transcript independently in Python and Node | Canonical bytes and Ed25519 signature are byte-identical in both implementations |
 | D04-W46 | Verify the fixed WSS transcript after RFC 8785 JCS serialization and domain separation | Exact transcript signature verifies |
 | D04-W47 | Change runner_id, audience or endpoint authority | Signature verification fails |
 | D04-W48 | Change challenge_id or protocol version | Signature verification fails |
