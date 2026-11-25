@@ -177,6 +177,29 @@ Rules:
 - Persist process exit evidence before sending `harness.process_exited`. If the event send fails, replay the same `event_id` and sequence after reconnect.
 - Harness self-report is never the authoritative process-exit evidence.
 
+**Mandatory launch/containment contract (OS adapter decision still open):**
+
+1. Before any OS create call, persist a unique `launch_id`, immutable containment identity, execution/delivery/epoch tuple and start intent.
+2. The OS create operation must place the process inside that pre-identified containment boundary as part of creation, or a durable single-writer launch broker must own and deduplicate the entire create/assign/resume operation. A plain “spawn, then attach to cgroup/job” sequence is not sufficient unless its intermediate crash window is independently recoverable.
+3. A duplicate start for the same `launch_id` queries/adopts the original containment unit; it never calls OS create again merely because a PID/process record is missing.
+4. The containment boundary must prevent the Harness and descendants from escaping, migrating out, or creating untracked descendants. The exact controls are OS/profile-specific and must be testable.
+5. The process identity record is persisted before the process is allowed to execute user workload where the OS supports suspended creation. Where it does not, the durable launch broker/containment owner must provide equivalent discoverability and idempotency.
+6. If the OS/profile cannot prove whether creation happened, the Supervisor enters `local_uncertain`, retains the reservation and blocks duplicate launch pending reconciliation/operator action.
+
+**Required OS profile decisions before ratification:**
+
+- Linux must select one supported mechanism and document its crash semantics, such as an OCI/container runtime object with a stable unique ID, a systemd transient unit, or a supported `clone3(CLONE_INTO_CGROUP)` path. It must also define cgroup delegation/escape prevention and how the unit is queried after Supervisor restart.
+- Windows must define Job Object ownership and assignment at creation time, including the crash window before assignment/resume. A supported extended startup/job-list mechanism or a durable launch broker is required; a best-effort post-spawn assignment is not enough.
+- V1 must name the supported OS/profile set. Unsupported profiles fail closed; they must not silently fall back to PID-only tracking.
+
+**Positive exit proof after Supervisor restart:**
+
+- The design must name the durable process owner (for example, the selected container runtime or host service manager) and the authoritative query used to establish that the exact containment unit is empty and cannot accept late descendants.
+- PID absence or a failed process-list lookup is not proof. The containment owner must provide authoritative state for the stable containment identity.
+- It is valid for process exit to be positively proven while the numeric exit code is unknown after Supervisor crash. In that case report `process_exited` with `exit_status=unknown` plus the evidence source; do not fabricate an exit code.
+- “No longer executing on this host” is distinct from “external side effects rolled back”. The former may release process capacity after required cleanup; the latter is never inferred.
+- If the selected host profile cannot provide this proof, retain quarantine and require operator intervention under D-03.
+
 ## 4. Transition transaction contract
 
 Every transition below is local to the authority named in the first column. Cross-system side effects are emitted through a durable outbox/journal after the local commit.
