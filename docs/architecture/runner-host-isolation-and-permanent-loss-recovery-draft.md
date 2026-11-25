@@ -216,19 +216,19 @@ The V1 candidate process owner is a **systemd transient service unit backed by o
 
 - The stable unit identity is derived from immutable runner_id + execution_id + binding_epoch; exact unit-name encoding and collision limits are frozen in D-04/D-10.
 - Before any OS launch call, the Supervisor durably commits launch_id, containment_id, delivery identity, binding epoch, expected unit identity and a start_intent journal record.
-- The launch broker calls systemd's manager API to create/start that exact transient unit. It MUST configure no automatic restart, KillMode=control-group, no cgroup delegation, and an explicit resource-control policy. The final property set and supported systemd versions are D-10 implementation-contract items.
+- The launch broker calls systemd Manager.StartTransientUnit for that exact transient service unit. The V1 candidate property set is Type=exec, ExitType=cgroup, RemainAfterExit=yes, CollectMode=inactive, Restart=no, KillMode=control-group, and no cgroup delegation, plus an explicit resource-control policy. ExitType=cgroup requires systemd 250 or later; V1 therefore sets systemd 250 as the minimum candidate version, subject to distro integration tests. The exact serialized D-Bus property values and distro support matrix are D-10 contract items.
 - The broker never launches the Harness directly as an untracked child of the Supervisor.
 - A repeated start for the same launch_id queries/adopts the same unit and invocation; it MUST NOT issue a second independent launch. A different payload or identity for an existing launch_id is a conflict.
 - The unit's systemd invocation identity, cgroup path, host boot_id, main process identity and durable SEM execution tuple are recorded. PID alone is never an identity.
-- Transient units and their terminal records MUST remain queryable until the Supervisor has durably recorded terminal process evidence and SEM has acknowledged/reconciled it. Unit garbage collection or cleanup cannot erase the only evidence needed to resolve an uncertain launch.
+- RemainAfterExit=yes keeps a successfully completed unit active after its processes exit; CollectMode=inactive avoids the more aggressive inactive-or-failed collection mode. The Supervisor MUST NOT stop/reset-failed/otherwise release the unit before terminal evidence is durable locally and SEM has acknowledged/reconciled it. The durable Supervisor journal remains the authoritative tombstone even after the unit is eventually cleaned up; systemd unit retention is a live-reconciliation aid, not the sole durable history.
 
-The systemd manager is the OS process owner across Runner Supervisor process restarts. The Supervisor's journal remains the durable command/idempotency ledger; systemd is the authoritative process/containment observer. Neither replaces the other.
+The systemd manager is the OS process owner across Runner Supervisor process restarts. The Supervisor's journal remains the durable command/idempotency ledger; systemd is the authoritative live process/containment observer. Neither replaces the other. The systemd transient-unit API documents that units may be released when no longer running/referenced or at reboot, so the design explicitly retains successful units with RemainAfterExit and keeps a separate durable Supervisor tombstone; no correctness claim depends on indefinite systemd unit retention.
 
 ### 13.3 Start/release linearization and crash recovery
 
 - All start and release commands pass through one durable single-writer sequencer in the Supervisor.
 - The sequencer commits a release fence before it can authorize any later launch for that binding.
-- A launch broker request has a stable launch_id and stable systemd unit identity. If the D-Bus request times out or the Supervisor crashes, recovery queries the same unit and outstanding systemd jobs before deciding whether launch occurred.
+- A launch broker request has a stable launch_id and stable systemd unit identity. The broker first resolves the exact unit with GetUnit and inspects its InvocationID, ControlGroup, ActiveState/SubState and outstanding jobs; it MUST NOT blindly repeat StartTransientUnit after an ambiguous reply. If the D-Bus request times out or the Supervisor crashes, recovery queries the same unit and outstanding systemd jobs before deciding whether launch occurred. The systemd API requires the unit name to be unique while the unit is loaded; after cleanup/GC the durable journal tombstone prevents that launch_id/unit identity from being reused.
 - While the systemd operation is unresolved, the state is local_uncertain; no effective stop-fence ACK is sent, no replacement launch is issued and SEM retains the reservation.
 - If the unit exists or its start job is pending, the Supervisor adopts the same invocation and applies termination to that unit after the release fence.
 - If systemd authoritatively proves the unit was never created and no start job remains or can later complete, the Supervisor may commit stop_fenced and acknowledge that no late start can occur.
@@ -265,7 +265,16 @@ The implementation acceptance suite MUST inject crashes at each boundary:
 
 Every case must prove no duplicate Harness launch, no false stop/exit ACK, no premature reservation release and deterministic reconciliation using the same unit/launch identity.
 
-### 13.6 Explicit limitations
+### 13.6 Upstream interface references
+
+- systemd transient unit API and supported transient properties: https://systemd.io/TRANSIENT-SETTINGS/ and https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.systemd1.html
+- systemd control-group interface and StartTransientUnit semantics: https://systemd.io/CONTROL_GROUP_INTERFACE/
+- systemd service ExitType/RemainAfterExit semantics: https://www.freedesktop.org/software/systemd/man/latest/systemd.service.html
+- Linux cgroup v2 populated semantics: https://docs.kernel.org/admin-guide/cgroup-v2.html
+
+These upstream documents establish available interface semantics, not the behavior of every target distribution build. The minimum supported distro/systemd/kernel matrix still requires integration testing.
+
+### 13.7 Explicit limitations
 
 - V1 does not support Windows Job Objects, macOS launchd, cgroup v1, non-systemd Linux hosts, or a Runner container that cannot use a trusted host-side systemd broker.
 - Linux-only does not decide whether the physical host is a managed VM, bare metal with BMC/IPMI, or unmanaged bare metal. D-03 permanent-host-loss fencing still requires that separate deployment decision. Until then, permanent host loss remains quarantine plus operator intervention.
