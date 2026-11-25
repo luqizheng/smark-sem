@@ -299,6 +299,19 @@ $defs:
       process_exit_evidence_id: { type: string, format: uuid }
       observed_at: { type: string, format: date-time }
       detail_code: { type: string, maxLength: 64 }
+    allOf:
+      - if:
+          properties:
+            disposition: { enum: [process_stopped, already_exited] }
+          required: [disposition]
+        then:
+          required: [process_exit_evidence_id]
+      - if:
+          properties:
+            disposition: { enum: [stop_fenced, stale_rejected, local_uncertain] }
+          required: [disposition]
+        then:
+          not: { required: [process_exit_evidence_id] }
     additionalProperties: false
   ProtocolAck:
     type: object
