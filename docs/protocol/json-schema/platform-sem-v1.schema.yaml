@@ -1,7 +1,10 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 $id: https://schemas.internal.example/sem/platform/v1/message.schema.json
 title: Platform–SEM HTTP message schemas
-description: Draft JSON Schema definitions for Platform requests and SEM infrastructure events.
+description: >-
+  Draft request and infrastructure-event schemas. Event payloads are
+  discriminated by event_type and intentionally contain no AI-PM business
+  Task/Requirement/Approval status fields.
 oneOf:
   - $ref: '#/$defs/ExecutionRequestedEnvelope'
   - $ref: '#/$defs/ExecutionReleaseRequestedEnvelope'
@@ -43,7 +46,7 @@ $defs:
         type: object
         required: [capabilities, supervision_mode]
         properties:
-          capabilities: { type: array, items: { type: string }, uniqueItems: true }
+          capabilities: { type: array, items: { type: string, minLength: 1 }, uniqueItems: true }
           supervision_mode: { enum: [unattended, supervised] }
         additionalProperties: false
     additionalProperties: false
@@ -70,17 +73,172 @@ $defs:
         additionalProperties: false
     additionalProperties: false
   SemInfrastructureEventEnvelope:
+    oneOf:
+      - $ref: '#/$defs/BindingEstablishedEvent'
+      - $ref: '#/$defs/DeliveryStatusEvent'
+      - $ref: '#/$defs/ProcessObservedEvent'
+      - $ref: '#/$defs/ReleaseStatusEvent'
+      - $ref: '#/$defs/InfrastructureUncertainEvent'
+  EventBase:
     type: object
-    required: [event_id, event_type, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
+    required: [event_id, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
       event_id: { type: string, format: uuid }
-      event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
       execution_id: { type: string, format: uuid }
       execution_event_sequence: { type: integer, minimum: 1 }
       correlation_id: { type: string, format: uuid }
-      payload: { type: object, minProperties: 1 }
+      payload: { type: object }
+    additionalProperties: false
+  BindingEstablishedEvent:
+    allOf:
+      - $ref: '#/$defs/EventBase'
+      - type: object
+        required: [event_type]
+        properties:
+          event_type: { const: execution.binding_established }
+          payload: { $ref: '#/$defs/BindingEstablishedPayload' }
+  BindingEstablishedPayload:
+    type: object
+    required: [binding_epoch, runner, delivery_id, reserved_capacity, established_at]
+    properties:
+      binding_epoch: { type: integer, minimum: 1 }
+      runner:
+        type: object
+        required: [runner_id, key_version, boot_id, supervisor_instance_id]
+        properties:
+          runner_id: { type: string, format: uuid }
+          key_version: { type: integer, minimum: 1 }
+          boot_id: { type: string, minLength: 1 }
+          supervisor_instance_id: { type: string, format: uuid }
+        additionalProperties: false
+      delivery_id: { type: string, format: uuid }
+      reserved_capacity:
+        type: object
+        required: [cpu_millicores, memory_bytes, workspace_bytes]
+        properties:
+          cpu_millicores: { type: integer, minimum: 0 }
+          memory_bytes: { type: integer, minimum: 0 }
+          workspace_bytes: { type: integer, minimum: 0 }
+        additionalProperties: false
+      established_at: { type: string, format: date-time }
+    additionalProperties: false
+  DeliveryStatusEvent:
+    allOf:
+      - $ref: '#/$defs/EventBase'
+      - type: object
+        required: [event_type]
+        properties:
+          event_type: { const: execution.delivery_status }
+          payload: { $ref: '#/$defs/DeliveryStatusPayload' }
+  DeliveryStatusPayload:
+    type: object
+    required: [delivery_id, binding_epoch, runner_id, delivery_state, observed_at]
+    properties:
+      delivery_id: { type: string, format: uuid }
+      binding_epoch: { type: integer, minimum: 1 }
+      runner_id: { type: string, format: uuid }
+      delivery_state: { enum: [queued, sent, durably_received, delivery_failed, delivery_uncertain] }
+      supervisor_receipt_id: { type: string, format: uuid }
+      failure_code: { type: string, maxLength: 64 }
+      observed_at: { type: string, format: date-time }
+    additionalProperties: false
+  ProcessObservedEvent:
+    allOf:
+      - $ref: '#/$defs/EventBase'
+      - type: object
+        required: [event_type]
+        properties:
+          event_type: { const: harness.process_observed }
+          payload: { $ref: '#/$defs/ProcessObservedPayload' }
+  ProcessObservedPayload:
+    type: object
+    required: [binding_epoch, runner_id, boot_id, supervisor_instance_id, launch_id, containment_id, observation, observed_at]
+    properties:
+      binding_epoch: { type: integer, minimum: 1 }
+      runner_id: { type: string, format: uuid }
+      runner_key_version: { type: integer, minimum: 1 }
+      boot_id: { type: string, minLength: 1 }
+      supervisor_instance_id: { type: string, format: uuid }
+      launch_id: { type: string, format: uuid }
+      containment_id: { type: string, minLength: 1 }
+      observation:
+        enum: [starting, started, start_failed, exited, exit_status_unknown]
+      process_identity:
+        type: object
+        required: [pid, process_start_identity, cgroup_path, systemd_invocation_id]
+        properties:
+          pid: { type: integer, minimum: 1 }
+          process_start_identity: { type: string, minLength: 1 }
+          cgroup_path: { type: string, minLength: 1 }
+          systemd_invocation_id: { type: string, minLength: 1 }
+        additionalProperties: false
+      exit_evidence:
+        type: object
+        required: [evidence_id, cgroup_populated, systemd_invocation_id]
+        properties:
+          evidence_id: { type: string, format: uuid }
+          cgroup_populated: { const: 0 }
+          systemd_invocation_id: { type: string, minLength: 1 }
+          exit_code: { type: integer }
+          exit_signal: { type: integer, minimum: 1 }
+        additionalProperties: false
+      failure_code: { type: string, maxLength: 64 }
+      observed_at: { type: string, format: date-time }
+    allOf:
+      - if: { properties: { observation: { const: started } }, required: [observation] }
+        then: { required: [process_identity] }
+      - if: { properties: { observation: { const: exited } }, required: [observation] }
+        then: { required: [process_identity, exit_evidence] }
+      - if: { properties: { observation: { const: exit_status_unknown } }, required: [observation] }
+        then: { required: [exit_evidence] }
+      - if: { properties: { observation: { const: start_failed } }, required: [observation] }
+        then: { required: [failure_code] }
+    additionalProperties: false
+  ReleaseStatusEvent:
+    allOf:
+      - $ref: '#/$defs/EventBase'
+      - type: object
+        required: [event_type]
+        properties:
+          event_type: { const: execution.release_status }
+          payload: { $ref: '#/$defs/ReleaseStatusPayload' }
+  ReleaseStatusPayload:
+    type: object
+    required: [release_id, binding_epoch, runner_id, release_state, stop_fence_id, observed_at]
+    properties:
+      release_id: { type: string, format: uuid }
+      binding_epoch: { type: integer, minimum: 1 }
+      runner_id: { type: string, format: uuid }
+      release_state: { enum: [requested, stop_fenced, termination_requested, process_exited, released, cleanup_failed, release_uncertain, stale_rejected] }
+      stop_fence_id: { type: string, format: uuid }
+      process_exit_evidence_id: { type: string, format: uuid }
+      observed_at: { type: string, format: date-time }
+      failure_code: { type: string, maxLength: 64 }
+    additionalProperties: false
+  InfrastructureUncertainEvent:
+    allOf:
+      - $ref: '#/$defs/EventBase'
+      - type: object
+        required: [event_type]
+        properties:
+          event_type: { const: execution.infrastructure_uncertain }
+          payload: { $ref: '#/$defs/InfrastructureUncertainPayload' }
+  InfrastructureUncertainPayload:
+    type: object
+    required: [binding_epoch, uncertainty_code, uncertainty_scope, runner_id, since, reconciliation_required]
+    properties:
+      binding_epoch: { type: integer, minimum: 1 }
+      uncertainty_code: { enum: [wss_disconnected, heartbeat_stale, supervisor_unavailable, delivery_ack_unknown, process_state_unknown, host_unreachable, journal_gap, evidence_conflict] }
+      uncertainty_scope: { enum: [delivery, process, release, runner_host, event_stream] }
+      runner_id: { type: string, format: uuid }
+      boot_id: { type: string, minLength: 1 }
+      since: { type: string, format: date-time }
+      reconciliation_required: { const: true }
+      reservation_retained: { const: true }
+      operator_action_required: { type: boolean }
+      evidence_refs: { type: array, maxItems: 64, items: { type: string, minLength: 1 } }
     additionalProperties: false
   ExecutionAcceptanceEnvelope:
     type: object
@@ -121,7 +279,7 @@ $defs:
         type: object
         required: [code, class, retryable, detail]
         properties:
-          code: { type: string }
+          code: { type: string, minLength: 1, maxLength: 64 }
           class: { enum: [auth, protocol, conflict, admission, transient, uncertain, compatibility] }
           retryable: { type: boolean }
           retry_after_ms: { type: [integer, 'null'], minimum: 0 }
