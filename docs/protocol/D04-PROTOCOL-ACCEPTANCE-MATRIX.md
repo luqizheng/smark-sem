@@ -56,7 +56,7 @@
 
 ## 2.1 Approved cryptographic profile acceptance cases
 
-The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases below add 12 cases, for 92 total. The strict-payload/callback cases below extend it to 92 cases. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
+The algorithm-family decision is recorded in [D-04 Cryptographic Profile Decision](./D04-CRYPTOGRAPHIC-PROFILE-DECISION.md). These 13 cryptographic cases extended the previous 67-case matrix to 80 cases. The strict-payload/callback cases below add 12 cases, for 92 total. They are required additions to the HTTP/WSS test suites; their executable fixture IDs must be preserved in CI.
 
 | ID | Scenario | Expected result |
 |---|---|---|
