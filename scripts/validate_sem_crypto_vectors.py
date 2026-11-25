@@ -8,6 +8,8 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
+import struct
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
@@ -36,12 +38,157 @@ def reject_duplicate_object_members(pairs):
         result[key] = value
     return result
 
+def jcs_string(value: str) -> str:
+    if any(0xD800 <= ord(char) <= 0xDFFF for char in value):
+        raise ValueError("RFC 8785 rejects unpaired UTF-16 surrogates")
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def jcs_number(value) -> str:
+    # RFC 8785 numbers use ECMAScript-compatible IEEE-754 binary64 values.
+    # Python's repr(float) supplies shortest round-trip digits; this function
+    # applies ECMAScript's fixed/scientific notation thresholds and exponent form.
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError("number outside finite IEEE-754 range") from exc
+    if not math.isfinite(number):
+        raise ValueError("RFC 8785 rejects non-finite numbers")
+    if number == 0:
+        return "0"
+
+    rendered = repr(number).lower()
+    sign = ""
+    if rendered.startswith("-"):
+        sign, rendered = "-", rendered[1:]
+    if "e" in rendered:
+        mantissa, exponent_text = rendered.split("e")
+        exponent = int(exponent_text)
+    else:
+        mantissa, exponent = rendered, 0
+    if "." in mantissa:
+        integer, fraction = mantissa.split(".")
+    else:
+        integer, fraction = mantissa, ""
+    digits = integer + fraction
+    decimal_position = len(integer) + exponent
+    while len(digits) > 1 and digits.startswith("0"):
+        digits = digits[1:]
+        decimal_position -= 1
+    while len(digits) > 1 and digits.endswith("0"):
+        digits = digits[:-1]
+
+    # ECMAScript uses fixed notation for 1e-6 <= abs(number) < 1e21.
+    if 0 < decimal_position <= 21:
+        if len(digits) <= decimal_position:
+            body = digits + "0" * (decimal_position - len(digits))
+        else:
+            body = digits[:decimal_position] + "." + digits[decimal_position:]
+    elif -5 <= decimal_position <= 0:
+        body = "0." + "0" * (-decimal_position) + digits
+    else:
+        scientific_exponent = decimal_position - 1
+        body = digits[0] + (("." + digits[1:]) if len(digits) > 1 else "")
+        body += "e" + ("+" if scientific_exponent >= 0 else "") + str(scientific_exponent)
+    return sign + body
+
+
+def jcs_canonicalize(value) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, str):
+        return jcs_string(value)
+    if isinstance(value, (int, float)):
+        return jcs_number(value)
+    if isinstance(value, list):
+        return "[" + ",".join(jcs_canonicalize(item) for item in value) + "]"
+    if isinstance(value, dict):
+        for key in value:
+            if not isinstance(key, str):
+                raise TypeError("RFC 8785 object property names must be strings")
+            if any(0xD800 <= ord(char) <= 0xDFFF for char in key):
+                raise ValueError("RFC 8785 rejects unpaired surrogate property names")
+        # RFC 8785 sorts property names by unsigned UTF-16 code units, not
+        # Python Unicode code points.
+        keys = sorted(value.keys(), key=lambda key: key.encode("utf-16-be"))
+        return "{" + ",".join(
+            jcs_string(key) + ":" + jcs_canonicalize(value[key]) for key in keys
+        ) + "}"
+    raise TypeError("value is not representable as a JSON value")
+
 try:
     json.loads('{"a":1,"\\u0061":2}', object_pairs_hook=reject_duplicate_object_members)
 except ValueError:
     pass
 else:
     raise AssertionError("duplicate JSON member with escaped-equivalent name was accepted")
+
+
+# Independent Python RFC 8785 edge vectors. These intentionally mirror the
+# Node verifier's UTF-16 ordering and Appendix B IEEE-754 cases.
+unicode_input = r'{"\\u20ac":"Euro Sign","\\r":"Carriage Return","\\ufb33":"Hebrew Letter Dalet With Dagesh","1":"One","\\ud83d\\ude00":"Emoji: Grinning Face","\\u0080":"Control","\\u00f6":"Latin Small Letter O With Diaeresis"}'
+unicode_expected = r'{"\\r":"Carriage Return","1":"One","":"Control","ö":"Latin Small Letter O With Diaeresis","€":"Euro Sign","😀":"Emoji: Grinning Face","דּ":"Hebrew Letter Dalet With Dagesh"}'
+assert jcs_canonicalize(json.loads(unicode_input, object_pairs_hook=reject_duplicate_object_members)) == unicode_expected, "RFC 8785 UTF-16 property ordering mismatch"
+
+number_vectors = [
+    ("0000000000000000", "0"),
+    ("8000000000000000", "0"),
+    ("0000000000000001", "5e-324"),
+    ("8000000000000001", "-5e-324"),
+    ("7fefffffffffffff", "1.7976931348623157e+308"),
+    ("ffefffffffffffff", "-1.7976931348623157e+308"),
+    ("4340000000000000", "9007199254740992"),
+    ("c340000000000000", "-9007199254740992"),
+    ("4430000000000000", "295147905179352830000"),
+    ("44b52d02c7e14af5", "9.999999999999997e+22"),
+    ("44b52d02c7e14af6", "1e+23"),
+    ("44b52d02c7e14af7", "1.0000000000000001e+23"),
+    ("444b1ae4d6e2ef4e", "999999999999999700000"),
+    ("444b1ae4d6e2ef4f", "999999999999999900000"),
+    ("444b1ae4d6e2ef50", "1e+21"),
+]
+for number_hex, expected_number in number_vectors:
+    number = struct.unpack(">d", bytes.fromhex(number_hex))[0]
+    assert jcs_canonicalize(number) == expected_number, "RFC 8785 IEEE-754 vector mismatch: " + number_hex
+
+for number_text, expected_number in [
+    ("-0", "0"),
+    ("1e-6", "0.000001"),
+    ("1e-7", "1e-7"),
+    ("1e20", "100000000000000000000"),
+    ("1e21", "1e+21"),
+]:
+    assert jcs_canonicalize(json.loads(number_text)) == expected_number, "RFC 8785 exponent boundary mismatch: " + number_text
+
+nested_input = r'{"z":[{"b":2,"a":1},3],"a":"\\u000f\\nplain"}'
+nested_expected = r'{"a":"\\u000f\\nplain","z":[{"a":1,"b":2},3]}'
+assert jcs_canonicalize(json.loads(nested_input, object_pairs_hook=reject_duplicate_object_members)) == nested_expected, "RFC 8785 recursive sorting/array order/control escaping mismatch"
+
+for invalid_json in ("{",):
+    try:
+        json.loads(invalid_json, object_pairs_hook=reject_duplicate_object_members)
+    except json.JSONDecodeError:
+        pass
+    else:
+        raise AssertionError("malformed JSON was accepted")
+for invalid_json in (r'{"x":"\\ud800"}', r'{"x":"\\udc00"}'):
+    try:
+        jcs_canonicalize(json.loads(invalid_json, object_pairs_hook=reject_duplicate_object_members))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unpaired surrogate was accepted")
+for invalid_number in ("NaN", "Infinity", "-Infinity", "1e400"):
+    try:
+        jcs_canonicalize(json.loads(invalid_number))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("non-finite number was accepted: " + invalid_number)
+
+print("python-jcs-edge-ok: UTF-16 ordering, Appendix B IEEE-754 values, boundaries, and invalid inputs")
 
 data = json.loads(FIXTURE.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_object_members)
 http = data["http"]
