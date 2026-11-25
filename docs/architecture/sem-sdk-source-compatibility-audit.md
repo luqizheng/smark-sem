@@ -4,8 +4,8 @@
 - Audit date: 2026-11-25 (latest provenance refresh)
 - Current review snapshot:
   - `smark-sem` PR #1 workspace candidate: `23224d6d7f3d541677f6e48fa14d61cdd0165d9a`
-  - `smark-sem` PR #3 protocol candidate: `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362`
-  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `a51edf41b853e281e7b5214287692f6fea5b930c`
+  - `smark-sem` PR #3 protocol candidate: `dfe00314c65b3899c65da495e8f866678d2b2739`
+  - `smark-sem` PR #4 reviewed docs head before this provenance-only update: `81a682b078bf16ca8f90b8bb31000a72506410ae`
   - `ai-pm` source baseline: `master` (manifest, lockfile and app manifests identified by blob SHA in §§9–11)
   - `ai-pm` PR #9 design-doc head: `ecfc6eaaa7a76fe52282946615f1182d629fdd4a` (Draft docs only)
 - Method: GitHub source/manifest inspection only. No local compilation, combined dependency resolution, TLS handshake/pinning, registry publish, or runtime test was performed.
@@ -274,3 +274,15 @@ Latest reviewed heads before this audit refresh:
 The SDK proposal now recognizes the D-04 error boundary: authenticated application responses must be signed and context-bound; unsigned pre-authentication 401/early-413 responses are unverified and carry no protocol IDs. The API traceability matrix includes the new signed 404 and pre-authentication fixture cases.
 
 No source compatibility conclusion changes. There is still no integrated SEM+SDK workspace build, CA/pin proof, SEM CI registry publish/read test or AI-PM pinned-SDK compile. All SDK dependency, crate-name and distribution choices remain Draft.
+
+
+## 15. SDK traceability and current branch snapshot — 2026-11-25
+
+The latest SDK public API design branch before this audit refresh is `smark-sem` PR #4 at `81a682b078bf16ca8f90b8bb31000a72506410ae`. Its error taxonomy distinguishes signed authenticated application outcomes from unsigned/unverified pre-authentication responses; its method traceability includes signed 404 and pre-authentication fixture coverage.
+
+Current related review references:
+- SEM PR #3 protocol branch: `dfe00314c65b3899c65da495e8f866678d2b2739`. The immediately preceding protocol fixture head `d4b31a0f8d1c344f858870fd9afbeb4e2b42f362` passed CI #411. CI #413 is validating the later crypto-decision documentation refresh.
+- AI-PM PR #9 callback/Inbox branch: `ecfc6eaaa7a76fe52282946615f1182d629fdd4a`, docs only; no observed workflow run.
+- SEM PR #1 workspace candidate remains `23224d6d7f3d541677f6e48fa14d61cdd0165d9a`.
+
+No SDK API or distribution decision is ratified. No integrated workspace build, TLS pin proof, SEM registry publish/read, or AI-PM pinned SDK compile has occurred. This provenance refresh does not change the source-compatibility recommendation or authorize implementation.
