@@ -9,11 +9,11 @@ This repository owns the execution infrastructure:
 - Runner connection and authentication at the SEM edge
 - Runner WSS control protocol
 - Session and dispatch coordination
-- Process supervision and process observations
+- Runtime-control coordination and Runner-reported process observations
 - SEM-local persistence and recovery
 - Platform–SEM integration contracts and SEM architecture documentation
 
-The AI-PM Platform remains authoritative for Project, Task, Run/business execution state, approvals, HIR/Barrier, business commands, business results and audit state. SEM is an execution-message transport and runtime manager: it routes opaque prompts, supervises Runner/Harness processes, records infrastructure observations and releases execution resources when instructed by AI-PM. SEM must not connect to or share the Platform PostgreSQL database, mirror business state, or interpret prompt content.
+The AI-PM Platform remains authoritative for Project, Task, Run/business execution state, approvals, HIR/Barrier, business commands, business results and audit state. SEM is an execution-message transport and runtime manager: it routes opaque prompts, coordinates Runner runtime commands, records Runner-reported infrastructure observations and releases SEM-side reservations when instructed by AI-PM. Runner Supervisor owns local Harness process start/stop and OS process identity. SEM must not connect to or share the Platform PostgreSQL database, mirror business state, or interpret prompt content.
 
 ## Integration
 
