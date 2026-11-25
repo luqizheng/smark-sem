@@ -6,6 +6,19 @@
 - Authority baseline: [SEM Authority Boundary and Execution Message Model](../architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md).
 - Detailed companion contract: [Execution Identity, Lifecycle, Fencing and Delivery Contract](./EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
 
+## Transport deployment profile (V1)
+
+Platform↔SEM and Runner↔SEM transport security is configurable for company-internal deployment; the application message contract does not change with the transport choice.
+
+- Platform↔SEM supports both HTTP and HTTPS. Both endpoints must be reachable only through the company private network/VPN or an explicitly approved internal network segment. V1 has no public internet ingress requirement.
+- HTTPS is supported with publicly trusted certificates, enterprise-private CA certificates, or self-signed certificates. A self-signed certificate is a supported production deployment option when its trust is explicitly provisioned.
+- Clients must validate the configured trust chain or an explicitly pinned certificate/public-key fingerprint. Certificate validation must never be silently disabled; no production `--insecure` / verify=false mode.
+- Runner registration CLI and WSS clients use the same configurable trust-material model (CA bundle or explicit pin), while Runner key proof-of-possession remains separate from TLS server authentication.
+- HTTP is permitted only on the restricted internal network. It provides no transport confidentiality; request authentication, integrity protection, timestamp/nonce replay defense, idempotency and audit remain mandatory. Sensitive fields that require confidentiality must be protected at the application layer or sent over HTTPS.
+- Certificate expiry, renewal, rotation, overlap, revocation and trust-material distribution are D-09 operational requirements. A trust change must not silently downgrade validation.
+
+This is a deployment/transport choice, not two business protocols. Endpoint configuration selects `http://` or `https://`; message schemas, Outbox/Inbox, idempotency and reconciliation are identical.
+
 ## 1. Contract invariants
 
 1. AI-PM owns all business semantics and business state. SEM is an execution-message transport and infrastructure coordination service.
