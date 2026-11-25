@@ -48,6 +48,71 @@ if (!reproduced.equals(signature)) {
   throw new Error("Node Ed25519 reproduction differs from committed WSS signature");
 }
 
+
+// Cross-check the body-bearing response and conditional 304 vectors using
+// Node's independent Ed25519 implementation and exact request context.
+for (const name of ["http_response", "http_304"]) {
+  const vector = fixture[name];
+  const request = vector.request;
+  const response = vector.response;
+  const responseBody = Buffer.from(response.body, "utf8");
+  const responseDigest = "sha-256=:" + crypto.createHash("sha256").update(responseBody).digest("base64") + ":";
+  if (responseDigest !== response.content_digest) throw new Error(name + " Content-Digest mismatch");
+  if (response.request_id !== request.request_id) throw new Error(name + " response correlation mismatch");
+  let pairs;
+  if (name === "http_response") {
+    pairs = [
+      ['"@status"', String(response.status)],
+      ['"content-digest"', response.content_digest],
+      ['"x-sem-request-id"', response.request_id],
+      ['"content-type"', response.content_type],
+      ['"@method";req', request.method],
+      ['"@authority";req', request.authority],
+      ['"@path";req', request.path],
+      ['"content-digest";req', request.content_digest],
+    ];
+  } else {
+    const emptyDigest = "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:";
+    if (response.status !== 304 || responseBody.length !== 0 || response.content_digest !== emptyDigest) {
+      throw new Error("304 must have empty content and the SHA-256 empty-content digest");
+    }
+    pairs = [
+      ['"@status"', String(response.status)],
+      ['"content-digest"', response.content_digest],
+      ['"x-sem-request-id"', response.request_id],
+      ['"etag"', response.etag],
+      ['"@method";req', request.method],
+      ['"@authority";req', request.authority],
+      ['"@path";req', request.path],
+      ['"content-digest";req', request.content_digest],
+      ['"if-none-match";req', request.if_none_match],
+    ];
+  }
+  const responseBase = pairs.map(([component, value]) => component + ": " + value).join("\n")
+    + '\n"@signature-params": ' + vector.signature_params;
+  if (responseBase !== vector.signature_base) throw new Error(name + " RFC 9421 signature-base mismatch");
+  const responsePublicRaw = Buffer.from(vector.public_key_base64, "base64");
+  const responsePublicKey = crypto.createPublicKey({
+    key: Buffer.concat([publicDerPrefix, responsePublicRaw]),
+    format: "der",
+    type: "spki",
+  });
+  const responseSignature = Buffer.from(vector.signature_base64, "base64");
+  if (!crypto.verify(null, Buffer.from(responseBase, "ascii"), responsePublicKey, responseSignature)) {
+    throw new Error(name + " Ed25519 response signature failed");
+  }
+  const responseSeed = Buffer.from(vector.test_private_seed_base64, "base64");
+  const responsePrivateKey = crypto.createPrivateKey({
+    key: Buffer.concat([privateDerPrefix, responseSeed]),
+    format: "der",
+    type: "pkcs8",
+  });
+  if (!crypto.sign(null, Buffer.from(responseBase, "ascii"), responsePrivateKey).equals(responseSignature)) {
+    throw new Error(name + " response signature reproduction failed");
+  }
+}
+console.log("node-http-response-ok: signed 202 and conditional 304 bind their exact request contexts");
+
 const rfc = fixture.rfc9421_official_ed25519;
 const rfcPublicRaw = Buffer.from(rfc.public_key_base64, "base64");
 const rfcPublicKey = crypto.createPublicKey({
