@@ -210,4 +210,6 @@ Added TEST-ONLY response vectors to [crypto-vectors-v1.json](../../tests/protoco
 
 The fixture stores exact request bytes and response bytes. Python and Node validators independently recompute both request and response Content-Digest values, reconstruct the signature base from the request/response fields, verify Ed25519 signatures, and reproduce signatures from TEST-ONLY seeds. This exercises the candidate response serialization and the empty-content 304 path without relying on a precomputed signature-base string alone.
 
+The Python and Node response-vector verification steps passed in CI run #171 on commit `534b74498c0f0b33889a743b2b55d915064f8b4b`. This is a deterministic fixture check, not a live HTTP-stack test.
+
 This does **not** prove an RFC 9421 HTTP stack's live request-context association, duplicate-header handling, proxy behavior, redirect rejection, signed 4xx/5xx behavior, response nonce replay storage, or production client/server interoperability. The vectors are primitive/signature-base fixtures, not a complete RFC 9421 parser or runtime verifier. D04-H52 and D04-H57 have deterministic fixture coverage only; the rest of H52–H62 remain open, and P0-01 remains **OPEN / CHANGES REQUIRED** until live bilateral tests and replay-policy closure.
