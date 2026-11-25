@@ -210,7 +210,7 @@ SEM may report these infrastructure facts to AI-PM, but AI-PM decides what they 
 
 Rules:
 
-- PID alone is never a process identity. Use PID + process start identity and an OS containment identity (Linux cgroup/container ID; Windows Job Object identity or equivalent).
+- PID alone is never a process identity. Use PID + process start identity together with the V1 Linux systemd transient-unit invocation identity and exact cgroup v2 containment path. PID alone is never an identity.
 - Journal must be durable across Supervisor process restart. Host reboot requires boot identity comparison and OS-specific containment reconciliation; absence of a PID after reboot is not sufficient unless the host/process containment evidence proves the old process cannot continue.
 - Persist `start_intent` before process creation. After process creation, persist the returned exact process identity before emitting `harness.process_started`.
 - If the Supervisor crashes between OS process creation and persisting the process identity, recovery must enumerate the dedicated containment unit using the durable launch nonce/labels and either adopt the exact process or quarantine. It must not launch again merely because the journal lacks a started event.
@@ -218,20 +218,20 @@ Rules:
 - Persist process exit evidence before sending `harness.process_exited`. If the event send fails, replay the same `event_id` and sequence after reconnect.
 - Harness self-report is never the authoritative process-exit evidence.
 
-**Mandatory launch/containment contract (OS adapter decision still open):**
+**Mandatory V1 Linux launch/containment contract (selected architecture; integration proof still open):**
 
 1. Before any OS create call, persist a unique `launch_id`, immutable containment identity, execution/delivery/epoch tuple and start intent.
 2. The OS create operation must place the process inside that pre-identified containment boundary as part of creation, or a durable single-writer launch broker must own and deduplicate the entire create/assign/resume operation. A plain “spawn, then attach to cgroup/job” sequence is not sufficient unless its intermediate crash window is independently recoverable.
 3. A duplicate start for the same `launch_id` queries/adopts the original containment unit; it never calls OS create again merely because a PID/process record is missing.
-4. The containment boundary must prevent the Harness and descendants from escaping, migrating out, or creating untracked descendants. The exact controls are OS/profile-specific and must be testable.
-5. The process identity record is persisted before the process is allowed to execute user workload where the OS supports suspended creation. Where it does not, the durable launch broker/containment owner must provide equivalent discoverability and idempotency.
+4. The V1 systemd-owned cgroup v2 containment boundary must prevent the Harness and descendants from escaping, migrating out, or creating untracked descendants. The exact systemd unit properties, cgroup permissions and hostile-descendant tests are D-10 integration acceptance requirements.
+5. The selected systemd launch broker must provide durable discoverability and idempotency across the StartTransientUnit request/job/process-create crash windows; no unsupported spawn-then-attach fallback is allowed.
 6. If the OS/profile cannot prove whether creation happened, the Supervisor enters `local_uncertain`, retains the reservation and blocks duplicate launch pending reconciliation/operator action.
 
-**Required OS profile decisions before ratification:**
+**V1 OS profile decision (user approved 2026-11-25):**
 
-- Linux must select one supported mechanism and document its crash semantics, such as an OCI/container runtime object with a stable unique ID, a systemd transient unit, or a supported `clone3(CLONE_INTO_CGROUP)` path. It must also define cgroup delegation/escape prevention and how the unit is queried after Supervisor restart.
-- Windows must define Job Object ownership and assignment at creation time, including the crash window before assignment/resume. A supported extended startup/job-list mechanism or a durable launch broker is required; a best-effort post-spawn assignment is not enough.
-- V1 must name the supported OS/profile set. Unsupported profiles fail closed; they must not silently fall back to PID-only tracking.
+- V1 supports Linux only: systemd 250 or later as PID 1, unified cgroup v2, host systemd manager, and a systemd transient service/cgroup per execution binding.
+- Windows, cgroup v1, non-systemd Linux and Runner containers without a trusted host-side systemd broker are out of scope and MUST NOT become dispatch-ready.
+- The exact StartTransientUnit/GetUnit/GetJob request/response sequence, unit property serialization, job cancellation/fencing and cgroup escape-prevention behavior remain integration-proof requirements, not open OS-profile choices.
 
 **Positive exit proof after Supervisor restart:**
 
