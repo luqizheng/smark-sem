@@ -98,7 +98,6 @@ V1 does not promise automatic failover for a permanently unreachable host. It de
 - For V1 permanent host loss, an auditable on-site operator verification of physical host isolation is the only host-level fencing evidence; SEM has no cloud/BMC remote-fencing integration.
 
 All four solve different problems.
-
 After positive local process-exit evidence or recorded on-site verification that the host is physically isolated:
 1. SEM records the old process/binding as fenced and releases the quarantined capacity according to cleanup policy.
 2. AI-PM invalidates the previous delegated grant.
@@ -137,7 +136,7 @@ The operational contract must provide:
 - current unreachable/quarantine status and last-known host/process evidence;
 - on-site inspection procedure, authorized operator identity, observed physical condition, evidence attachment/reference and timestamp;
 - explicit administrative action and authorization required before any quarantine release or replacement execution;
-- who is authorized to trigger host power-off and who verifies it;
+- who is authorized to record the on-site inspection and approve the subsequent administrative disposition;
 - quarantine age alerts and escalation policy;
 - evidence retention and audit requirements;
 - process for reconciling external side effects (Git pushes, API calls, package publishing) after uncertain execution.
@@ -152,16 +151,15 @@ The operational contract must provide:
 6. Release before process spawn prevents a late launch.
 7. Release during process start is serialized and cannot leak an untracked process.
 8. Stale binding_epoch release cannot stop a newer process.
-9. Container stop ACK without terminal runtime observation is not accepted as process exit.
+9. Stop-command ACK without terminal runtime observation is not accepted as process exit.
 10. Permanent host loss raises a visible alert and retains the execution and reservation in quarantine.
 11. Alert acknowledgement or timeout alone cannot release quarantine.
 12. On-site operator inspection is recorded with identity, method, observation, evidence and timestamp.
 13. Ambiguous physical condition keeps quarantine; no replacement execution is dispatched.
 14. Positively verified physical host isolation can be used only through the controlled, audited release workflow.
-15. External Git/API side effects are not represented as rolled back by host isolation.
-13. Duplicate/out-of-order process events are idempotently reconciled.
-14. External Git/API side effects are not represented as rolled back by host power-off.
-15. Capacity is released only after process/host fence and cleanup policy succeed.
+15. Duplicate/out-of-order process events are idempotently reconciled.
+16. External Git/API side effects are not represented as rolled back by host isolation.
+17. Capacity is released only after process/host fence and cleanup policy succeed.
 
 ## 11. V1 permanent-host-loss decision (user confirmed: 2026-11-25)
 
@@ -197,7 +195,6 @@ V1 Runner hosts MUST satisfy all of the following:
 A host failing any baseline check is unsupported and MUST NOT become dispatch-ready.
 
 ### 13.2 Per-execution process owner
-
 The V1 candidate process owner is a **systemd transient service unit backed by one dedicated cgroup v2 subtree per execution binding**.
 
 - The stable unit identity is derived from immutable runner_id + execution_id + binding_epoch; exact unit-name encoding and collision limits are frozen in D-04/D-10.
