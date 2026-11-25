@@ -221,5 +221,19 @@
     "test_private_seed_base64": "ECEyQ1RldoeYqbrL3O3+DxAhMkNUZXaHmKm6y9zt/g8=",
     "public_key_base64": "Div31gXVZQXm91pGO94GP7V2JcxHAJx0BWvrAZ0z910=",
     "signature_base64": "9npB1Kri/aeAfE+OCHIK8x2r95vRGv01Ws+ToveMvTYAkUpaqf38LfXWdnjrVwEOY3h0EYVqUlDAk9D8ccEtCQ=="
-  }
+  },
+  "pre_authentication_error_responses": [
+    {
+      "case_id": "D04-H79-invalid-signature",
+      "status": 401,
+      "headers": [],
+      "body": "{\"error\":{\"class\":\"auth\",\"code\":\"AUTHENTICATION_FAILED\",\"detail\":\"Request authentication failed.\",\"retryable\":false}}"
+    },
+    {
+      "case_id": "D04-H80-early-body-size-limit",
+      "status": 413,
+      "headers": [],
+      "body": "{\"error\":{\"class\":\"protocol\",\"code\":\"PAYLOAD_TOO_LARGE\",\"detail\":\"Request rejected before authentication.\",\"retryable\":false}}"
+    }
+  ]
 }
