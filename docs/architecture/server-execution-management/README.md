@@ -41,6 +41,8 @@ SEM must not connect to or share the AI-PM PostgreSQL database. SEM has its own 
 
 ## 4. Normative review documents
 
+0. [Bilateral Documentation Completion Register](../SEM-DOCUMENTATION-COMPLETION-REGISTER.md) — authoritative development gate, P0/P1 decision register and readiness checklist.
+
 These documents are the active design-review set. They are still drafts and must be reconciled before implementation.
 
 1. [SEM Authority Boundary and Execution Message Model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md) — service responsibility and opaque business payload boundary.
