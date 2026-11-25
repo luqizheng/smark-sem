@@ -1,5 +1,8 @@
 # Session Manager 设计（session-manager-design）
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document records the superseded Platform Claim/Lease/Run/Task/HIR/Barrier architecture. It is retained for migration and source-audit traceability only. Do not implement SEM behavior from this document. The current baseline is the [authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [detailed identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 - 性质：架构设计（Phase 3 的设计依据），本阶段不实施。
 - 定位：Session Manager 是**逻辑职责模块**，不是微服务、不是新进程。落在 `crates/pm-application`（新增 `session_manager` 模块），实现落 `pm-infrastructure::codex_executor`。
 
