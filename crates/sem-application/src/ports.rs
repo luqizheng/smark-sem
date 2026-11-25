@@ -1,17 +1,18 @@
 use async_trait::async_trait;
 use sem_domain::{DispatchOperationId, RunnerId};
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct ClaimRequest {
-    pub claim_request_id: String,
+    pub claim_request_id: Uuid,
     pub runner_id: RunnerId,
     pub dispatch_operation_id: DispatchOperationId,
-    pub task_id: Option<String>,
+    pub task_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone)]
 pub enum ClaimResult {
-    Claimed { run_id: String, generation: i32 },
+    Claimed { run_id: Uuid, generation: i32 },
     NoWork,
 }
 
