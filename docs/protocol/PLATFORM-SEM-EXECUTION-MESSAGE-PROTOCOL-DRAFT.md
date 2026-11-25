@@ -228,6 +228,16 @@ The current AI-PM Task lifecycle distinguishes Running→Submitted (delivery man
 
 When an AI-PM business decision makes the execution no longer necessary, the business transition and Platform Outbox release intent should be committed atomically. SEM release remains an infrastructure lifecycle, independent of Task completion.
 
+
+
+## 9.4 Remote Runner Git evidence boundary
+
+The AI-PM Platform cannot assume it can inspect a worktree located on an independent Runner host. The current AI-PM D4 remote verifier supports a remote-carrier mode, but that mode currently verifies a declared commit as a remote branch head and checks baseline ancestry; it does not prove the Runner-local worktree HEAD and currently echoes the declared changed-file count rather than independently recalculating it.
+
+Before implementation, define the remote execution evidence contract. At minimum, require the Runner/Harness to push to a unique execution branch/ref before submitting; AI-PM must bind the submitted SHA to that ref and verify the remote ref and ancestry. Changed-file facts must be calculated from the remote Git object graph, or explicitly labeled as an unverified declaration. A commit not pushed or not fetchable must not be treated as verified delivery. If exact local worktree HEAD proof is required, define a separate Runner-signed attestation and trust model; a Harness JSON claim is not independent evidence.
+
+The remote evidence mode must be explicit execution metadata, not inferred from a legacy lease_owner string or credential prefix. SEM transports any opaque evidence reference without interpreting Git or Task semantics.
+
 ## 10. Failure and recovery semantics
 
 - SEM accepts request but cannot find a Runner: remain queued/rejected according to infrastructure policy; no business state is changed.
