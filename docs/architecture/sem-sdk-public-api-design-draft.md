@@ -3,8 +3,8 @@
 - Status: **DRAFT / ARCHITECTURE REVIEW — NOT IMPLEMENTATION-AUTHORIZING**
 - Owner: `smark-sem`
 - Consumer: `ai-pm`
-- Protocol baseline reviewed: SEM PR #3, commit `068d44f3742b1381d059f9435f26c34137c0cebb`
-- Consumer source baseline reviewed: AI-PM PR #9, commit `19cfa2682682bfeb75bfea0091544b53a57bfc50`
+- Protocol baseline reviewed: SEM PR #3, commit `068d44f3742b1381d059f9435f26c34137c0cebb` (Draft, not ratified)
+- Consumer source baseline: AI-PM `master` manifests/lockfile; AI-PM PR #9 design-doc head `2e19a7ed905a78d037de5ff172fc309256e68336` (Draft only, not runtime source)
 - Companion: [SEM SDK source compatibility audit](./sem-sdk-source-compatibility-audit.md)
 - Protocol source: [Platform–SEM execution message protocol](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md)
 - OpenAPI source: [Platform–SEM OpenAPI draft](https://github.com/luqizheng/smark-sem/blob/docs/sem-d05-lifecycle-crash-consistency/docs/protocol/openapi/platform-sem-v1-draft.yaml)
