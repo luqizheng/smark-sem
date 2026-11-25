@@ -104,23 +104,23 @@ This section removes ambiguity from the *candidate* response profile. It is norm
 For all non-304 responses, including structured errors and empty-body statuses, the candidate covered-component order is:
 
 1. `"@status"`
-2. `"content-digest"`
+2. `"content-digest";sf;sf`
 3. Exactly one response correlation field: `"x-sem-request-id"` for Platform→SEM responses, or `"x-sem-event-id"` for SEM→AI-PM callback responses.
 4. `"@method";req`
 5. `"@authority";req`
 6. `"@path";req`
-7. `"content-digest";req`
+7. `"content-digest";sf;req;sf`
 
 The Structured Fields serialization template is therefore exactly one of:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest" "x-sem-request-id" "@method";req "@authority";req "@path";req "content-digest";req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "@method";req "@authority";req "@path";req "content-digest";sf;req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 or:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest" "x-sem-event-id" "@method";req "@authority";req "@path";req "content-digest";req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-event-id" "@method";req "@authority";req "@path";req "content-digest";sf;req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 These are Structured Fields serialization templates, not literal valid header values until placeholders are replaced. There is no whitespace around separators. Component identifiers and signature parameters are serialized using RFC 9421 / RFC 8941 rules; implementations MUST NOT hand-roll ad-hoc quoting or parse the field with comma/semicolon splitting.
@@ -132,19 +132,19 @@ For a response with a representation body, `content-type` is additionally requir
 A 304 has no message content and uses this exact component order:
 
 1. `"@status"`
-2. `"content-digest"`
+2. `"content-digest";sf;sf`
 3. `"x-sem-request-id"`
 4. `"etag"`
 5. `"@method";req`
 6. `"@authority";req`
 7. `"@path";req`
-8. `"content-digest";req`
+8. `"content-digest";sf;req;sf`
 9. `"if-none-match";req`
 
 Template:
 
 ```http
-Signature-Input: sig1=("@status" "content-digest" "x-sem-request-id" "etag" "@method";req "@authority";req "@path";req "content-digest";req "if-none-match";req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
+Signature-Input: sig1=("@status" "content-digest";sf "x-sem-request-id" "etag" "@method";req "@authority";req "@path";req "content-digest";sf;req "if-none-match";req);created=<unix-seconds>;expires=<unix-seconds>;nonce="<base64url-random>";keyid="<immutable-key-id>";alg="ed25519"
 ```
 
 The response `Content-Digest` for a 304 MUST be SHA-256 over zero content octets:
@@ -169,6 +169,7 @@ This association is a runtime API contract: implementations need a request-conte
 - There MUST be exactly one `Signature-Input`, `Signature`, `Content-Digest`, and operation-specific correlation field. Duplicate instances, combined ambiguous values, malformed Structured Fields, unknown signature labels, and unsupported component identifiers are rejected.
 - The `Signature` dictionary MUST contain exactly `sig1`; its value is the RFC 9421 byte-sequence serialization of the 64-octet Ed25519 signature.
 - The signed response correlation field MUST be a single canonical protocol identifier and MUST equal the expected request message_id or callback event_id. It is not copied from an untrusted client-provided header.
+- RFC 9530 `Content-Digest` is a Structured Field Dictionary. Every request-side and response-side Content-Digest component MUST use RFC 9421's `sf` component parameter so optional Structured Field whitespace is canonicalized; request-derived digest uses the component identifier parameter order `;req;sf`. The digest field's Structured Field type is known to both signer and verifier.
 - Body bytes are hashed before JSON decoding, decompression, normalization, or application-level parsing. The deployment must disable intermediary transformations of signed response content; if content coding is used, the protocol must specify exactly which representation bytes are signed. V1 candidate profile therefore requires identity content coding for these endpoints.
 - `Content-Digest` is required even when the response content is empty. A no-content response uses the SHA-256 empty-content digest above.
 - Response signature verification, digest verification, key-status validation, freshness checks, nonce replay checks, request association, and correlation checks all complete before status/body is exposed as a typed application result.
