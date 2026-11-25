@@ -73,7 +73,12 @@ handshake_types = {
 }
 if "runner.session.ack" not in handshake_types:
     raise SystemExit("runner.session.ack must be owned by handshake schema")
-if "runner.session.ack" in runner_types:
-    raise SystemExit("runner.session.ack must not be duplicated in application schema")
+if handshake_types & runner_types:
+    raise SystemExit(
+        "Handshake/application frame ownership overlaps: "
+        + ", ".join(sorted(handshake_types & runner_types))
+    )
+if "runner.session.superseded" not in runner_types:
+    raise SystemExit("runner.session.superseded must remain a post-handshake application frame")
 
 print(f"coverage-ok: {len(runner_types)} Runner WSS messages, {len(event_names)} SEM event payloads")
