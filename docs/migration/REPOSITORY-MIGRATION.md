@@ -71,3 +71,25 @@ Do not mechanically move `apps/ai-pm-worker`, `crates/pm-application`, `crates/p
 - RabbitMQ is an existing independent single instance, not a required safety dependency or authority.
 - Workspace is disposable and is not backed up; workspace loss is not process-exit evidence.
 - Do not start Phase 0 or claim production readiness until the transaction audit and protocol review are closed.
+
+
+## Additional historical/design documents migrated
+
+The following earlier SEM design and deployment-audit documents were also copied, preserving their historical status:
+
+- `docs/architecture/server-execution-management/decision-record.md`
+- `docs/architecture/server-execution-management/deployment-topology.md`
+- `docs/architecture/server-execution-management/runner-supervision-and-handoff.md`
+- `docs/architecture/server-execution-management/security-model.md`
+- `docs/architecture/server-execution-management/domain-model.md`
+- `docs/architecture/server-execution-management/state-machines.md`
+- `docs/architecture/server-execution-management/testing-and-acceptance.md`
+- `docs/architecture/server-execution-management/execution-safety.md`
+- `docs/architecture/server-execution-management/protocol-contracts.md`
+- `docs/architecture/server-execution-management/session-manager-design.md`
+- `docs/architecture/server-execution-management/sem-02d-final-architecture-review.md`
+- `docs/architecture/server-execution-management/sem-02d-review-findings-corrective-design.md`
+- `docs/architecture/sem-01-deployment-audit/README.md`
+- `docs/architecture/sem-01-deployment-audit/migration-recommendation.md`
+
+Older design records are historical inputs. Where they conflict with SEM-02E–02J or later confirmed decisions, the newer reviewed decision/audit material takes precedence. These copies do not imply that old recommendations are still normative.
