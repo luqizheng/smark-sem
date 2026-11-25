@@ -138,6 +138,13 @@ for name in ("http_response", "http_304", "http_callback_ack"):
     response_pub = b64d(vector["public_key_base64"])
     response_sig = b64d(vector["signature_base64"])
     assert verify(response_pub, response_sig, response_base.encode("ascii")), name + " Ed25519 response signature failed"
+
+    if name == "http_callback_ack":
+        wrong_pairs = list(pairs)
+        wrong_pairs[2] = ('"x-sem-event-id"', request["message_id"])
+        wrong_base = "\\n".join(f"{component}: {value}" for component, value in wrong_pairs)
+        wrong_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        assert not verify(response_pub, response_sig, wrong_base.encode("ascii")), "callback ACK signature unexpectedly accepted wrong event correlation"
     response_seed = base64.b64decode(vector["test_private_seed_base64"])
     response_private = Ed25519PrivateKey.from_private_bytes(response_seed)
     assert response_private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) == response_pub
