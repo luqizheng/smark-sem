@@ -66,8 +66,8 @@ All application messages use a common envelope. Fields shown are required unless
   "connection_id": "uuid",
   "session_generation": 17,
   "message_sequence": 42,
-  "journal_id": "uuid (durable observations only)",
-  "event_sequence": 42 (durable observations only),
+  "journal_id": "uuid",
+  "event_sequence": 42,
   "occurred_at": "RFC3339 UTC",
   "payload": {}
 }
@@ -75,6 +75,7 @@ All application messages use a common envelope. Fields shown are required unless
 
 Rules:
 
+- `journal_id` and `event_sequence` are required only for durable Runner observations; heartbeat and replaceable telemetry snapshots may omit them.
 - `message_id` is globally unique per sender message and is used for deduplication.
 - `message_sequence` is a transport sequence, monotonically increasing for each direction within one connection generation. It starts a new sequence space after reconnect and is used for connection-level gap detection only.
 - Durable Runner observations additionally carry `journal_id` and `event_sequence`. `event_sequence` is monotonically increasing within the durable stream keyed by `runner_id + journal_id`, survives WSS reconnects, and is never reset merely because `connection_id` or `session_generation` changes.
