@@ -158,7 +158,7 @@ This protocol is deliberately conservative. It still requires a real systemd >=2
 
 The complete evidence record in §5.1 is immutable once committed to the Runner journal. Its identity is `evidence_id`; its `evidence_digest` is SHA-256 over RFC 8785 JCS serialization of the complete record, and its `evidence_schema_version` is `1` for this draft. The digest and version accompany the minimum exit-proof summary in `harness.process_exited`.
 
-The WSS event itself is the transport for the summary and digest. No separate evidence-fetch endpoint is introduced in V1. SEM persists the complete event envelope before acknowledging the corresponding durable Runner journal sequence. Runner retains the full local record until that durable acknowledgement; after acknowledgement it follows the configured D-10 audit-retention policy. SEM's persisted event summary and digest remain the long-lived audit copy after local raw-record expiry. The digest is an integrity binding, not a digital signature; authenticated WSS provenance and the Supervisor trust boundary remain authoritative.
+The WSS event itself is the transport for the summary and digest. No separate evidence-fetch endpoint is introduced in V1. SEM persists the complete event envelope before acknowledging the corresponding durable Runner journal sequence. Runner retains the full local record until that durable acknowledgement; after acknowledgement it follows the configured deployment/operations audit-retention policy. SEM's persisted event summary and digest remain the long-lived audit copy after local raw-record expiry. The digest is an integrity binding, not a digital signature; authenticated WSS provenance and the Supervisor trust boundary remain authoritative.
 
 ### 5.3 Exit status versus exit proof
 
@@ -176,7 +176,7 @@ Before the implementation can claim P0-04 closed, it must specify and prove one 
 
 ## 6. Required failure-injection acceptance cases
 
-These sixteen cases have been added to the D-05 acceptance matrix as D05-79–D05-94. Implement them in the D-10 Linux integration harness before ratification:
+These sixteen cases have been added to the D-05 acceptance matrix as D05-79–D05-94. Implement them in the executable Linux systemd integration harness described by the test plan before ratification:
 
 | ID | Injection point / condition | Required result |
 |---|---|---|
@@ -201,7 +201,7 @@ These sixteen cases have been added to the D-05 acceptance matrix as D05-79–D0
 
 | Finding | Draft disposition | Evidence still required |
 |---|---|---|
-| P0-02 launch/create crash window | **Design constraints made explicit; not closed** | D-10 broker implementation, systemd >=250 failure injection, hostile descendant/escape tests |
+| P0-02 launch/create crash window | **Design constraints made explicit; not closed** | broker implementation plus the Linux systemd integration test plan's systemd >=250 failure injection, hostile descendant/escape tests |
 | P0-03 start/release race | **Sequencer and release decision table specified; not closed** | Prove D-Bus job correlation and exact cancellation/StopUnit behavior under all race windows |
 | P0-04 exit proof after Supervisor restart | **Conservative evidence protocol specified; not closed** | Prove bracketed D-Bus/cgroup evidence and durable terminal-unit retention through SEM acknowledgement |
 
