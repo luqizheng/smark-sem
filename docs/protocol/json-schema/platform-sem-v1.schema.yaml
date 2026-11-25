@@ -1,0 +1,130 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://schemas.internal.example/sem/platform/v1/message.schema.json
+title: Platform–SEM HTTP message schemas
+description: Draft JSON Schema definitions for Platform requests and SEM infrastructure events.
+oneOf:
+  - $ref: '#/$defs/ExecutionRequestedEnvelope'
+  - $ref: '#/$defs/ExecutionReleaseRequestedEnvelope'
+  - $ref: '#/$defs/SemInfrastructureEventEnvelope'
+$defs:
+  BaseRequestEnvelope:
+    type: object
+    required: [message_id, request_id, schema_version, message_type, occurred_at, payload]
+    properties:
+      message_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid }
+      schema_version: { const: 1 }
+      message_type: { type: string }
+      occurred_at: { type: string, format: date-time }
+      correlation_id: { type: string, format: uuid }
+      payload: { type: object }
+    additionalProperties: false
+  ExecutionRequestedEnvelope:
+    allOf:
+      - $ref: '#/$defs/BaseRequestEnvelope'
+      - type: object
+        properties:
+          message_type: { const: execution.requested }
+          payload: { $ref: '#/$defs/ExecutionRequest' }
+  ExecutionRequest:
+    type: object
+    required: [execution_id, prompt, harness_profile, runner_requirements]
+    properties:
+      execution_id: { type: string, format: uuid }
+      prompt:
+        type: object
+        required: [content_type, body]
+        properties:
+          content_type: { const: 'text/plain; charset=utf-8' }
+          body: { type: string, minLength: 1 }
+        additionalProperties: false
+      harness_profile: { type: string, minLength: 1, maxLength: 64 }
+      runner_requirements:
+        type: object
+        required: [capabilities, supervision_mode]
+        properties:
+          capabilities: { type: array, items: { type: string }, uniqueItems: true }
+          supervision_mode: { enum: [unattended, supervised] }
+        additionalProperties: false
+    additionalProperties: false
+  ExecutionReleaseRequestedEnvelope:
+    allOf:
+      - $ref: '#/$defs/BaseRequestEnvelope'
+      - type: object
+        properties:
+          message_type: { const: execution.release_requested }
+          payload: { $ref: '#/$defs/ExecutionReleaseRequest' }
+  ExecutionReleaseRequest:
+    type: object
+    required: [execution_id, release_id, expected_binding_epoch, stop_policy]
+    properties:
+      execution_id: { type: string, format: uuid }
+      release_id: { type: string, format: uuid }
+      expected_binding_epoch: { type: integer, minimum: 1 }
+      stop_policy:
+        type: object
+        required: [mode, grace_period_seconds]
+        properties:
+          mode: { enum: [graceful_then_force, force] }
+          grace_period_seconds: { type: integer, minimum: 0, maximum: 3600 }
+        additionalProperties: false
+    additionalProperties: false
+  SemInfrastructureEventEnvelope:
+    type: object
+    required: [event_id, event_type, schema_version, occurred_at, event_sequence, journal_id, payload]
+    properties:
+      event_id: { type: string, format: uuid }
+      event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
+      schema_version: { const: 1 }
+      occurred_at: { type: string, format: date-time }
+      event_sequence: { type: integer, minimum: 1 }
+      journal_id: { type: string, format: uuid }
+      correlation_id: { type: string, format: uuid }
+      payload: { type: object, minProperties: 1 }
+    additionalProperties: false
+  ExecutionAcceptanceEnvelope:
+    type: object
+    required: [message_id, request_id, execution_id, acceptance, accepted_at]
+    properties:
+      message_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid }
+      execution_id: { type: string, format: uuid }
+      acceptance: { enum: [accepted, duplicate] }
+      accepted_at: { type: string, format: date-time }
+    additionalProperties: false
+  ReleaseAcceptanceEnvelope:
+    type: object
+    required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
+    properties:
+      message_id: { type: string, format: uuid }
+      request_id: { type: string, format: uuid }
+      execution_id: { type: string, format: uuid }
+      release_id: { type: string, format: uuid }
+      acceptance: { enum: [accepted, duplicate] }
+      accepted_at: { type: string, format: date-time }
+    additionalProperties: false
+  EventAcknowledgementEnvelope:
+    type: object
+    required: [event_id, disposition, acknowledged_at]
+    properties:
+      event_id: { type: string, format: uuid }
+      disposition: { enum: [accepted, duplicate] }
+      acknowledged_at: { type: string, format: date-time }
+    additionalProperties: false
+  ProtocolErrorEnvelope:
+    type: object
+    required: [error]
+    properties:
+      message_id: { type: string, format: uuid }
+      in_reply_to: { type: string, format: uuid }
+      error:
+        type: object
+        required: [code, class, retryable, detail]
+        properties:
+          code: { type: string }
+          class: { enum: [auth, protocol, conflict, admission, transient, uncertain, compatibility] }
+          retryable: { type: boolean }
+          retry_after_ms: { type: [integer, 'null'], minimum: 0 }
+          detail: { type: string, maxLength: 512 }
+        additionalProperties: false
+    additionalProperties: false
