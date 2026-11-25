@@ -369,28 +369,7 @@ $defs:
           additionalProperties: false
       generated_at: { type: string, format: date-time }
     additionalProperties: false
- }
-      exit_status:
-        oneOf:
-          - type: object
-            required: [kind, code]
-            properties: { kind: { const: code }, code: { type: integer } }
-            additionalProperties: false
-          - type: object
-            required: [kind, signal]
-            properties: { kind: { const: signal }, signal: { type: integer, minimum: 1 } }
-            additionalProperties: false
-          - type: object
-            required: [kind]
-            properties: { kind: { const: unknown } }
-            not:
-              anyOf:
-                - required: [code]
-                - required: [signal]
-            additionalProperties: false
-      supervisor_instance_id: { type: string, format: uuid }
-      exit_observed_at: { type: string, format: date-time }
-    additionalProperties: false
+
   ExecutionRelease:
     type: object
     required: [execution_id, release_id, expected_binding_epoch, stop_policy]
