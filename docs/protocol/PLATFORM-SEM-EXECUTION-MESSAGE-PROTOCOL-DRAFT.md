@@ -114,19 +114,24 @@ Runner behavior:
 
 Runner must not fetch Task context from SEM or ask SEM to mutate Task state.
 
-## 6. Runner → SEM: infrastructure observations
+## 6. Infrastructure observation directions
 
-Use distinct message types for distinct facts:
-- execution.binding_established: SEM has bound the execution to a specific Runner and assigned the current binding_epoch.
-- execution.delivery_received: Runner durably accepted the delivery message.
-- harness.starting: launch is in progress.
+SEM→AI-PM events:
+- execution.binding_established: SEM selected and bound the execution to a Runner and assigned binding_epoch.
+- execution.delivery_status: SEM's durable delivery state and any Runner receipt.
+- execution.release_status: SEM's release/cleanup state.
+- execution.infrastructure_uncertain: SEM cannot currently prove the process/binding state.
+
+Runner→SEM observations:
+- execution.delivery_received: Runner Supervisor durably accepted the delivery operation.
+- harness.starting: local launch is in progress.
 - harness.started: exact Harness process identity has been established.
 - harness.start_failed: launch failed before a process was established.
 - harness.process_exited: exact local process identity exited, with exit code and OS evidence metadata.
 - runner.resources.report: CPU, memory and workspace-volume telemetry.
 - execution.release_applied: Runner processed the release instruction and reports cleanup/process facts.
 
-Heartbeat, resource telemetry, agent activity, timeout, workspace deletion and a command receipt are not process-exit evidence.
+Heartbeat loss, resource telemetry, agent activity, timeout, workspace deletion and a command receipt are not process-exit evidence.
 
 ## 7. AI-PM → SEM: release/stop instruction
 
@@ -342,7 +347,28 @@ After validating the binding, AI-PM may send a separate message:
 
 SEM routes this opaque ticket only to the exact current Runner binding and does not inspect, redeem, log or transform it. Runner Supervisor's local credential broker redeems it directly with AI-PM using the bound Runner key. The resulting MCP credential is never returned to SEM. A stale binding, wrong Runner or mismatched key must be rejected by both SEM routing and AI-PM redemption validation.
 
-### 13.3 Runner → SEM: Harness process started
+### 13.3 Runner → SEM: durable delivery receipt
+
+~~~json
+{
+  "message_id": "uuid",
+  "message_type": "execution.delivery_received",
+  "schema_version": 1,
+  "event_sequence": 1,
+  "occurred_at": "RFC3339 UTC",
+  "payload": {
+    "execution_id": "uuid",
+    "binding_epoch": 1,
+    "runner_id": "uuid",
+    "delivery_id": "uuid",
+    "receipt": "durably_recorded"
+  }
+}
+~~~
+
+This receipt proves only that Runner Supervisor durably recorded the delivery operation. It does not prove that Harness started or that business work began.
+
+### 13.4 Runner → SEM: Harness process started
 
 ~~~json
 {
@@ -369,7 +395,7 @@ SEM routes this opaque ticket only to the exact current Runner binding and does 
 
 PID alone is not a stable process identity. The process start identity and OS boot identity are required to detect PID reuse and Runner reboot.
 
-### 13.4 Runner → SEM: exact process exit observation
+### 13.5 Runner → SEM: exact process exit observation
 
 ~~~json
 {
@@ -399,7 +425,7 @@ PID alone is not a stable process identity. The process start identity and OS bo
 
 The evidence_kind is accepted only when produced by the trusted Runner Supervisor implementation through the authenticated Runner channel. A Harness self-report is not process-exit evidence. The exit code is infrastructure evidence and never means Task completion.
 
-### 13.5 Runner → SEM: resource telemetry
+### 13.6 Runner → SEM: resource telemetry
 
 ~~~json
 {
@@ -420,7 +446,7 @@ The evidence_kind is accepted only when produced by the trusted Runner Superviso
 
 Telemetry includes observation time and Runner boot identity. SEM applies a configured freshness window and accounts for its own active reservations before dispatch. Stale or missing telemetry is not treated as unlimited capacity.
 
-### 13.6 AI-PM → SEM: fenced release request
+### 13.7 AI-PM → SEM: fenced release request
 
 ~~~json
 {
@@ -442,7 +468,7 @@ Telemetry includes observation time and Runner boot identity. SEM applies a conf
 
 If AI-PM does not know the current binding_epoch, it must first query/reconcile the execution by execution_id. SEM rejects a stale expected_binding_epoch and never applies it to a newer binding. Release arriving while launch is in progress must be persisted as a stop fence so the Supervisor cannot launch a late process after the release.
 
-### 13.7 Ordering and duplicate handling
+### 13.8 Ordering and duplicate handling
 
 - Every sender supplies a unique message_id; every logical operation also has its stable request_id, delivery_id or release_id.
 - Runner observations carry a monotonically increasing event_sequence within the execution/binding stream. SEM persists the last accepted sequence and deduplicates message_id.
