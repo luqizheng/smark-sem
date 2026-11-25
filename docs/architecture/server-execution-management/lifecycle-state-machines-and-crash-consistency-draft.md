@@ -523,7 +523,7 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 - Local journal must be access-controlled and tamper-evident to the extent supported by the host profile. Host compromise is handled by D-03 trust and isolation policy, not by assuming the journal is infallible.
 - Clock timestamps are diagnostic; ordering and fencing use stable IDs, epochs and sequence numbers, not wall-clock ordering alone.
 
-## 10. Acceptance matrix (56 cases)
+## 10. Acceptance matrix (60 cases)
 
 | ID | Scenario | Required result |
 |---|---|---|
@@ -583,6 +583,10 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-54 | `authorization_generation` changes while `lease_generation` remains unchanged (and vice versa) | Each authority rejects only its own stale generation; no cross-domain substitution |
 | D05-55 | Process exit is proven but workspace cleanup fails | Process capacity and cleanup resource accounting follow separate evidence; no false full release |
 | D05-56 | `infrastructure_uncertain` receives late valid start/exit/reconcile evidence | Only explicitly allowed reconciliation edges apply; no guessed terminal transition |
+| D05-57 | AI-PM receives a TaskStatus edge not present in the pinned 31-edge matrix | Domain guard rejects it; SEM cannot bypass or widen the matrix |
+| D05-58 | AI-PM receives a legal Task edge without its required evidence (E1/E2, waiting, failure, supersession or manual completion) | Application/domain guard rejects the transition and leaves Task status unchanged |
+| D05-59 | Delivery and Review Run transitions are mixed, or a terminal Run is mutated | Run transition guard rejects the edge; lease reacquisition remains a separate Delivery/Claimed operation |
+| D05-60 | SEM or Runner attempts a direct business-state transition based on infrastructure evidence | No business mutation; only AI-PM application service may evaluate RunOutcome/RunStatus/TaskStatus |
 
 ## 11. Open decisions required before ratification
 
