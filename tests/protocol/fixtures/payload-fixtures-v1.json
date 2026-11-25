@@ -463,9 +463,9 @@
         "binding_epoch": 1,
         "runner": {
           "runner_id": "55555555-5555-4555-8555-555555555555",
-          "key_version": 1,
           "boot_id": "boot-01",
-          "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+          "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "runner_key_version": 1
         },
         "delivery_id": "77777777-7777-4777-8777-777777777777",
         "reserved_capacity": {
