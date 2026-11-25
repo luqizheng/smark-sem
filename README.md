@@ -6,10 +6,10 @@ Standalone Server Execution Management (SEM) service for the AI-PM platform.
 
 This repository owns the execution infrastructure:
 
-- Runner connection and authentication at the SEM edge
+- Runner enrollment, connection and authentication at the SEM edge
 - Runner WSS control protocol
-- Session and dispatch coordination
-- Runtime-control coordination and Runner-reported process observations
+- Infrastructure-only execution dispatch and resource admission
+- Runtime-control coordination and authenticated Runner process observations
 - SEM-local persistence and recovery
 - Platform–SEM integration contracts and SEM architecture documentation
 
@@ -28,7 +28,15 @@ No distributed transaction and no shared database. Cross-service delivery is ide
 
 **Architecture migration in progress. No production SEM implementation is declared complete.**
 
-The SEM-02E–02J architecture and transaction-audit documents have been copied into this repository. SEM-02J remains **Changes Required / Audit In Progress**; unresolved findings remain unresolved. Platform-owned code and migrations stay in luqizheng/ai-pm. See [the repository migration record](docs/migration/REPOSITORY-MIGRATION.md), [cross-repository code ownership](docs/architecture/CROSS-REPOSITORY-CODE-OWNERSHIP.md), [the authority-boundary decision](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), the [replacement execution-message protocol draft](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and the [detailed identity/lifecycle/fencing/delivery contract draft](docs/protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md). The previous [Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md) is superseded and retained only as historical material pending replacement wire schemas.
+SEM-02E–02J and the original V1 domain/state/security/recovery designs are historical source-audit material; they are not implementation contracts. The active review baseline is indexed in [SEM Architecture README](docs/architecture/server-execution-management/README.md). Start with the [authority-boundary model](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol draft](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract draft](docs/protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md). Platform-owned code and migrations remain in luqizheng/ai-pm.
+
+## Confirmed operating constraints
+
+- Runner supervision defaults to unattended; supervised mode is opt-in.
+- Runner CPU, memory and workspace-volume telemetry informs SEM capacity admission and concurrency.
+- Workspace/worktree backups are not required; durable process registry and execution evidence are operational state, not workspace backup.
+- Each repository has one authoritative Git `origin`.
+- RabbitMQ exists as a separate single-instance service without clustering. SEM correctness must not depend on it; any future use is limited to optional non-authoritative wake-up/notification acceleration.
 
 ## Implementation status
 
@@ -40,7 +48,7 @@ The SEM-02E–02J architecture and transaction-audit documents have been copied 
 
 - docs/architecture/ — SEM architecture, contracts, audit, decisions
 - docs/migration/ — repository-boundary migration record
-- docs/protocol/ — [Platform–SEM–Runner Protocol V1](docs/protocol/PLATFORM-SEM-RUNNER-PROTOCOL-V1.md)
+- docs/protocol/ — active replacement Platform–SEM message protocol and execution identity/lifecycle/fencing/delivery contract drafts
 - src/ — SEM modular-monolith implementation (not yet migrated/created)
 - tests/ — SEM unit, integration, contract, and concurrency tests
 
