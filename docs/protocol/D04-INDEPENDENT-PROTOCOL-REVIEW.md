@@ -227,3 +227,16 @@ This closes the identified schema/fixture gap only. It does not prove SEM persis
 ### CI evidence update for §5.8 — 2026-11-25
 
 SEM Protocol Contract Validation run #502 (`45618307319`) passed all 10 steps on PR #5 head `65051e8d75a4fa0833d4755a48a32209195aca97`, including the new durable-ACK cursor rule, negative fixtures and WSS direction-catalogue coverage. This is contract/schema/fixture CI only; it does not prove live WSS sender enforcement, HTTP middleware/replay, AI-PM Inbox transactions or Linux process lifecycle behavior.
+
+
+## 5.9 Follow-up: release-applied disposition must agree with exit evidence — 2026-11-25
+
+A D-05/WSS cross-check found that ReleaseApplied accepted process_stopped or already_exited without process_exit_evidence_id, and also allowed stop_fenced/stale_rejected/local_uncertain to carry a positive exit-evidence reference. This was weaker than the D-05 positive-exit proof contract and could let a wire-valid release disposition be misinterpreted as process termination.
+
+Corrected on PR #5:
+- The Runner WSS schema now requires process_exit_evidence_id for process_stopped and already_exited.
+- The schema rejects process_exit_evidence_id for stop_fenced, stale_rejected and local_uncertain.
+- The WSS narrative now defines each disposition and requires SEM to cross-check the referenced harness.process_exited evidence against the exact execution/binding/launch/containment/boot identity.
+- Added D04-W46/W47 and positive/negative fixture assertions.
+
+This is schema and Draft semantic alignment only. The schema cannot prove that the referenced event exists or that the identity tuple matches; SEM receiver logic and live event-order/replay tests must enforce that. D-05 P0-02/P0-03/P0-04 remain open pending executable Linux systemd >=250 failure-injection evidence.
