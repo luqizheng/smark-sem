@@ -1,5 +1,7 @@
 # SEM-02H — DDL Integrity and Transaction Review
 
+> **Authority-boundary revision (2026-11-25):** This review's source/DDL findings remain historical evidence about AI-PM. Its old SEM business-control model is superseded by [the authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md). Do not derive SEM-owned business entities or APIs from it.
+
 - Status: **Changes Required / Review Pending**.
 - Reviewed draft: [SEM-02G](./sem-02g-database-and-api-contract-draft.md).
 - Current code baseline: GitHub `master@d0e72fa6805aebeadf1b282e430deba493072fd6`.
