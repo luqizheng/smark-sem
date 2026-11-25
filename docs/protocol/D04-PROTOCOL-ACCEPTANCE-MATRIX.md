@@ -302,3 +302,10 @@ See [D-04 RFC 8785 Full JCS Conformance Addendum](./D04-RFC8785-FULL-JCS-CONFORM
 | D04-H67 | SEM emits `harness.process_observed` with `observation=exit_status_unknown` and no numeric exit status | Accept only as infrastructure process-exit evidence with unknown numeric status; never infer business success |
 
 These are protocol/fixture requirements. They do not prove that the production Runner Supervisor, SEM event producer or AI-PM receiver implements the mapping.
+
+
+### 3.3 Handshake/application frame ownership
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-W64 | A message_type appears in both pre-application handshake and post-handshake application schemas | Contract validation fails; the two frame ownership sets must be disjoint. `runner.session.ack` is handshake-only; `runner.session.superseded` is post-handshake-only because it is sent over an already authenticated old connection. |
