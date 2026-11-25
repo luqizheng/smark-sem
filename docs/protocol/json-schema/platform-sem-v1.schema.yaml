@@ -239,7 +239,7 @@ $defs:
       observed_at: { type: string, format: date-time }
       failure_code: { type: string, maxLength: 64 }
     allOf:
-      - if: { properties: { release_state: { const: process_exited } }, required: [release_state] }
+      - if: { properties: { release_state: { enum: [process_exited, released] } }, required: [release_state] }
         then: { required: [process_exit_evidence_id] }
     additionalProperties: false
   InfrastructureUncertainEvent:
