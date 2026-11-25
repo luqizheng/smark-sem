@@ -1,0 +1,559 @@
+{
+  "warning": "All identifiers and payloads are deterministic test fixtures only. Do not use as production credentials or live execution requests.",
+  "runner_messages": [
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000001",
+      "message_type": "runner.heartbeat",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "boot_id": "boot-01",
+        "supervisor_state": "healthy",
+        "accepting_work": true,
+        "draining": false,
+        "active_execution_count": 1,
+        "process_registry_state": "consistent",
+        "resource_report_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "runner_monotonic_uptime_ms": 120000
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000002",
+      "message_type": "runner.health_probe",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 2,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "probe_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "issued_at": "2026-11-25T12:00:00Z",
+        "deadline_at": "2026-11-25T12:00:10Z"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000003",
+      "message_type": "runner.health_report",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 3,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "probe_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "boot_id": "boot-01",
+        "supervisor_state": "healthy",
+        "process_registry_state": "consistent",
+        "observed_at": "2026-11-25T12:00:00Z"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000004",
+      "message_type": "runner.resources.report",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 4,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "boot_id": "boot-01",
+        "resource_report_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "observed_at": "2026-11-25T12:00:00Z",
+        "cpu": {
+          "logical_cores": 8,
+          "utilization_ratio": 0.25,
+          "available_millicores": 6000
+        },
+        "memory": {
+          "total_bytes": 17179869184,
+          "available_bytes": 8589934592
+        },
+        "workspace_volume": {
+          "volume_id": "workspace-01",
+          "total_bytes": 107374182400,
+          "available_bytes": 85899345920,
+          "reserved_bytes": 10737418240
+        },
+        "execution_capacity": {
+          "max_concurrent": 4,
+          "active": 1,
+          "accepting": true
+        }
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000005",
+      "message_type": "runner.admission.changed",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 5,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "boot_id": "boot-01",
+        "admission_state": "accepting",
+        "accepting_work": true,
+        "reason_code": "operator_enabled",
+        "changed_at": "2026-11-25T12:00:00Z"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 5
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000006",
+      "message_type": "execution.deliver",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 6,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "delivery_id": "77777777-7777-4777-8777-777777777777",
+        "binding_epoch": 1,
+        "harness_profile": "codex",
+        "prompt": {
+          "content_type": "text/plain; charset=utf-8",
+          "body": "test-only opaque prompt"
+        }
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000007",
+      "message_type": "execution.credential_bootstrap",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 7,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "delivery_id": "77777777-7777-4777-8777-777777777777",
+        "binding_epoch": 1,
+        "bootstrap_ticket": "tttttttttttttttttttttttttttttttttttttttttttttttt",
+        "expires_at": "2026-11-25T12:01:00Z",
+        "audience": "ai-pm.internal.example"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000008",
+      "message_type": "execution.delivery_received",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 8,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "delivery_id": "77777777-7777-4777-8777-777777777777",
+        "binding_epoch": 1,
+        "receipt": "durably_recorded",
+        "local_record_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "boot_id": "boot-01"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 8
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000009",
+      "message_type": "harness.starting",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 9,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "binding_epoch": 1,
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "boot_id": "boot-01"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 9
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000010",
+      "message_type": "harness.started",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 10,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "binding_epoch": 1,
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "boot_id": "boot-01",
+        "process_identity": {
+          "pid": 4312,
+          "process_start_identity": "proc-start-4312",
+          "cgroup_path": "/system.slice/sem-exec-111",
+          "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        }
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 10
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000011",
+      "message_type": "harness.start_failed",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 11,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "binding_epoch": 1,
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "boot_id": "boot-01",
+        "failure_code": "spawn_failed",
+        "retry_disposition": "operator_required"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 11
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000012",
+      "message_type": "harness.process_exited",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 12,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "binding_epoch": 1,
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "boot_id": "boot-01",
+        "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "cgroup_populated": 0,
+        "evidence_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "exit_status": {
+          "kind": "code",
+          "code": 0
+        },
+        "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "exit_observed_at": "2026-11-25T12:00:00Z"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 12
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000013",
+      "message_type": "execution.release",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 13,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "release_id": "88888888-8888-4888-8888-888888888888",
+        "expected_binding_epoch": 1,
+        "stop_policy": {
+          "mode": "graceful_then_force",
+          "grace_period_seconds": 30
+        }
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000014",
+      "message_type": "execution.release_applied",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 14,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "release_id": "88888888-8888-4888-8888-888888888888",
+        "binding_epoch": 1,
+        "disposition": "stop_fenced",
+        "stop_fence_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "observed_at": "2026-11-25T12:00:00Z"
+      },
+      "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "event_sequence": 14
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000015",
+      "message_type": "protocol.ack",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 15,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "acknowledged_message_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "disposition": "durably_recorded"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000016",
+      "message_type": "protocol.error",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 16,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "code": "TEMPORARY_UNAVAILABLE",
+        "class": "transient",
+        "retryable": true,
+        "retry_after_ms": 1000,
+        "detail": "test fixture"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000017",
+      "message_type": "runner.session.superseded",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 17,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "superseded_connection_id": "66666666-6666-4666-8666-666666666666",
+        "superseded_session_generation": 1,
+        "reason": "newer_session_authenticated"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000018",
+      "message_type": "runner.replay.request",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 18,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "boot_id": "boot-01",
+        "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "last_durable_event_sequence": 10,
+        "active_executions": [
+          {
+            "execution_id": "11111111-1111-4111-8111-111111111111",
+            "binding_epoch": 1,
+            "launch_id": "99999999-9999-4999-8999-999999999999",
+            "local_state": "running"
+          }
+        ],
+        "process_registry_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "protocol": "sem.runner.v1",
+      "schema_version": 1,
+      "message_id": "10000000-0000-4000-8000-000000000019",
+      "message_type": "runner.replay.snapshot",
+      "runner_id": "55555555-5555-4555-8555-555555555555",
+      "connection_id": "66666666-6666-4666-8666-666666666666",
+      "session_generation": 1,
+      "message_sequence": 19,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "snapshot_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "journal_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "sem_last_accepted_event_sequence": 10,
+        "outstanding_executions": [
+          {
+            "execution_id": "11111111-1111-4111-8111-111111111111",
+            "binding_epoch": 1,
+            "delivery_id": "77777777-7777-4777-8777-777777777777",
+            "infrastructure_state": "running"
+          }
+        ],
+        "generated_at": "2026-11-25T12:00:00Z"
+      }
+    }
+  ],
+  "platform_requests": [
+    {
+      "message_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "request_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "schema_version": 1,
+      "message_type": "execution.requested",
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "prompt": {
+          "content_type": "text/plain; charset=utf-8",
+          "body": "test-only"
+        },
+        "harness_profile": "codex",
+        "runner_requirements": {
+          "capabilities": [
+            "linux"
+          ],
+          "supervision_mode": "unattended"
+        }
+      }
+    },
+    {
+      "message_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "request_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "schema_version": 1,
+      "message_type": "execution.release_requested",
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "11111111-1111-4111-8111-111111111111",
+        "release_id": "88888888-8888-4888-8888-888888888888",
+        "expected_binding_epoch": 1,
+        "stop_policy": {
+          "mode": "graceful_then_force",
+          "grace_period_seconds": 30
+        }
+      }
+    }
+  ],
+  "sem_events": [
+    {
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "event_type": "execution.binding_established",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 1,
+      "payload": {
+        "binding_epoch": 1,
+        "runner": {
+          "runner_id": "55555555-5555-4555-8555-555555555555",
+          "key_version": 1,
+          "boot_id": "boot-01",
+          "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        },
+        "delivery_id": "77777777-7777-4777-8777-777777777777",
+        "reserved_capacity": {
+          "cpu_millicores": 1000,
+          "memory_bytes": 1073741824,
+          "workspace_bytes": 1073741824
+        },
+        "established_at": "2026-11-25T12:00:00Z"
+      }
+    },
+    {
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "event_type": "execution.delivery_status",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 2,
+      "payload": {
+        "delivery_id": "77777777-7777-4777-8777-777777777777",
+        "binding_epoch": 1,
+        "runner_id": "55555555-5555-4555-8555-555555555555",
+        "delivery_state": "durably_received",
+        "supervisor_receipt_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "observed_at": "2026-11-25T12:00:00Z"
+      }
+    },
+    {
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "event_type": "harness.process_observed",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 3,
+      "payload": {
+        "binding_epoch": 1,
+        "runner_id": "55555555-5555-4555-8555-555555555555",
+        "runner_key_version": 1,
+        "boot_id": "boot-01",
+        "supervisor_instance_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "launch_id": "99999999-9999-4999-8999-999999999999",
+        "containment_id": "sem-exec-111",
+        "observation": "started",
+        "process_identity": {
+          "pid": 4312,
+          "process_start_identity": "proc-start-4312",
+          "cgroup_path": "/system.slice/sem-exec-111",
+          "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+        },
+        "observed_at": "2026-11-25T12:00:00Z"
+      }
+    },
+    {
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "event_type": "execution.release_status",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 4,
+      "payload": {
+        "release_id": "88888888-8888-4888-8888-888888888888",
+        "binding_epoch": 1,
+        "runner_id": "55555555-5555-4555-8555-555555555555",
+        "release_state": "stop_fenced",
+        "stop_fence_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "observed_at": "2026-11-25T12:00:00Z"
+      }
+    },
+    {
+      "event_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "event_type": "execution.infrastructure_uncertain",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "11111111-1111-4111-8111-111111111111",
+      "execution_event_sequence": 5,
+      "payload": {
+        "binding_epoch": 1,
+        "uncertainty_code": "process_state_unknown",
+        "uncertainty_scope": "process",
+        "runner_id": "55555555-5555-4555-8555-555555555555",
+        "boot_id": "boot-01",
+        "since": "2026-11-25T12:00:00Z",
+        "reconciliation_required": true,
+        "reservation_retained": true,
+        "operator_action_required": false,
+        "evidence_refs": [
+          "journal:10"
+        ]
+      }
+    }
+  ]
+}
