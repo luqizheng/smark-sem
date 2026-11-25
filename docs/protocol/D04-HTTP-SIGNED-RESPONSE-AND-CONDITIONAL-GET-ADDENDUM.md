@@ -247,3 +247,6 @@ CI evidence update: latest PR head `a81b83edf908cd9cec6a981cbec70024f89e5d0a` pa
 
 
 Latest deterministic response-vector validation: PR head `16cf8432c7dc8642370e763f92c2539ced446b75` passed CI runs #299 and #300 (all ten steps). This includes the signed 409 and callback ACK fixtures, correlation mutations, and request-context mutations for method, authority, path, Content-Digest and 304 If-None-Match.
+
+
+Latest signed ETag validation: PR head `1b81fb2cc5f92ef43ae09e46547587fd681359b4` passed CI runs #349/#350, all ten steps. The run includes GET snapshot 200 ETag signature verification and ETag-tamper rejection, plus conditional 304 ETag and If-None-Match negative cases.
