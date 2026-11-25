@@ -74,7 +74,7 @@ let result = client
     .await?;
 ```
 
-The final method names, generic parameters and ownership ergonomics are to be frozen by the SDK API review.
+The proposed three-method public API, request identity rules, conditional read behavior, release fencing, signing, error taxonomy and acceptance criteria are specified in [D-12 SEM SDK Public API Design](./sem-sdk-public-api-design-draft.md). That API design remains Draft pending D-04 and bilateral review.
 
 ## 5. Transport and trust
 
@@ -152,7 +152,7 @@ Before SDK implementation is approved, define executable tests for:
 - Confirm Tokio 1 + reqwest 0.12/native-tls after integrated workspace dependency resolution; the source compatibility audit recommends this candidate based on the current AI-PM and SEM manifests.
 - Confirm `sem-protocol` as the canonical model crate and SDK re-export boundary; avoid speculative companion crates.
 - Prove CA trust, hostname validation, explicit certificate/public-key pinning and fail-closed behavior with the selected TLS stack. If pinning cannot be implemented safely, stop for a bilateral transport decision; never disable verification.
-- Exact public method signatures and builder/configuration ergonomics.
+- Final ratification of the proposed public method signatures and builder/configuration ergonomics in [D-12 SEM SDK Public API Design](./sem-sdk-public-api-design-draft.md).
 - Whether SEM provides a reusable callback-verification helper crate, and the boundary of that helper.
 - SDK support window, semantic-versioning policy and release automation.
 - Exact mapping of existing D-04 OpenAPI endpoints to SDK methods.
