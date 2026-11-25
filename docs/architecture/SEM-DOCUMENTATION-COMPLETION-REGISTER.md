@@ -183,18 +183,18 @@ See the AI-PM [Harness identity and business fencing review](https://github.com/
 
 ## D-12 — SEM SDK provider and consumer contract
 
-The user-confirmed provider/consumer direction is: **smark-sem provides and owns the supported SDK; AI-PM consumes it.** The design is recorded in [SEM SDK and Consumer Integration Contract](./sem-sdk-and-consumer-integration-contract-draft.md).
+The user-confirmed provider/consumer direction is: **smark-sem provides and owns the supported SDK; AI-PM consumes it.** The provider/consumer boundary is recorded in [SEM SDK and Consumer Integration Contract](./sem-sdk-and-consumer-integration-contract-draft.md); the proposed three-operation API, error model, signing boundary, retry/idempotency semantics and acceptance suite are in [D-12 SEM SDK Public API Design](./sem-sdk-public-api-design-draft.md).
 
 Required closure:
 - Freeze the Rust crate name, workspace placement and distribution/release channel.
 - Audit async runtime and HTTP dependency compatibility with AI-PM before selecting the implementation stack.
-- Freeze typed client methods for execution submission, query/reconciliation and release.
+- Review and ratify the three typed client methods for execution submission, query/reconciliation and release against the final D-04 OpenAPI/JSON Schemas.
 - Freeze structured error categories, idempotency behavior, timeout uncertainty and bounded retry primitives.
 - Define SDK/API major-version compatibility, support window, deprecation and release notes.
 - Decide whether shared protocol models and callback-verification primitives belong in the SDK crate or a companion crate.
 - Add SEM schema/fixture validation and AI-PM pinned-SDK bilateral compile/contract CI.
 
-The SDK must not own AI-PM Outbox, database, business retry decisions, Task state or callback transaction. The callback receiver and Inbox remain AI-PM-owned. A source compatibility audit now recommends an isolated `sem-sdk` crate over canonical `sem-protocol`, Tokio 1 + reqwest 0.12/native-tls as a candidate, and internal Kellnr distribution subject to SEM CI access verification. Explicit certificate/public-key pinning must be proven independently from CA-chain validation. See [SEM SDK Source Compatibility Audit](./sem-sdk-source-compatibility-audit.md). This is a Draft contract; no SDK code is authorized.
+The SDK must not own AI-PM Outbox, database, durable retry scheduling, business retry decisions, Task state or callback transaction. The callback receiver and Inbox remain AI-PM-owned. A source compatibility audit now recommends an isolated `sem-sdk` crate over canonical `sem-protocol`, Tokio 1 + reqwest 0.12/native-tls as a candidate, and internal Kellnr distribution subject to SEM CI access verification. Explicit certificate/public-key pinning must be proven independently from CA-chain validation. See [SEM SDK Source Compatibility Audit](./sem-sdk-source-compatibility-audit.md). The public API proposal is available for bilateral review but is not ratified. This is a Draft contract; no SDK code is authorized.
 
 ## 7. Document status vocabulary
 
