@@ -652,6 +652,11 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-92 | Harness attempts system-bus, systemd control or cgroup mutation | Access denied; if containment integrity cannot be proven, quarantine |
 | D05-93 | Out-of-band administrator changes or replaces the reserved unit | Detect identity/property mismatch; quarantine and audit; no silent adoption |
 | D05-94 | Broker sees no matching job/unit after ambiguous D-Bus request but cannot prove request was never sent | Remain local_uncertain; operator reconciliation; no second StartTransientUnit |
+| D05-95 | harness.process_exited omits evidence_schema_version or evidence_digest | Schema validation rejects the event; no process-exited transition |
+| D05-96 | Replayed event reuses evidence_id but changes digest or evidence payload | SEM detects integrity conflict and quarantines/reconciles; never overwrite accepted evidence |
+| D05-97 | SEM sends durable event ACK before the complete event envelope is committed | Test fails; ACK must follow durable persistence |
+| D05-98 | Runner deletes or mutates the raw evidence record before receiving durable ACK for its event_sequence | Test fails; evidence must remain replayable and immutable until ACK |
+| D05-99 | Runner replays process-exit event after reconnect | journal_id, event_sequence, evidence_id, schema version, digest and payload remain identical; only connection-scoped framing may change |
 
 ## 11. Open decisions required before ratification
 
