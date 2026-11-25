@@ -336,6 +336,13 @@ for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304",
         wrong_context_base = "\n".join(f"{component}: {value}" for component, value in wrong_context_pairs)
         wrong_context_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_context_base.encode("ascii")), name + " response accepted a different request context"
+    if name == "http_snapshot_200":
+        wrong_etag_pairs = list(pairs)
+        etag_index = next(i for i, pair in enumerate(wrong_etag_pairs) if pair[0] == '"etag"')
+        wrong_etag_pairs[etag_index] = ('"etag"', '"tampered-snapshot-v5"')
+        wrong_etag_base = "\\n".join(f"{component}: {value}" for component, value in wrong_etag_pairs)
+        wrong_etag_base += f'\\n"@signature-params": {vector["signature_params"]}'
+        assert not verify(response_pub, response_sig, wrong_etag_base.encode("ascii")), "snapshot 200 signature accepted a tampered ETag"
     if name == "http_304":
         wrong_validator_pairs = list(pairs)
         wrong_validator_pairs[8] = ('"if-none-match";req', '"different-validator"')
@@ -343,7 +350,7 @@ for name in ("http_response", "http_error_409", "http_snapshot_200", "http_304",
         wrong_validator_base += f'\n"@signature-params": {vector["signature_params"]}'
         assert not verify(response_pub, response_sig, wrong_validator_base.encode("ascii")), "304 response accepted a different If-None-Match context"
 
-    if name in ("http_response", "http_error_409"):
+    if name in ("http_response", "http_error_409", "http_snapshot_200"):
         wrong_pairs = list(pairs)
         wrong_pairs[2] = ('"x-sem-request-id"', request["message_id"])
         wrong_base = "\n".join(f"{component}: {value}" for component, value in wrong_pairs)
