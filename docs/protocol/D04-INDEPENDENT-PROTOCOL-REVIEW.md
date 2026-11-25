@@ -223,3 +223,7 @@ This closes the identified schema/fixture gap only. It does not prove SEM persis
 - **Version negotiation and operational bounds remain prose-level:** retain P1-02/P1-03.
 - **Platform↔SEM HTTP authentication/replay and AI-PM callback Inbox remain P0 blockers:** schema/fixture CI does not close live middleware, nonce replay, durable Inbox, producer/receiver mapping or bilateral runtime behavior.
 - **No process lifecycle P0 is closed by this ACK correction:** P0-02/P0-03/P0-04 still require executable Linux systemd >=250 failure-injection evidence.
+
+### CI evidence update for §5.8 — 2026-11-25
+
+SEM Protocol Contract Validation run #502 (`45618307319`) passed all 10 steps on PR #5 head `65051e8d75a4fa0833d4755a48a32209195aca97`, including the new durable-ACK cursor rule, negative fixtures and WSS direction-catalogue coverage. This is contract/schema/fixture CI only; it does not prove live WSS sender enforcement, HTTP middleware/replay, AI-PM Inbox transactions or Linux process lifecycle behavior.
