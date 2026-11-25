@@ -80,7 +80,7 @@ assert digest != "sha-256=:" + base64.b64encode(hashlib.sha256(body + b" ").dige
 
 
 # Deterministic response-signature vectors bind the exact associated request.
-for name in ("http_response", "http_304"):
+for name in ("http_response", "http_304", "http_callback_ack"):
     vector = data[name]
     request = vector["request"]
     response = vector["response"]
@@ -90,9 +90,22 @@ for name in ("http_response", "http_304"):
     response_body = response["body"].encode("utf-8")
     expected_response_digest = "sha-256=:" + base64.b64encode(hashlib.sha256(response_body).digest()).decode("ascii") + ":"
     assert expected_response_digest == response["content_digest"], name + " response Content-Digest mismatch"
-    assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
-    assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
-    if name == "http_response":
+    if name == "http_callback_ack":
+        assert response["event_id"] == request["event_id"] == request["idempotency_key"], "callback ACK correlation must equal authenticated event_id"
+        assert response["event_id"] != request["message_id"], "callback event_id must remain distinct from transport message_id"
+        pairs = [
+            ('"@status"', str(response["status"])),
+            ('"content-digest";sf', response["content_digest"]),
+            ('"x-sem-event-id"', response["event_id"]),
+            ('"content-type"', response["content_type"]),
+            ('"@method";req', request["method"]),
+            ('"@authority";req', request["authority"]),
+            ('"@path";req', request["path"]),
+            ('"content-digest";req;sf', request["content_digest"]),
+        ]
+    elif name == "http_response":
+        assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
+        assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
         pairs = [
             ('"@status"', str(response["status"])),
             ('"content-digest";sf', response["content_digest"]),
@@ -104,6 +117,8 @@ for name in ("http_response", "http_304"):
             ('"content-digest";req;sf', request["content_digest"]),
         ]
     else:
+        assert response["request_id"] == request["request_id"], name + " response correlation mismatch"
+        assert response["request_id"] != request["message_id"], name + " response correlation must use request_id, not message_id"
         assert response["status"] == 304 and response_body == b"", "304 must be bodyless"
         assert response["content_digest"] == "sha-256=:47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=:", "304 empty digest mismatch"
         pairs = [
@@ -127,6 +142,7 @@ for name in ("http_response", "http_304"):
     response_private = Ed25519PrivateKey.from_private_bytes(response_seed)
     assert response_private.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw) == response_pub
     assert response_private.sign(response_base.encode("ascii")) == response_sig
+
 
 rfc = data["rfc9421_official_ed25519"]
 rfc_pub = b64d(rfc["public_key_base64"])
