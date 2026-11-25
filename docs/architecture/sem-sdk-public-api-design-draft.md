@@ -116,7 +116,9 @@ The SDK must not generate a new request_id after an ambiguous result. A retry by
 
 The optional read condition represents the HTTP `If-None-Match` validator. The result must distinguish:
 - `Modified(snapshot, etag)` for HTTP 200;
-- `NotModified(etag)` for HTTP 304.
+- `NotModified` for HTTP 304.
+
+The current OpenAPI draft defines an ETag response header for 200 but does not explicitly define it for 304. Before freezing the Rust return type, D-04 must decide whether 304 echoes ETag (recommended) and add the corresponding OpenAPI header and signed-response coverage. Until then the SDK must not promise an ETag value on the 304 branch.
 
 A 404 means the execution identifier is unknown to SEM; it must not be silently translated into an empty/queued execution.
 
@@ -232,7 +234,7 @@ Proposed:
 8. Ambiguous timeout is distinguishable from definitive rejection.
 9. Idempotent replay returns the same durable disposition; changed body conflicts.
 10. 412 stale epoch is typed and never automatically retried.
-11. 200/304 conditional read and 404 semantics are tested.
+11. 200/304 conditional read and 404 semantics are tested; the 304 ETag response-header omission in the current OpenAPI draft is resolved.
 12. No automatic durable retry, Outbox access, DB access, Task transition or callback server exists in SDK.
 13. AI-PM compiles against the published immutable SDK version in bilateral CI.
 14. SEM CI verifies public API compatibility and package publication provenance.
@@ -240,7 +242,7 @@ Proposed:
 
 ## 10. Blocking open decisions
 
-- D-04 exact request/response/event schema and signature profile closure.
+- D-04 exact request/response/event schema and signature profile closure, including the currently unspecified ETag response header on 304.
 - Final signer/verifier/key-resolver interfaces and crypto implementation ownership.
 - Whether reqwest 0.12/native-tls can meet explicit pinning requirements safely.
 - SEM CI access to internal Kellnr and immutable publish permissions.
