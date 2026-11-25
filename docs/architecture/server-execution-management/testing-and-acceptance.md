@@ -1,5 +1,8 @@
 # SEM V1 Testing and Acceptance
 
+> **HISTORICAL — NOT AN IMPLEMENTATION CONTRACT (2026-11-25):** This document describes the superseded SEM V1 Platform Claim/Lease/Run/Task/HIR/Barrier control-plane model. Preserve it as historical design and audit evidence only. Do not implement its business orchestration, database ownership, state machines or API flows. The current review baseline is the [SEM authority-boundary model](../SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [Platform–SEM execution-message protocol](../../protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract](../../protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md).
+
+
 A mock passing does not prove OS process semantics. Process and Runner ACK tests require real process/Runner integration.
 
 ## 1. Unit tests
