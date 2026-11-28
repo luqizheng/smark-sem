@@ -11,24 +11,25 @@ This repository owns the execution infrastructure:
 - Infrastructure-only execution dispatch and resource admission
 - Runtime-control coordination and authenticated Runner process observations
 - SEM-local persistence and recovery
-- Platform–SEM integration contracts and SEM architecture documentation
+- Platform–SEM integration contracts, the supported Rust SDK and SEM architecture documentation
 
 The AI-PM Platform remains authoritative for Project, Task, Run/business execution state, approvals, HIR/Barrier, business commands, business results and audit state. SEM is an execution-message transport and runtime manager: it routes opaque prompts, coordinates Runner runtime commands, records Runner-reported infrastructure observations and releases SEM-side reservations when instructed by AI-PM. Runner Supervisor owns local Harness process start/stop and OS process identity. SEM must not connect to or share the Platform PostgreSQL database, mirror business state, or interpret prompt content.
 
 ## Integration
 
-- AI-PM Platform Outbox → authenticated, versioned HTTPS → SEM Inbox (execution request, opaque prompt body, release instruction)
-- SEM ↔ Runner over authenticated WSS (opaque prompt delivery, runtime control, process/resource observations)
-- Harness → AI-PM MCP for all project/task context, business state transitions and business results
-- SEM → AI-PM reports infrastructure delivery, process and cleanup facts only; it does not call business Claim/Lease/Task/HIR/Barrier APIs
+- AI-PM's durable Outbox worker calls SEM through the **Rust SDK provided and versioned by smark-sem**. AI-PM owns Outbox persistence, business authorization and durable retry scheduling; the SDK owns typed SEM API calls, transport/authentication primitives and protocol compatibility.
+- AI-PM → SEM uses the versioned HTTP/HTTPS service contract over the company private network. HTTP is permitted only on the restricted internal network; HTTPS supports enterprise CA or explicitly pinned self-signed certificates. Certificate verification must never be disabled.
+- SEM → AI-PM reports infrastructure delivery, process and cleanup facts through an AI-PM-owned callback endpoint. SEM owns the event schema and shared conformance fixtures; AI-PM owns callback authentication, Inbox transaction, Run observation and ACK-after-commit.
+- SEM ↔ Runner uses authenticated persistent WSS (opaque prompt delivery, runtime control, process/resource observations).
+- Harness → AI-PM MCP for all project/task context, business state transitions and business results. SEM does not provide business context or call business Claim/Lease/Task/HIR/Barrier APIs.
 
-No distributed transaction and no shared database. Cross-service delivery is idempotent and reconciled.
+No distributed transaction and no shared database. Cross-service delivery is at-least-once, idempotent and reconciled. The SDK does not poll or own the AI-PM Outbox and does not make business retry decisions.
 
 ## Current status
 
 **Architecture migration in progress. No production SEM implementation is declared complete.**
 
-SEM-02E–02J and the original V1 domain/state/security/recovery designs are historical source-audit material; they are not implementation contracts. The active review baseline is indexed in [SEM Architecture README](docs/architecture/server-execution-management/README.md) and tracked by the [Bilateral Documentation Completion Register](docs/architecture/SEM-DOCUMENTATION-COMPLETION-REGISTER.md). Start with the [authority-boundary model](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [replacement execution-message protocol draft](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract draft](docs/protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md). Platform-owned code and migrations remain in luqizheng/ai-pm.
+SEM-02E–02J and the original V1 domain/state/security/recovery designs are historical source-audit material; they are not implementation contracts. The active review baseline is indexed in [SEM Architecture README](docs/architecture/server-execution-management/README.md) and tracked by the [Bilateral Documentation Completion Register](docs/architecture/SEM-DOCUMENTATION-COMPLETION-REGISTER.md). Start with the [authority-boundary model](docs/architecture/SEM-AUTHORITY-BOUNDARY-AND-EXECUTION-MESSAGE-MODEL.md), [SEM SDK and Consumer Integration Contract](docs/architecture/sem-sdk-and-consumer-integration-contract-draft.md), [draft SEM SDK public API](docs/architecture/sem-sdk-public-api-design-draft.md), [SDK source compatibility audit](docs/architecture/sem-sdk-source-compatibility-audit.md), [replacement execution-message protocol](docs/protocol/PLATFORM-SEM-EXECUTION-MESSAGE-PROTOCOL-DRAFT.md), and [identity/lifecycle/fencing/delivery contract](docs/protocol/EXECUTION-IDENTITY-LIFECYCLE-FENCING-DELIVERY-CONTRACT-DRAFT.md). Platform-owned code and migrations remain in luqizheng/ai-pm.
 
 ## Confirmed operating constraints
 
@@ -48,7 +49,7 @@ SEM-02E–02J and the original V1 domain/state/security/recovery designs are his
 
 - docs/architecture/ — SEM architecture, contracts, audit, decisions
 - docs/migration/ — repository-boundary migration record
-- docs/protocol/ — active replacement Platform–SEM message protocol and execution identity/lifecycle/fencing/delivery contract drafts
+- docs/protocol/ — active replacement Platform–SEM message protocol and execution identity/lifecycle/fencing/delivery contract
 - src/ — SEM modular-monolith implementation (not yet migrated/created)
 - tests/ — SEM unit, integration, contract, and concurrency tests
 
@@ -64,5 +65,4 @@ SEM-02E–02J and the original V1 domain/state/security/recovery designs are his
 
 Architecture and transaction contracts must be reviewed before implementation. The initial service should be a modular monolith, not a fleet of microservices.
 
-
-**Security review gate:** The protocol and companion contract drafts now cover delegated Harness identity, a proposed Runner-bound bootstrap, independent AI-PM authorization-generation vs SEM binding-epoch fencing, uncertain-Runner quarantine, idempotent lifecycle messaging, and the distinction between delivery submission and Task completion. These are review requirements, not implemented features.
+**Security review gate:** The protocol and companion contract drafts cover delegated Harness identity, a proposed Runner-bound bootstrap, independent AI-PM authorization-generation vs SEM binding-epoch fencing, uncertain-Runner quarantine, idempotent lifecycle messaging, and the distinction between delivery submission and Task completion. These are review requirements, not implemented features.
