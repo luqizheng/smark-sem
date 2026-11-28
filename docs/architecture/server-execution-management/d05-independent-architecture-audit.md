@@ -321,7 +321,7 @@ Remaining blockers:
 
 - The event sequence scope is now explicit in D-05 §5.4 as `runner_id + journal_id`, with execution_id + binding_epoch validated separately. Confirm every state-changing WSS message branch carries journal_id + event_sequence and that replay snapshots/cursors use the same scope.
 - D-05 now has explicit uncertainty-resolution edges and a separate process-capacity vs workspace-cleanup distinction. The D-05 transition table and the D-04 wire schemas still need a mechanical cross-reference check.
-- The selected systemd profile remains an architecture candidate, not an implementation proof. No runtime work should start until D-10 integration/failure-injection evidence and D-03 host-loss profile are complete.
+- The selected systemd profile remains an architecture candidate, not an implementation proof. No runtime work should start until Linux systemd integration/failure-injection evidence and D-03 host-loss profile are complete.
 
 ## 10. Updated disposition
 
@@ -367,3 +367,82 @@ Consequences now incorporated into D-05 §3.6 and acceptance cases D05-75–78:
 - JobRemoved result, unit ActiveState/SubState and cgroup emptiness are distinct observations; none alone substitutes for the full exit/no-late-start proof.
 
 This is authoritative documentation research, not a live systemd integration test. It sharpens the contract but does not close P0-03/P0-04. A systemd 250+ failure-injection harness remains mandatory.
+
+## 13. Challenge review — Linux launch/release/exit proof addendum
+
+A focused challenge addendum was added at [D-05 Linux Launch, Release and Exit-Proof Addendum](./d05-linux-launch-release-exit-proof-addendum.md). It does not mark any P0 closed. It converts the remaining ambiguity into explicit, testable contract obligations.
+
+### P0-02 — Launch idempotency across lost D-Bus replies
+
+The addendum now makes the safety rule explicit: once a StartTransientUnit request may have crossed the D-Bus send boundary, a lost reply is an ambiguous side effect. The broker may adopt a matching job/invocation, but if neither can be proven it must quarantine; an empty ListJobs result or missing unit is not proof that the original call was never accepted. Blind retry is prohibited.
+
+It also makes the sole-broker privilege boundary mandatory: Harness cannot access systemd/D-Bus/cgroup controls, and no ordinary competing actor may create or replace units in the reserved namespace.
+
+**Disposition: DESIGN CONSTRAINTS CLARIFIED; P0 remains OPEN pending implementation plus Linux systemd integration test plan and systemd >=250 failure injection.**
+
+### P0-03 — Start/release linearization
+
+The addendum separates the durable release fence from systemd manager acceptance of a start job. It defines outcomes for pre-send, call-in-flight, waiting job, running job, running invocation, terminal invocation and unresolved evidence. A waiting job can only be canceled with exact-job correlation plus independent no-process/no-pending-start proof. A running job requires StopUnit for the exact unit; CancelJob is not a stop.
+
+**Disposition: DECISION TABLE ADDED; P0 remains OPEN pending race injection at D-Bus send, JobNew, waiting→running, process spawn and StopUnit boundaries.**
+
+### P0-04 — Exit proof after Supervisor restart
+
+The addendum specifies an identity-bound evidence record and a conservative bracketed observation: exact unit/invocation properties, job snapshots, cgroup.events populated=0, then re-read unit/jobs/cgroup and require stable identity and no pending start/restart. It explicitly does not claim an atomic cross-interface snapshot. Unit retention through SEM acknowledgement is still an unresolved implementation proof obligation; CollectMode/RemainAfterExit alone must not be assumed sufficient.
+
+**Disposition: EVIDENCE PROTOCOL SPECIFIED AS A CHALLENGE; P0 remains OPEN pending proof of bracket semantics, unit retention/GC behavior and restart failure injection.**
+
+### Overall
+
+No Linux integration harness or runtime code was added in this documentation-only step. D-05 remains **CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT**. P0-01 remains Draft-contract closed against the pinned AI-PM source revision and must be rechecked immediately before ratification. D-04 schema cross-reference and D-03 operator-resolution acceptance remain separate gates.
+
+
+## 14. D-05 ↔ D-04 durable-event cross-check
+
+A branch-level review of `runner-sem-v1.schema.yaml`, `RUNNER-SEM-WSS-PROTOCOL-DRAFT.md`, the D-05 event model and the contract validators found:
+
+- The schema currently requires `journal_id + event_sequence` for seven durable Runner message types: `execution.delivery_received`, `harness.starting`, `harness.started`, `harness.start_failed`, `harness.process_exited`, `execution.release_applied` and `runner.admission.changed`.
+- The WSS narrative states that durable Runner observations use the `runner_id + journal_id` stream and that transport `message_sequence` is not a substitute. The seven-branch list is now pinned in `validate_sem_contracts.py`; payload fixtures now reject missing `journal_id` and missing `event_sequence` independently for each durable message.
+- Replaceable heartbeat/health/resource snapshots remain outside the durable event stream. The schema/validator must be updated together if a new message becomes state-changing or replayable.
+
+### P1 — Exit evidence reference semantics
+
+The Runner–SEM WSS protocol §9.2 now freezes the V1 model:
+
+- `evidence_id` is an immutable opaque reference to the full Runner local-journal record; no HTTP fetch endpoint or second transport is introduced.
+- `evidence_schema_version=1` and `evidence_digest` (SHA-256 over RFC 8785 JCS of the complete evidence record) accompany the process-exit event.
+- The event carries the minimum exit-proof summary; SEM persists the complete event envelope before ACKing its durable Runner event sequence. The ACK echoes `acknowledged_journal_id + acknowledged_event_sequence` with `disposition=durably_recorded`; schema conditionals require the cursor pair together, and negative fixtures reject either missing field.
+- Runner retains the full record until that durable ACK; post-ACK local retention is a deployment/operations policy. SEM's stored summary and digest remain the durable audit copy after local raw-record expiry.
+- The digest is an integrity binding, not a digital signature. V1 trusts authenticated WSS provenance and the Runner Supervisor authority; independent remote verification of the full raw record is explicitly out of scope.
+
+**Disposition: CONTRACT SEMANTICS CLOSED AT DRAFT LEVEL.** The Linux systemd integration test plan must still prove immutable journal commit/fsync, digest generation over exact JCS bytes, replay identity preservation, ACK gating and configured post-ACK retention under disk pressure and Supervisor restart. These are implementation acceptance requirements, not reasons to invent a second V1 evidence transport.
+
+
+The added validators now check schema branch parity, durable journal cursor requirements, evidence digest presence/format, supported evidence schema version and complete durable ACK cursor. They do not prove runtime digest calculation, event replay persistence or retention. GitHub Actions Run #477 passed all 10 contract-validation steps (OpenAPI, JSON Schema/message coverage, crypto vectors, payload fixtures including the new negative cases, and independent Node JCS/Ed25519 vectors); Linux systemd failure-injection evidence remains mandatory.
+
+
+## 15. D-03 manual host-loss disposition challenge
+
+The user-confirmed V1 deployment model remains visible unreachable status + quarantine + on-site handling; no cloud/BMC power control or separate alert-delivery integration. The D-03 draft now makes the minimum administrative action concrete:
+
+- dedicated SEM capability `runner.quarantine.resolve`; no project-user, ordinary Runner operator or AI-PM agent authority;
+- action only against an unreachable/quarantined host when normal authenticated reconnect/reconciliation is unavailable;
+- explicit `inspection_inconclusive` (quarantine unchanged) or `host_physically_isolated` disposition;
+- exact affected execution/binding/launch/containment identities, authenticated operator, capability at action time, timestamps, non-empty reason and append-only resolution_id;
+- physical isolation closes only the old execution reservations; it does not make the old host capacity schedulable. A rebuilt/re-enrolled host must receive a fresh trusted identity and telemetry;
+- manual disposition is never represented as process-exited evidence and never makes an AI-PM business decision.
+
+V1 does not require dual approval; the dedicated capability, on-site attestation, append-only audit and no-capacity-reuse rule are the selected minimum controls. This is a Draft contract, not implementation evidence. The Linux systemd integration test plan must test authorization, idempotency, audit durability, no-capacity-reuse and AI-PM authority separation.
+
+**Disposition: D-03 operator-action semantics clarified at Draft level; implementation and authorization tests remain open.**
+
+
+## 16. Linux integration test-plan challenge and acceptance-matrix integrity
+
+A dedicated [Linux systemd Integration and Failure-Injection Test Plan](./linux-systemd-integration-test-plan.md) now separates real-host OS validation from ordinary protocol CI. It defines the disposable systemd >=250 + unified cgroup v2 host profile, privilege boundaries, deterministic D-Bus/Journal/Release/exit/ACK injection points, required evidence artifacts, test suites and ratification gates.
+
+The D-05 acceptance matrix was mechanically checked against the source document: **102 unique IDs, D05-01 through D05-102, with no gaps or duplicates**. The test plan requires every ID to map to an executable test or an explicitly identified schema/unit/operational test; prose-only coverage is not accepted.
+
+A package-number collision was also corrected: the completion register uses **D-10 for implementation architecture and repository ownership**. The Linux systemd test plan is therefore an independent named test plan, not D-10. All active D-03/D-05 references now use the unnumbered test-plan title.
+
+**Disposition:** test design and traceability contract are present; no Linux runtime test has been executed. P0-02/P0-03/P0-04 remain open until real-host failure-injection artifacts exist.

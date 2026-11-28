@@ -176,6 +176,7 @@ SEM state describes its own infrastructure work only.
 | `release_requested` | AI-PM release instruction durably accepted | SEM Inbox and release intent committed |
 | `stopping` | Runner accepted stop fence / termination command | Runner durable stop fence ACK; not yet process exit |
 | `released` | Process exit/absence and cleanup requirements positively satisfied | Exact process exit evidence + cleanup completion recorded |
+| `released_unbound` | P0-07: an `expected_binding=unbound` release won the per-execution dispatch/release sequencer before any Runner binding existed; dispatch is permanently fenced for this execution_id | Immutable dispatch-fence/tombstone record (`dispatch_fence_id`) committed with the release intent; emits exactly one `execution.unbound_release_applied`; carries no Runner, binding_epoch, stop_fence_id or process-exit evidence |
 | `delivery_failed` | Delivery definitively rejected before Runner durable receipt | Explicit terminal protocol rejection; not timeout |
 | `start_failed` | Supervisor proves no process was created for this start intent | Durable Supervisor evidence and reconciliation |
 | `infrastructure_uncertain` | Outcome cannot be established safely | Ambiguous send, lost Runner, journal gap, or conflicting evidence |
@@ -223,7 +224,7 @@ Rules:
 1. Before any OS create call, persist a unique `launch_id`, immutable containment identity, execution/delivery/epoch tuple and start intent.
 2. The OS create operation must place the process inside that pre-identified containment boundary as part of creation, or a durable single-writer launch broker must own and deduplicate the entire create/assign/resume operation. A plain “spawn, then attach to cgroup/job” sequence is not sufficient unless its intermediate crash window is independently recoverable.
 3. A duplicate start for the same `launch_id` queries/adopts the original containment unit; it never calls OS create again merely because a PID/process record is missing.
-4. The V1 systemd-owned cgroup v2 containment boundary must prevent the Harness and descendants from escaping, migrating out, or creating untracked descendants. The exact systemd unit properties, cgroup permissions and hostile-descendant tests are D-10 integration acceptance requirements.
+4. The V1 systemd-owned cgroup v2 containment boundary must prevent the Harness and descendants from escaping, migrating out, or creating untracked descendants. The exact systemd unit properties, cgroup permissions and hostile-descendant tests are Linux systemd integration acceptance requirements.
 5. The selected systemd launch broker must provide durable discoverability and idempotency across the StartTransientUnit request/job/process-create crash windows; no unsupported spawn-then-attach fallback is allowed.
 6. If the OS/profile cannot prove whether creation happened, the Supervisor enters `local_uncertain`, retains the reservation and blocks duplicate launch pending reconciliation/operator action.
 
@@ -262,6 +263,7 @@ The tables in this section define the allowed state edges. They are normative de
 | delivery_received | start_failed | Runner no-create proof | Launch broker proves no process was created for launch ID and no in-flight create exists | Missing PID/journal record is insufficient |
 | starting | start_failed | Runner no-create proof | Same as above, including resolved in-flight broker operation and durable stop fence if release raced | If ambiguous, remain uncertain |
 | Any nonterminal state except released | release_requested | AI-PM release command | Authenticated Platform request; expected execution and binding fence; release Inbox and intent committed | Same release ID returns original; stale epoch rejected or reconcile-only |
+| accepted / queued / reserved | released_unbound | AI-PM `expected_binding=unbound` release wins the dispatch/release sequencer | Single per-execution sequencer transaction: release intent + immutable dispatch-fence tombstone committed atomically before 202; exactly one `execution.unbound_release_applied` emitted; reservation released only per capacity policy | Duplicate release_id + identical body returns the original tombstone disposition; dispatch-wins against unbound release returns 409 `BINDING_ALREADY_ESTABLISHED` with the actual epoch; a `released_unbound` tombstone is terminal for the execution_id — no later assignment, requeue, rebind or epoch may resurrect it; a new AI-PM attempt uses a new execution_id |
 | release_requested | stopping | Runner stop-fence ACK | ACK proves later starts fenced and every earlier/in-flight start accounted for; it does not prove exit | Duplicate ACK no-op; retain reservation |
 | release_requested | released | SEM + Runner evidence | No process was ever created and launch broker confirms no in-flight create; cleanup requirements satisfied | Requires positive no-create proof; otherwise remain pending/uncertain |
 | stopping | released | Runner exit + cleanup evidence | Exact containment positively empty/cannot accept descendants; cleanup requirements complete | Duplicate exit/cleanup evidence no-op |
@@ -276,6 +278,7 @@ The tables in this section define the allowed state edges. They are normative de
 Additional SEM invariants:
 
 - released, delivery_failed and start_failed are terminal for the corresponding binding/delivery identity. A later business attempt uses a new execution identity; a transport retry preserves the old identity.
+- released_unbound is terminal for the entire execution_id (P0-07 dispatch fence). Dispatch and release linearize on one per-execution sequencer; SEM never judges dispatch permission in two services or two separate transactions.
 - A release command can be accepted from any nonterminal SEM state, but it cannot skip the Runner launch-broker resolution or process-exit evidence needed for safe release.
 - infrastructure_uncertain is a reconciliation state, not permission to allocate a replacement Runner. The previous known state and all outstanding reservations remain queryable.
 - A newer binding epoch is not created while the old process may still exist, unless D-03 provides independent, verifiable isolation/fencing evidence that explicitly permits it.
@@ -338,6 +341,8 @@ AI-PM remains the sole authority for TaskStatus, RunKind, RunStatus, RunOutcome 
 8. SEM may retain the previous known state alongside infrastructure_uncertain; implementation must not destroy that state history when entering or leaving uncertainty.
 
 ### 3.6 V1 Linux process-owner contract
+> **Additional challenge contract:** See [D-05 Linux Launch, Release and Exit-Proof Addendum](./d05-linux-launch-release-exit-proof-addendum.md). It defines the conservative lost-D-Bus-reply rule, sole-broker boundary, start/release decision table and bracketed exit-evidence protocol. The addendum remains Draft and does not claim P0-02/P0-03/P0-04 closed without Linux failure-injection evidence.
+
 
 User decision (2026-11-25): V1 Runner hosts are Linux-only. Windows and other operating systems are out of scope for V1.
 
@@ -346,12 +351,12 @@ The selected V1 architecture candidate is a host systemd manager owning one tran
 Normative requirements:
 
 - Host admission requires Linux unified cgroup v2, systemd 250 or later as PID 1, reachable system D-Bus manager, and the required cgroup/systemd security controls. Unsupported hosts are never dispatch-ready.
-- Each binding has a stable launch_id, containment_id and systemd unit identity derived from runner_id + execution_id + binding_epoch. The exact encoding is a D-10 implementation detail; identities must be collision-resistant and immutable.
+- Each binding has a stable launch_id, containment_id and systemd unit identity derived from runner_id + execution_id + binding_epoch. The exact encoding is an implementation detail covered by the Linux systemd integration test plan; identities must be collision-resistant and immutable.
 - The Supervisor commits start_intent and the stable unit identity before calling systemd. A retry queries/adopts the same unit and invocation; it never creates a second independent unit for the same launch_id.
 - The systemd manager owns the live process across Supervisor restart; the Supervisor journal owns command idempotency and event durability. Both are required for recovery.
 - The broker resolves the exact unit with GetUnit and inspects InvocationID, ControlGroup, ActiveState/SubState and outstanding jobs before retrying. It never blindly repeats StartTransientUnit after an ambiguous reply. Unit names are unique only while loaded; a durable journal tombstone prevents launch_id/unit identity reuse after unit cleanup or garbage collection.
 - RemainAfterExit=yes retains a successfully completed service in active/exited state; CollectMode=inactive avoids aggressive inactive-or-failed collection. The Supervisor must not stop/reset-failed/clean the unit before local terminal evidence and SEM reconciliation are durable. The Supervisor journal, not systemd unit retention, is the long-lived tombstone.
-- Configure no automatic restart, KillMode=control-group, no cgroup delegation, and no Harness access to host Docker/systemd control sockets. The final systemd property set and minimum supported systemd version require a D-10 contract and Linux integration tests.
+- Configure no automatic restart, KillMode=control-group, no cgroup delegation, and no Harness access to host Docker/systemd control sockets. The final systemd property set and minimum supported systemd version require a finalized host contract and Linux systemd integration tests.
 - Release/start is serialized through the durable Supervisor sequencer. While a systemd start job is unresolved, state remains local_uncertain and no effective stop-fence ACK is sent. Recovery queries the exact stable unit and outstanding jobs.
 - The Supervisor MUST subscribe to systemd Manager job signals before issuing StartTransientUnit and persist the returned job object path/identity when the reply is received. A lost D-Bus reply is reconciled by querying both the exact unit and the manager's outstanding job list; a second StartTransientUnit call is forbidden until this reconciliation resolves the first request.
 - systemd Job state distinguishes waiting (queued, not begun) from running (execution begun). CancelJob only cancels a queued job; it has no effect once job execution has begun. Therefore a stop/release path MUST NOT treat a CancelJob request or ACK as a process stop.
@@ -634,18 +639,42 @@ All messages must be authenticated, versioned, bounded, schema validated, dedupl
 | D05-76 | Release races after the exact systemd start job reaches `running` | CancelJob is not treated as cancellation; issue StopUnit for exact unit, await stop-job result, then verify invocation terminal and cgroup populated=0 |
 | D05-77 | StartTransientUnit reply is lost before job path/ID is persisted | Subscribe-before-call and reconcile exact unit plus ListJobs; no blind duplicate StartTransientUnit |
 | D05-78 | Supervisor reuses a systemd job ID across host reboot | Reject prior-boot job identity; correlate with boot_id and immutable launch/unit/invocation identity |
+| D05-79 | StartTransientUnit request may have crossed D-Bus send boundary but reply is lost and no job/unit is currently visible | Remain local_uncertain and quarantined; no blind retry; missing ListJobs/GetUnit result is not proof of non-acceptance |
+| D05-80 | Supervisor crashes after durable start intent but before D-Bus request is sent, with durable proof that send was not attempted | Retry same immutable launch_id through the single-writer broker; at most one unit |
+| D05-81 | A second actor attempts to create or replace a unit in the reserved SEM namespace | Privilege boundary blocks it; detected interference quarantines the execution |
+| D05-82 | Release commits while StartTransientUnit is call_in_flight | Persist release fence but do not ACK; reconcile exact job/unit until no-start or started-and-stopped is positively proven |
+| D05-83 | Exact waiting start job receives CancelJob | No effective no-start ACK until matching JobRemoved plus no invocation, no pending start job and cgroup populated=0 |
+| D05-84 | Exact start job is running when release arrives | CancelJob is not treated as stop; StopUnit exact unit, await stop job and verify invocation terminal plus cgroup populated=0 |
+| D05-85 | StartTransientUnit call has ambiguous outcome and exact unit has a conflicting InvocationID or launch digest | Integrity conflict; quarantine; never adopt or retry |
+| D05-86 | Exit evidence bracket observes different InvocationID or ControlGroup on second unit query | Reject candidate evidence; remain uncertain |
+| D05-87 | cgroup.events populated changes between first and second reads | Reject candidate evidence; remain uncertain |
+| D05-88 | A start/restart job appears between the two job snapshots used for exit proof | Reject candidate evidence; remain uncertain |
+| D05-89 | Unit disappears or is garbage-collected before terminal evidence is durably journaled and SEM reconciles | No process-exited event; retention test fails; quarantine |
+| D05-90 | Supervisor restarts after process exit with exact containment empty but numeric wait status unavailable | Report positive exit only if invocation-bound durable evidence is reconstructed; exit_status=unknown |
+| D05-91 | Disk full or fsync failure before start/release/exit evidence commit | No ACK and no unsafe side effect; retain uncertainty/quarantine |
+| D05-92 | Harness attempts system-bus, systemd control or cgroup mutation | Access denied; if containment integrity cannot be proven, quarantine |
+| D05-93 | Out-of-band administrator changes or replaces the reserved unit | Detect identity/property mismatch; quarantine and audit; no silent adoption |
+| D05-94 | Broker sees no matching job/unit after ambiguous D-Bus request but cannot prove request was never sent | Remain local_uncertain; operator reconciliation; no second StartTransientUnit |
+| D05-95 | harness.process_exited omits evidence_schema_version or evidence_digest | Schema validation rejects the event; no process-exited transition |
+| D05-96 | Replayed event reuses evidence_id but changes digest or evidence payload | SEM detects integrity conflict and quarantines/reconciles; never overwrite accepted evidence |
+| D05-97 | SEM sends durable event ACK before the complete event envelope is committed | Test fails; ACK must follow durable persistence |
+| D05-98 | Runner deletes or mutates the raw evidence record before receiving durable ACK for its event_sequence | Test fails; evidence must remain replayable and immutable until ACK |
+| D05-99 | Runner replays process-exit event after reconnect | journal_id, event_sequence, evidence_id, schema version, digest and payload remain identical; only connection-scoped framing may change |
+| D05-100 | SEM sends durable ACK without acknowledged_journal_id or acknowledged_event_sequence | Reject ACK; Runner retains raw evidence and replays the event |
+| D05-101 | ACK journal_id/event_sequence refers to a different durable stream position | Reject as stale/conflicting ACK; do not release evidence retention gate |
+| D05-102 | Transport ACK or accepted/duplicate disposition is received without durable_recorded disposition for the exact event cursor | Do not delete or mutate the process-exit evidence record |
 
 ## 11. Open decisions required before ratification
 
-1. Exact AI-PM Run/attempt state names and their mapping to current source model.
+1. Recheck the pinned AI-PM Run/attempt source revision immediately before ratification; any source drift requires a new compatibility review.
 2. Whether SEM persists a single execution aggregate with transition history or separate delivery/binding/release tables; uniqueness constraints and retention.
 3. Runner journal storage engine, fsync policy, corruption recovery and disk-full behavior.
-4. OS-specific process containment and durable discovery mechanism for the process-create-before-journal window (Linux cgroup/container; Windows Job Object or equivalent).
-5. How the Supervisor can prove exit after its own crash or host reboot, including limits of OS wait/reap evidence.
-6. Event sequence scope: this draft recommends a durable Runner event stream keyed by `runner_id + journal_id`, with `execution_id + binding_epoch` carried on each event. This avoids requiring two different Runner hosts to allocate one shared per-execution sequence after rebind. D-04 must freeze the stream/cursor schema and retention semantics.
+4. Exact D-Bus StartTransientUnit request/property serialization, non-replacing job mode, JobNew/JobRemoved correlation, GetUnit/GetJob/ListJobs recovery behavior and systemd >=250 distro compatibility; the Linux systemd integration test plan must prove these with failure injection.
+5. Durable terminal-unit evidence retention through both local journal and SEM acknowledgement, including successful exit, failed exit, StopUnit-driven termination, unit garbage collection and Supervisor restart.
+6. Event sequence scope is proposed as a durable Runner event stream keyed by `runner_id + journal_id`, with `execution_id + binding_epoch` carried on each event. D-04 must freeze the stream/cursor schema and retention semantics and cross-check every state-changing WSS message.
 7. Snapshot/replay API exact schemas, cursor semantics and maximum journal retention.
-8. Reservation expiry/recovery rules and whether quarantined capacity can ever be manually released under each D-03 host profile.
-9. Whether a process exit event must carry signed evidence in addition to authenticated WSS provenance.
+8. Reservation expiry/recovery rules and the minimal audited manual operator disposition under the user-confirmed D-03 host-loss profile.
+9. D-04 now defines evidence_id as an immutable Runner journal reference, adds evidence_schema_version + JCS/SHA-256 evidence_digest to harness.process_exited, and requires SEM durable event persistence before journal-sequence ACK. the Linux systemd integration test plan must prove journal fsync, replay identity, ACK gating and post-ACK retention; independent cryptographic verification is not a V1 promise.
 10. Exact reconciliation deadlines are operational SLOs, not correctness shortcuts; timeout must never resolve uncertainty by assumption.
 
 ## 12. Readiness conclusion

@@ -59,11 +59,23 @@ $defs:
           payload: { $ref: '#/$defs/ExecutionReleaseRequest' }
   ExecutionReleaseRequest:
     type: object
-    required: [execution_id, release_id, expected_binding_epoch, stop_policy]
+    required: [execution_id, release_id, expected_binding, stop_policy]
     properties:
       execution_id: { type: string, format: uuid }
       release_id: { type: string, format: uuid }
-      expected_binding_epoch: { type: integer, minimum: 1 }
+      expected_binding:
+        oneOf:
+          - type: object
+            required: [state]
+            properties:
+              state: { const: unbound }
+            additionalProperties: false
+          - type: object
+            required: [state, binding_epoch]
+            properties:
+              state: { const: bound }
+              binding_epoch: { type: integer, minimum: 1 }
+            additionalProperties: false
       stop_policy:
         type: object
         required: [mode, grace_period_seconds]
@@ -79,12 +91,13 @@ $defs:
       - $ref: '#/$defs/ProcessObservedEvent'
       - $ref: '#/$defs/ReleaseStatusEvent'
       - $ref: '#/$defs/InfrastructureUncertainEvent'
+      - $ref: '#/$defs/UnboundReleaseAppliedEvent'
   EventBase:
     type: object
     required: [event_id, schema_version, occurred_at, execution_id, execution_event_sequence, payload]
     properties:
       event_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
-      event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain] }
+      event_type: { enum: [execution.binding_established, execution.delivery_status, harness.process_observed, execution.release_status, execution.infrastructure_uncertain, execution.unbound_release_applied] }
       schema_version: { const: 1 }
       occurred_at: { type: string, format: date-time }
       execution_id: { type: string, format: uuid }
@@ -225,7 +238,7 @@ $defs:
           payload: { $ref: '#/$defs/ReleaseStatusPayload' }
   ReleaseStatusPayload:
     type: object
-    required: [release_id, binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, release_state, stop_fence_id, observed_at]
+    required: [release_id, binding_epoch, runner_id, runner_key_version, boot_id, supervisor_instance_id, release_state, observed_at]
     properties:
       release_id: { type: string, format: uuid }
       binding_epoch: { type: integer, minimum: 1 }
@@ -239,6 +252,11 @@ $defs:
       observed_at: { type: string, format: date-time }
       failure_code: { type: string, maxLength: 64 }
     allOf:
+      - if:
+          properties:
+            release_state: { enum: [stop_fenced, termination_requested, process_exited, released, cleanup_failed] }
+          required: [release_state]
+        then: { required: [stop_fence_id] }
       - if: { properties: { release_state: { const: process_exited } }, required: [release_state] }
         then: { required: [process_exit_evidence_id] }
     additionalProperties: false
@@ -281,6 +299,34 @@ $defs:
       operator_action_required: { type: boolean }
       evidence_refs: { type: array, maxItems: 64, items: { type: string, minLength: 1 } }
     additionalProperties: false
+  UnboundReleaseAppliedEvent:
+    allOf:
+      - $ref: '#/$defs/EventBase'
+      - type: object
+        required: [event_type]
+        properties:
+          event_type: { const: execution.unbound_release_applied }
+          payload: { $ref: '#/$defs/UnboundReleaseAppliedPayload' }
+  UnboundReleaseAppliedPayload:
+    type: object
+    description: >-
+      Sixth SEM-to-Platform infrastructure event. Emitted only when an
+      expected_binding=unbound release wins the SEM per-execution
+      dispatch/release sequencer before any Runner binding existed. It is a
+      permanent dispatch-fence tombstone for this execution_id: no Runner
+      assignment, requeue, or binding_epoch may follow for the same
+      execution_id. It intentionally carries no runner_id, runner_key_version,
+      boot_id, supervisor_instance_id, binding_epoch, delivery_id, stop_fence_id
+      or process-exit evidence: none of those facts exist for an unbound
+      execution and none may be fabricated. It does not imply that any process
+      exited, because no process was ever started under this contract.
+    required: [release_id, dispatch_fence_id, disposition, applied_at]
+    properties:
+      release_id: { type: string, format: uuid }
+      dispatch_fence_id: { type: string, format: uuid }
+      disposition: { const: released_unbound }
+      applied_at: { type: string, format: date-time }
+    additionalProperties: false
   ExecutionAcceptanceEnvelope:
     type: object
     required: [message_id, request_id, execution_id, acceptance, accepted_at]
@@ -293,13 +339,26 @@ $defs:
     additionalProperties: false
   ReleaseAcceptanceEnvelope:
     type: object
-    required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
+    required: [message_id, request_id, execution_id, release_id, acceptance, release_disposition, accepted_at]
     properties:
       message_id: { type: string, format: uuid }
       request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
       execution_id: { type: string, format: uuid }
       release_id: { type: string, format: uuid }
       acceptance: { enum: [accepted, duplicate] }
+      release_disposition:
+        enum: [bound_release_accepted, unbound_release_fenced]
+        description: >-
+          bound_release_accepted: the release linearized against an existing
+          binding (or a fenced bound release) and follows the normal
+          execution.release_status path. unbound_release_fenced: an
+          expected_binding=unbound release won the dispatch/release sequencer;
+          SEM persists the permanent dispatch fence and emits exactly one
+          execution.unbound_release_applied event. A duplicate response echoes
+          the original disposition. Dispatch-wins against an unbound release is
+          never a 202; it is 409 BINDING_ALREADY_ESTABLISHED with the actual
+          binding_epoch. An ambiguous linearization result is an uncertain-class
+          signed error, never a guessed disposition.
       accepted_at: { type: string, format: date-time }
     additionalProperties: false
   EventAcknowledgementEnvelope:
@@ -330,5 +389,14 @@ $defs:
           detail: { type: string, maxLength: 512 }
           execution_id: { type: string, format: uuid }
           expected_sequence: { type: integer, minimum: 1 }
+          binding_epoch:
+            type: integer
+            minimum: 1
+            description: >-
+              Required on 409 BINDING_ALREADY_ESTABLISHED: the actual current
+              binding_epoch that won the dispatch/release sequencer against an
+              expected_binding=unbound release. AI-PM must reconcile and submit
+              a normal bound release with this epoch. Never present on an
+              accepted unbound release.
         additionalProperties: false
     additionalProperties: false

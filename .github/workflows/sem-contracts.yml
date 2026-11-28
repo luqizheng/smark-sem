@@ -13,10 +13,13 @@ on:
   push:
     branches:
       - docs/sem-d05-lifecycle-crash-consistency
+      - docs/d05-linux-proof-contract
     paths:
       - "docs/protocol/**"
       - "scripts/validate_sem_contracts.py"
       - "scripts/validate_sem_crypto_vectors.py"
+      - "scripts/validate_sem_payload_fixtures.py"
+      - "scripts/validate_sem_jcs_vectors.mjs"
       - "tests/protocol/**"
       - ".github/workflows/sem-contracts.yml"
 

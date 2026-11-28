@@ -203,3 +203,61 @@ This is deterministic fixture evidence only. It does not prove live authenticati
 ### CI evidence update for §5.7 — 2026-11-25
 
 The signed Platform GET 404, signed SEM callback 404 and unsigned pre-authentication 401/early-413 fixture changes passed SEM Protocol Contract Validation run #413 on commit `dfe00314c65b3899c65da495e8f866678d2b2739`. All ten steps succeeded, including OpenAPI/external references, JSON Schema, cryptographic vectors, payload fixtures and independent Node JCS/Ed25519 verification. This remains deterministic contract CI; live HTTP middleware and replay behavior remain open.
+
+
+## 5.8 Follow-up: durable Runner ACK cursor must be mandatory — 2026-11-25
+
+A focused cross-check of the D-04 WSS narrative against the application JSON Schema found that the schema required acknowledged_journal_id and acknowledged_event_sequence to appear together only when either field was present. It still accepted a protocol.ack with disposition=durably_recorded and neither cursor field. That contradicted the WSS contract: a durable ACK is the exact retention/cleanup gate for one Runner journal position and MUST echo both cursor fields.
+
+Corrected on the D-05 follow-up branch:
+- The ProtocolAck schema now requires both cursor fields whenever disposition=durably_recorded.
+- The payload-fixture validator now rejects a durable ACK with both cursor fields absent, while retaining acceptance of a non-durable accepted ACK without a journal cursor.
+- Existing negative cases continue to reject either half of an incomplete cursor pair.
+
+This closes the identified schema/fixture gap only. It does not prove SEM persists the complete event envelope before ACK, that Runner gates evidence cleanup on the exact cursor, or that replay/deduplication works under a live WSS session. Those remain integration obligations under D-05 and the Linux systemd failure-injection plan.
+
+### Remaining D-04 cross-audit items confirmed
+
+- **Direction catalogue consistency is now mechanically checked:** `validate_sem_contracts.py` parses the normative WSS direction table and requires an exact, duplicate-free mapping for every application message type. The shared bidirectional JSON Schema still cannot reject a wrong-peer sender by itself; SEM/Runner receive-path enforcement and live wrong-direction rejection tests remain open.
+- **Cross-message identity remains incomplete:** execution/binding/launch/containment/boot/Supervisor identity is not uniformly required across every lifecycle, release and replay branch; retain P1-01.
+- **Version negotiation and operational bounds remain prose-level:** retain P1-02/P1-03.
+- **Platform↔SEM HTTP authentication/replay and AI-PM callback Inbox remain P0 blockers:** schema/fixture CI does not close live middleware, nonce replay, durable Inbox, producer/receiver mapping or bilateral runtime behavior.
+- **No process lifecycle P0 is closed by this ACK correction:** P0-02/P0-03/P0-04 still require executable Linux systemd >=250 failure-injection evidence.
+
+### CI evidence update for §5.8 — 2026-11-25
+
+SEM Protocol Contract Validation run #502 (`45618307319`) passed all 10 steps on PR #5 head `65051e8d75a4fa0833d4755a48a32209195aca97`, including the new durable-ACK cursor rule, negative fixtures and WSS direction-catalogue coverage. This is contract/schema/fixture CI only; it does not prove live WSS sender enforcement, HTTP middleware/replay, AI-PM Inbox transactions or Linux process lifecycle behavior.
+
+
+## 5.9 Follow-up: release-applied disposition must agree with exit evidence — 2026-11-25
+
+A D-05/WSS cross-check found that ReleaseApplied accepted process_stopped or already_exited without process_exit_evidence_id, and also allowed stop_fenced/stale_rejected/local_uncertain to carry a positive exit-evidence reference. This was weaker than the D-05 positive-exit proof contract and could let a wire-valid release disposition be misinterpreted as process termination.
+
+Corrected on PR #5:
+- The Runner WSS schema now requires process_exit_evidence_id for process_stopped and already_exited.
+- The schema rejects process_exit_evidence_id for stop_fenced, stale_rejected and local_uncertain.
+- The WSS narrative now defines each disposition and requires SEM to cross-check the referenced harness.process_exited evidence against the exact execution/binding/launch/containment/boot identity.
+- Added D04-W46/W47 and positive/negative fixture assertions.
+
+This is schema and Draft semantic alignment only. The schema cannot prove that the referenced event exists or that the identity tuple matches; SEM receiver logic and live event-order/replay tests must enforce that. D-05 P0-02/P0-03/P0-04 remain open pending executable Linux systemd >=250 failure-injection evidence.
+
+### CI evidence update for §5.9 — 2026-11-25
+
+SEM Protocol Contract Validation run #513 (`45619646503`) passed all 10 steps on commit `eceec9e0ef7ba7a31865f9e779e4a73a0be8f8b3`, including JSON Schema meta-validation and the new positive/negative ReleaseApplied evidence fixtures. This validates the Draft contract shape only; it does not prove SEM's cross-message identity join or live Runner process-exit evidence behavior.
+
+
+## 5.10 Follow-up: distinguish no-start release from process-exit release — 2026-11-25
+
+The D-05 release race table permits an effective no-start ACK when StartTransientUnit is provably not sent or an in-flight start is reconciled to no accepted invocation, no pending start/restart job and empty/absent exact containment. The WSS disposition stop_fenced had previously been described only as a durable fence, leaving ambiguity about whether it could also represent that positive no-start result.
+
+Aligned the Draft contracts:
+- stop_fenced now means durable fence **plus positive no-start proof**, with stop_fence_id referencing the immutable local journal record. It is not a process-exit claim.
+- If a Harness invocation existed, the only terminal release dispositions are process_stopped/already_exited with the exact earlier process-exit evidence reference.
+- If neither no-start nor positive process-exit proof is available, the disposition is local_uncertain and reservation/quarantine remain.
+- Added D04-W49 and mapped the wire dispositions into the Linux systemd failure-injection test plan.
+
+This clarifies the Draft contract; it does not close P0-03. The systemd >=250 integration suite must prove each no-start/start/release schedule and the identity-bound evidence ordering before ratification.
+
+### CI evidence boundary
+
+Protocol Contract Validation run #527 (`45620243425`) passed all 10 steps on executable contract head `bf2a1ec300a9afc96d06a60b25c75568121b1177`, including ReleaseApplied schema semantics, cross-message evidence-link fixture assertions and the Platform event schema/fixture suite. The subsequent commits through this §5.10 update changed only protocol/architecture/test-plan prose; no executable schema, validator or fixture changed after run #527. The run does not prove the Linux no-start or process-exit runtime behavior.

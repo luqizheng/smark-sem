@@ -75,6 +75,8 @@ Key lifecycle requirements: distinct key IDs per environment and direction; publ
 
 A new business execution attempt should receive a new execution_id from AI-PM. SEM may retry delivery of the same execution_id idempotently. SEM increments binding_epoch when it establishes or replaces a valid Runner binding. SEM reports the current binding through an execution.binding_established infrastructure event. AI-PM stores that opaque epoch with its execution mapping and includes it in a release request. An old epoch cannot stop a newer binding. If AI-PM has not received the latest binding event, it must query/reconcile the execution by execution_id before issuing a fenced release.
 
+binding_epoch allocation rules (P0-06 contract baseline): the first binding of an execution MUST use `binding_epoch = 1`; every later accepted rebind allocates a strictly greater epoch in the same per-execution sequence. SEM is the only authority that allocates epochs; an epoch that AI-PM has never received through an authenticated event does not exist for dispatch or release purposes. AI-PM's consumer-side projection rules for these events are defined in [§7.2](#72-binding-projection-event-contract-p0-06).
+
 ## 3. Platform → SEM: execution request
 
 Suggested endpoint: POST /internal/sem/v1/executions
@@ -161,8 +163,10 @@ Runner must not fetch Task context from SEM or ask SEM to mutate Task state.
 SEM→AI-PM events:
 - execution.binding_established: SEM selected and bound the execution to a Runner and assigned binding_epoch.
 - execution.delivery_status: SEM's durable delivery state and any Runner receipt.
+- harness.process_observed: SEM-relayed Runner process start/exit observation.
 - execution.release_status: SEM's release/cleanup state.
 - execution.infrastructure_uncertain: SEM cannot currently prove the process/binding state.
+- execution.unbound_release_applied: an unbound release won the dispatch fence; no Runner/binding/process facts exist (§7.1).
 
 Runner→SEM observations:
 - execution.delivery_received: Runner Supervisor durably accepted the delivery operation.
@@ -179,6 +183,8 @@ Heartbeat loss, resource telemetry, agent activity, timeout, workspace deletion 
 
 Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
 
+The request carries a tagged expected-binding condition (P0-07). The bound form:
+
 ~~~json
 {
   "message_id": "uuid",
@@ -189,7 +195,7 @@ Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
   "payload": {
     "execution_id": "uuid",
     "release_id": "uuid",
-    "expected_binding_epoch": 1,
+    "expected_binding": { "state": "bound", "binding_epoch": 1 },
     "stop_policy": {
       "mode": "graceful_then_force",
       "grace_period_seconds": 30
@@ -198,21 +204,39 @@ Suggested endpoint: POST /internal/sem/v1/executions/{execution_id}/release
 }
 ~~~
 
+The unbound form cancels an accepted execution that AI-PM believes has no Runner binding:
+
+~~~json
+{
+  "payload": {
+    "execution_id": "uuid",
+    "release_id": "uuid",
+    "expected_binding": { "state": "unbound" },
+    "stop_policy": { "mode": "force", "grace_period_seconds": 0 }
+  }
+}
+~~~
+
 Rules:
 - AI-PM sends this only after its own business decision (Task completed, cancelled, or otherwise no longer requiring this execution).
-- SEM validates the exact execution_id and expected_binding_epoch, deduplicates request_id, and forwards the stop request to the bound Runner.
+- The schema uses a strict oneOf: `unbound` forbids `binding_epoch`; `bound` requires an integer `binding_epoch >= 1`. The legacy untagged `expected_binding_epoch` field is rejected by the envelope schema.
+- SEM linearizes every release against its single per-execution dispatch/release sequencer (§7.1); it never judges dispatch permission in two services or two transactions.
+- For bound releases SEM validates the exact execution_id and binding_epoch, deduplicates release_id, and forwards the stop request to the bound Runner.
 - Runner Supervisor owns the actual local graceful/forced process termination.
-- Repeated release requests are idempotent.
+- Repeated release requests with identical canonical bodies are idempotent; the same release_id with a changed expected_binding or stop policy is `409 IDEMPOTENCY_CONFLICT`.
 - A stale epoch is rejected and must never terminate a newer execution.
 - Release is not a Task transition and must not update business state.
+- Do not fabricate an epoch, a Runner identity, a stop fence or process-exit evidence for an unbound execution; the unbound outcome is expressed only through §7.1 and the execution.unbound_release_applied event.
 
 ## 8. SEM → AI-PM: infrastructure result
 
-Distinct infrastructure event types:
+Distinct infrastructure event types (the normative set is the six-way discriminated union in `json-schema/platform-sem-v1.schema.yaml`):
+- execution.binding_established
 - execution.delivery_status
 - harness.process_observed
 - execution.release_status
 - execution.infrastructure_uncertain
+- execution.unbound_release_applied (P0-07 dispatch-fence tombstone; §7.1)
 
 ~~~json
 {
@@ -511,7 +535,7 @@ Telemetry includes observation time and Runner boot identity. SEM applies a conf
   "payload": {
     "execution_id": "uuid",
     "release_id": "uuid",
-    "expected_binding_epoch": 1,
+    "expected_binding": { "state": "bound", "binding_epoch": 1 },
     "stop_policy": {
       "mode": "graceful_then_force",
       "grace_period_seconds": 30
@@ -520,7 +544,7 @@ Telemetry includes observation time and Runner boot identity. SEM applies a conf
 }
 ~~~
 
-If AI-PM does not know the current binding_epoch, it must first query/reconcile the execution by execution_id. SEM rejects a stale expected_binding_epoch and never applies it to a newer binding. Release arriving while launch is in progress must be persisted as a stop fence so the Supervisor cannot launch a late process after the release.
+If AI-PM does not know the current binding_epoch, it must first query/reconcile the execution by execution_id, or send the explicit unbound form (`"expected_binding": { "state": "unbound" }`) and follow §7.1's sequencer outcomes. SEM rejects a stale expected_binding_epoch and never applies it to a newer binding. Release arriving while launch is in progress must be persisted as a stop fence so the Supervisor cannot launch a late process after the release.
 
 ### 13.8 SEM event delivery acknowledgement and per-execution cursor
 
@@ -546,6 +570,29 @@ The success ACK is never returned before Inbox + permitted Run-observation commi
 - A gap in `execution_event_sequence` within one execution, stale epoch, unknown process identity or out-of-order state-changing observation triggers reconciliation; it is not silently accepted as current state.
 - SEM→AI-PM events are at-least-once. Each durable SEM→AI-PM event carries `execution_id` and `execution_event_sequence`, monotonic within that execution's SEM event stream. AI-PM deduplicates by `event_id` and stores the per-execution cursor. This is distinct from Runner→SEM `journal_id + event_sequence`, which is scoped by `runner_id + journal_id` and survives WSS reconnect. AI-PM applies infrastructure facts through its own Run policy and must not let SEM directly change Task status.
 
+### 13.10 SEM → AI-PM: unbound release applied (sixth event)
+
+Emitted exactly once per execution when an unbound release wins the dispatch/release sequencer (§7.1 outcome A). It is replayed at-least-once like every other durable SEM event and deduplicated by AI-PM through the standard Inbox identity.
+
+~~~json
+{
+  "event_id": "uuid",
+  "event_type": "execution.unbound_release_applied",
+  "schema_version": 1,
+  "occurred_at": "RFC3339 UTC",
+  "execution_id": "uuid",
+  "execution_event_sequence": 13,
+  "payload": {
+    "release_id": "uuid",
+    "dispatch_fence_id": "uuid",
+    "disposition": "released_unbound",
+    "applied_at": "RFC3339 UTC"
+  }
+}
+~~~
+
+The payload intentionally contains no Runner identity, binding_epoch, stop_fence_id or process-exit fields; the strict schema branch rejects any such field. It participates in the same `execution_event_sequence` contiguous-cursor and ACK contract as the other five events (§13.8). Relation to the existing five events: it replaces no event, it never accompanies a Runner stop, and once AI-PM records its tombstone, later `execution.binding_established` events for the same execution_id are integrity contradictions and must be rejected.
+
 
 ## 6.1 SEM event callback acknowledgement
 
@@ -568,4 +615,120 @@ A duplicate delivery with the same event_id and identical canonical body returns
 
 The event schema requires `runner_key_version`, `boot_id` and `supervisor_instance_id` on delivery, process, release and uncertainty observations. The receiver must compare these fields to the currently known binding for the execution; schema validity alone is not authorization to apply an observation.
 
-For `harness.process_observed` with `observation=exited`, the payload must contain exact process identity and exit evidence with exactly one of `exit_code` or `exit_signal`. For `exit_status_unknown`, evidence may prove the containment is empty while the numeric status remains unknown. A `execution.release_status` event with `release_state=process_exited` must include `process_exit_evidence_id` referring to the exact accepted process-exit evidence. These references must resolve to the same execution, runner key version, boot, supervisor instance, binding epoch, launch and containment identity in the SEM durable ledger.
+For `harness.process_observed` with `observation=exited`, the payload must contain exact process identity and exit evidence with exactly one of `exit_code` or `exit_signal`. For `exit_status_unknown`, evidence may prove the containment is empty while the numeric status remains unknown. A `execution.release_status` event may report `requested`, `release_uncertain` or `stale_rejected` before a Runner stop fence is durably known; those states do not require `stop_fence_id`. Once the fence is committed, `stop_fenced`, `termination_requested`, `process_exited`, `released` and `cleanup_failed` MUST carry the exact `stop_fence_id` referencing the immutable Runner journal record. `process_exited` MUST additionally include `process_exit_evidence_id` referring to the exact accepted process-exit evidence. These references must resolve to the same execution, runner key version, boot, supervisor instance, binding epoch, launch and containment identity in the SEM durable ledger.
+
+
+## 7.1 Unbound release and dispatch-fence contract (P0-07)
+
+The bound-only release request is insufficient for an accepted execution that has not yet received a Runner binding. Do not invent binding_epoch=0, a Runner identity, a stop_fence_id or process-exit evidence.
+
+### Request shape proposal
+
+~~~json
+{
+  "execution_id": "uuid",
+  "release_id": "uuid",
+  "expected_binding": { "state": "unbound" },
+  "stop_policy": {
+    "mode": "graceful_then_force",
+    "grace_period_seconds": 30
+  }
+}
+~~~
+
+The bound form is:
+
+~~~json
+{
+  "execution_id": "uuid",
+  "release_id": "uuid",
+  "expected_binding": { "state": "bound", "binding_epoch": 7 },
+  "stop_policy": {
+    "mode": "graceful_then_force",
+    "grace_period_seconds": 30
+  }
+}
+~~~
+
+The schema must use a strict oneOf: unbound forbids binding_epoch; bound requires integer binding_epoch >= 1. No optional/ambiguous combination is accepted.
+
+### Linearization and outcomes
+
+Dispatch and release MUST use one SEM-owned per-execution command sequencer/transactional state row and the same serialization boundary:
+
+1. SEM accepts the execution and creates its dispatch-eligible state.
+2. A Runner binding transaction and an unbound-release transaction contend on the same execution state lock / sequencer.
+3. If unbound release wins, SEM atomically changes dispatch state to released_unbound and persists an immutable dispatch-fence record before returning success. Every later dispatch/bind attempt must fail closed against that fence. SEM emits a new Platform event execution.unbound_release_applied with execution_id, event_id/sequence, release_id, dispatch_fence_id and applied_at. It contains no Runner, binding_epoch, stop_fence_id or process-exit evidence.
+4. If dispatch wins, SEM returns authenticated 409 BINDING_ALREADY_ESTABLISHED with the actual binding_epoch and exact binding identity. It emits no unbound-release event. AI-PM reconciles and submits the normal bound release using that epoch.
+5. If the result is ambiguous, SEM returns/retains an uncertain result and does not claim either outcome. AI-PM retries the exact release_id/request body; SEM reconciles the sequencer's durable row and returns the same terminal disposition.
+6. Duplicate release_id + identical canonical body returns the original outcome. Same release_id with changed expected_binding/stop policy is IDEMPOTENCY_CONFLICT.
+7. A release-wins tombstone is permanent for that execution_id. No later Runner assignment, requeue, or higher binding_epoch may resurrect it. A genuinely new AI-PM attempt uses a new execution_id.
+
+The dispatch-fence record is SEM durable state, not Runner stop-fence evidence. Its existence proves only that SEM will not dispatch this execution; it does not prove any Harness process exited.
+
+### Event shape proposal
+
+~~~json
+{
+  "event_id": "uuid",
+  "event_type": "execution.unbound_release_applied",
+  "schema_version": 1,
+  "occurred_at": "RFC3339 UTC",
+  "execution_id": "uuid",
+  "execution_event_sequence": 13,
+  "payload": {
+    "release_id": "uuid",
+    "dispatch_fence_id": "uuid",
+    "disposition": "released_unbound",
+    "applied_at": "RFC3339 UTC"
+  }
+}
+~~~
+
+This is a sixth SEM→AI-PM event type, intentionally distinct from execution.release_status. It cannot accidentally imply Runner stop or process exit. The dedicated strict JSON Schema branch (`$defs/UnboundReleaseAppliedEvent` / `$defs/UnboundReleaseAppliedPayload`), the OpenAPI release/acknowledgement definitions, positive and negative callback fixtures, and the D04 acceptance cases D04-H89–H100 plus D04-H48–H51 are now machine-readable artifacts in this repository and are enforced by CI. The schema, not this prose, is the normative shape; the prose does not silently extend it further.
+
+Machine-readable P0-07 baseline (this branch):
+- `json-schema/platform-sem-v1.schema.yaml`: tagged `expected_binding` oneOf on `ExecutionReleaseRequest`; sixth event branch; `release_disposition` on `ReleaseAcceptanceEnvelope`; optional `binding_epoch` on `ProtocolErrorEnvelope.error` for `BINDING_ALREADY_ESTABLISHED`.
+- `openapi/platform-sem-v1-draft.yaml`: identical tagged request/acceptance/error shapes; `released_unbound` snapshot state.
+- `tests/protocol/fixtures/payload-fixtures-v1.json`: valid bound and unbound release requests and one valid sixth event; validator asserts the tombstone never carries Runner/binding/stop-fence/process-exit fields and rejects direction confusion between WSS frames and SEM callback events.
+
+P0-07 runtime remains open: the SEM dispatch/release sequencer service, its persistence and failure-injection tests do not exist yet. Contract artifacts are not runtime evidence.
+
+### Required D04 cases
+
+- D04-H94: unbound release wins; persist dispatch fence and emit released_unbound event with no Runner/process fields.
+- D04-H95: dispatch wins; return BINDING_ALREADY_ESTABLISHED with actual epoch/identity; no unbound event.
+- D04-H96: release wins, then delayed dispatch/retry/requeue arrives; reject permanently.
+- D04-H97: ambiguous response after durable release fence; exact retry returns same event/disposition.
+- D04-H98: same release_id with changed expected_binding or stop policy; IDEMPOTENCY_CONFLICT.
+- D04-H99: duplicate unbound-release event callback; AI-PM ACKs exact duplicate without changing projection.
+- D04-H100: a new AI-PM attempt with a new execution_id is independent; old tombstone cannot block it.
+
+P0-07 contract artifacts are complete at Draft level; P0-07 runtime closure remains OPEN until the SEM dispatch/release sequencer implementation and its failure-injection tests exist. Contract completion is not runtime completion.
+
+## 7.2 Binding projection event contract (P0-06)
+
+AI-PM persists one consumer-side projection row per execution attempt (single table `delivery.task_run_sem_execution`; no duplicate binding table and no dual-write projection — see the AI-PM PR #9 documents [SEM Callback Inbox — Exact DDL and Concurrency Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/sem-callback-inbox-ddl-and-concurrency-design.md) §13 and the bilateral review addendum). The projection records dispatch_state, the current binding tuple, binding_epoch, runner identity, host boot identity, launch/containment identity, release state and uncertainty/quarantine state. SEM remains the sole authority for epoch allocation, Runner selection and infrastructure facts; the AI-PM projection is never dispatch authorization and never mutates Task/Run business state.
+
+The ten binding/event handling cases below are the normative consumer contract for this protocol's events. SEM guarantees the evidence column; AI-PM must implement exactly the handling column.
+
+| # | Case | SEM-side guarantee (authoritative evidence) | Required AI-PM handling |
+|---|---|---|---|
+| 1 | First binding | `execution.binding_established` with `binding_epoch = 1`, full Runner tuple (runner_id, runner_key_version, boot_id, supervisor_instance_id, delivery_id), no prior binding exists | First-bind algorithm: insert the projection atomically with the Inbox row, Run observation and cursor CAS; require epoch=1 and a complete Runner tuple; no historical binding is compared |
+| 2 | Exact duplicate binding | Same event_id + identical canonical envelope replayed at-least-once | Resolve via Inbox event identity/envelope hash/sequence BEFORE projection mutation; return duplicate ACK without rewriting projection or `updated_at` |
+| 3 | Same epoch, different tuple | SEM never reuses an epoch with a different Runner tuple; such a tuple indicates forgery/integrity failure | Reject as conflict; quarantine; never overwrite the projection; cursor does not advance |
+| 4 | Lower-epoch late event | Old-epoch events may replay after a rebind; SEM marks them stale | Reject as stale; never regress the projection; append-only audit history only |
+| 5 | Higher-epoch rebind | SEM only allocates epoch N+1 after positively completed prior release (exact stop-fence/no-start proof or exact process-exit evidence) OR an explicit authenticated host-isolation disposition; it never rebinds while the old process may live | Accept only when the prior projection state is `released` with exact release evidence or `host_isolated` with the exact SEM disposition reference; old history stays append-only; strictly greater epoch required |
+| 6 | Rebind after normal release | Released state carries `stop_fence_id` (positive no-start proof) or `process_exit_evidence_id` (exact exit evidence) referencing immutable journal records | Same as case 5 bound-release branch; the tombstone/fence references must resolve to the same execution, epoch, runner key version, boot and supervisor instance |
+| 7 | Uncertain old binding | `execution.infrastructure_uncertain` always carries `reservation_retained=true`; heartbeat loss/WSS disconnect/host unreachable are NOT termination evidence | Reject any epoch change while prior state is `uncertain`; retain quarantine and reservation; never treat SEM self-asserted host state as AI-PM rebind authorization |
+| 8 | Runner host permanent loss | D-03 disposition is a separately authorized operator action (`runner.quarantine.resolve` audit record), never an automatic event; permanent loss is NOT process-exit evidence | Set `host_isolated` (or retain quarantine) only from the explicit SEM-authenticated disposition reference; the old binding stays fenced; old host capacity is never re-eligible |
+| 9 | Host physically isolated | Same D-03 path: exact affected identities + operator attestation + timestamp + reason are required | Same as case 8; physical isolation permits rebind ONLY via case 5's explicit disposition branch, and never fabricates process-exit evidence |
+| 10 | Inspection inconclusive | SEM keeps `infrastructure_uncertain` with quarantine and retained reservation | Reject rebind; keep `uncertain`; resolution only through §3.4 reconciliation edges backed by named-authority evidence |
+
+Additional normative points:
+
+- SEM's own claim about host state (heartbeat, WSS session, resource telemetry) is never AI-PM dispatch or rebind authorization. Only the exact evidence classes above cross the authority boundary.
+- The first `execution.binding_established` has no historical binding; case 1's first-bind algorithm replaces the generic compare-against-current-binding rule.
+- Release and unbound-release handling (tombstone protection: a recorded `released_unbound` projection rejects every later binding event for the same execution_id regardless of epoch) is specified in §7.1 and the AI-PM DDL design §12.
+- The required lock order for every AI-PM callback transaction is: Run row → execution projection → Inbox event → Run observation → cursor CAS, committed atomically or not at all.
+- Concurrent race coverage required on the AI-PM side: concurrent first-bind, two epochs in flight, concurrent duplicate commits, old event after new, release-vs-binding, host-isolation-vs-rebind, and mid-transaction failure replay (INBOX-50+ and BIND/UNBOUND cases in the AI-PM PR #9 DDL design).

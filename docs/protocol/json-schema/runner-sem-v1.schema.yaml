@@ -237,7 +237,7 @@ $defs:
     additionalProperties: false
   HarnessProcessExited:
     type: object
-    required: [execution_id, binding_epoch, launch_id, containment_id, boot_id, systemd_invocation_id, cgroup_populated, evidence_id, exit_status, supervisor_instance_id]
+    required: [execution_id, binding_epoch, launch_id, containment_id, boot_id, systemd_invocation_id, cgroup_populated, evidence_id, evidence_schema_version, evidence_digest, exit_status, supervisor_instance_id]
     properties:
       execution_id: { type: string, format: uuid }
       binding_epoch: { type: integer, minimum: 1 }
@@ -247,6 +247,10 @@ $defs:
       systemd_invocation_id: { type: string, minLength: 1 }
       cgroup_populated: { const: 0 }
       evidence_id: { type: string, format: uuid }
+      evidence_schema_version: { const: 1 }
+      evidence_digest:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
       exit_status:
         oneOf:
           - type: object
@@ -295,14 +299,39 @@ $defs:
       process_exit_evidence_id: { type: string, format: uuid }
       observed_at: { type: string, format: date-time }
       detail_code: { type: string, maxLength: 64 }
+    allOf:
+      - if:
+          properties:
+            disposition: { enum: [process_stopped, already_exited] }
+          required: [disposition]
+        then:
+          required: [process_exit_evidence_id]
+      - if:
+          properties:
+            disposition: { enum: [stop_fenced, stale_rejected, local_uncertain] }
+          required: [disposition]
+        then:
+          not: { required: [process_exit_evidence_id] }
     additionalProperties: false
   ProtocolAck:
     type: object
     required: [acknowledged_message_id, disposition]
     properties:
       acknowledged_message_id: { type: string, format: uuid }
+      acknowledged_journal_id: { type: string, format: uuid }
       acknowledged_event_sequence: { type: integer, minimum: 1 }
       disposition: { enum: [accepted, duplicate, durably_recorded, rejected] }
+    allOf:
+      - if: { required: [acknowledged_event_sequence] }
+        then: { required: [acknowledged_journal_id] }
+      - if: { required: [acknowledged_journal_id] }
+        then: { required: [acknowledged_event_sequence] }
+      - if:
+          properties:
+            disposition: { const: durably_recorded }
+          required: [disposition]
+        then:
+          required: [acknowledged_journal_id, acknowledged_event_sequence]
     additionalProperties: false
   ProtocolError:
     type: object

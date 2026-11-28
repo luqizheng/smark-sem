@@ -167,6 +167,52 @@ The user has confirmed that the Runner environment is inside the company network
 
 This is a resolved V1 deployment decision, not an open choice among host-management profiles. The minimum product requirement is a durable, visible unreachable status in the operator-facing SEM status surface and an auditable manual resolution action only when quarantine must be cleared without normal Runner reconnect/reconciliation. No separate alert-delivery integration is required in V1.
 
+## 11.1 Minimal manual quarantine-resolution authority contract (V1)
+
+The on-site host-loss decision is implemented as one explicit, audited administrative disposition; it is not a synthetic process-exit event and does not require a two-person approval workflow in V1.
+
+### Authority and preconditions
+
+- Only an authenticated SEM operator identity granted the dedicated `runner.quarantine.resolve` capability may submit the disposition. Ordinary Runner operators, project users and AI-PM business agents cannot invoke it.
+- The action is available only for an existing unreachable/quarantined Runner host and its explicitly listed affected executions. A live current authenticated session or successful normal reconciliation blocks manual resolution; use normal reconciliation instead.
+- The operator must attest that the offline on-site procedure has established the old host cannot continue the affected execution (for example, host power physically isolated or execution storage/compute removed from service). SEM does not claim to verify the physical fact remotely.
+- If the operator cannot establish physical isolation, the only permitted disposition is `inspection_inconclusive`; quarantine and reservation remain unchanged.
+- A manual disposition never sets `harness.process_exited`, never invents an exit status, never marks AI-PM Run/Task successful or failed, and never authorizes a replacement business attempt.
+
+### Required disposition record
+
+The durable audit record contains:
+
+- immutable `resolution_id`;
+- `runner_id`, host identity, last known `boot_id`;
+- the exact affected `execution_id + binding_epoch + launch_id + containment_id` set;
+- operator's authenticated subject ID and effective capability/role at action time;
+- disposition: `host_physically_isolated` or `inspection_inconclusive`;
+- operator attestation timestamp, server receipt timestamp and a non-empty reason;
+- prior quarantine/reservation state and resulting administrative state;
+- correlation to the triggering unreachable incident and audit/event sequence.
+
+The audit record is append-only. Corrections are new superseding records; no in-place edit or deletion is allowed. No evidence-upload subsystem is required for V1.
+
+### State effects
+
+- `inspection_inconclusive`: record the attempt; keep host and all affected executions quarantined; retain reservations; dispatch remains blocked.
+- `host_physically_isolated`: record the attestation and mark the old host identity `fenced_pending_recovery`. The affected execution reservations may be closed through the controlled administrative workflow, but the host's capacity is **not** returned to schedulable capacity. It remains unavailable until host rebuild/re-enrollment creates a fresh trusted host/Runner identity and fresh resource telemetry.
+- AI-PM independently decides whether a new business attempt is appropriate. Any replacement uses a new execution identity and new binding/authorization generation.
+
+V1 deliberately does not require a second approver, because the agreed deployment model relies on an on-site person and visible SEM quarantine. The dedicated capability, immutable audit record, explicit physical-isolation attestation and no-capacity-reuse rule are the compensating controls. A future organization policy may require dual control, but it is not a V1 protocol or release prerequisite.
+
+### Additional acceptance cases
+
+1. Unauthorized operator or AI-PM agent invokes manual resolution — reject without state change.
+2. Current authenticated Runner session exists or normal reconciliation succeeds — manual resolution is unavailable.
+3. Operator submits `inspection_inconclusive` — audit the attempt and retain all quarantine/reservations.
+4. Operator submits `host_physically_isolated` without a non-empty reason or exact affected identity set — reject.
+5. Accepted physical-isolation disposition closes only the listed old execution reservations; old host capacity remains unschedulable.
+6. A replacement Runner registers as a fresh identity; old host/Runner identity and binding epochs remain fenced.
+7. Repeated resolution_id with byte-equivalent content is idempotent; same ID with changed content is an audit conflict.
+8. Manual resolution never emits process-exited evidence or mutates AI-PM Task/Run/Outcome.
+
 ## 12. Status
 
 This is a safety design draft. The per-execution containment unit, on-site operator evidence record, administrative authorization model and Linux failure-injection proof must be finalized before implementation. No code, migration or automatic failover is authorized.
@@ -191,9 +237,9 @@ A host failing any baseline check is unsupported and MUST NOT become dispatch-re
 ### 13.2 Per-execution process owner
 The V1 candidate process owner is a **systemd transient service unit backed by one dedicated cgroup v2 subtree per execution binding**.
 
-- The stable unit identity is derived from immutable runner_id + execution_id + binding_epoch; exact unit-name encoding and collision limits are frozen in D-04/D-10.
+- The stable unit identity is derived from immutable runner_id + execution_id + binding_epoch; exact unit-name encoding and collision limits are frozen in D-04 and the Linux systemd integration test plan.
 - Before any OS launch call, the Supervisor durably commits launch_id, containment_id, delivery identity, binding epoch, expected unit identity and a start_intent journal record.
-- The launch broker calls systemd Manager.StartTransientUnit for that exact transient service unit. The V1 candidate property set is Type=exec, ExitType=cgroup, RemainAfterExit=yes, CollectMode=inactive, Restart=no, KillMode=control-group, and no cgroup delegation, plus an explicit resource-control policy. ExitType=cgroup requires systemd 250 or later; V1 therefore sets systemd 250 as the minimum candidate version, subject to distro integration tests. The exact serialized D-Bus property values and distro support matrix are D-10 contract items.
+- The launch broker calls systemd Manager.StartTransientUnit for that exact transient service unit. The V1 candidate property set is Type=exec, ExitType=cgroup, RemainAfterExit=yes, CollectMode=inactive, Restart=no, KillMode=control-group, and no cgroup delegation, plus an explicit resource-control policy. ExitType=cgroup requires systemd 250 or later; V1 therefore sets systemd 250 as the minimum candidate version, subject to distro integration tests. The exact serialized D-Bus property values and distro support matrix are Linux systemd integration contract/test-plan items.
 - The broker never launches the Harness directly as an untracked child of the Supervisor.
 - A repeated start for the same launch_id queries/adopts the same unit and invocation; it MUST NOT issue a second independent launch. A different payload or identity for an existing launch_id is a conflict.
 - The unit's systemd invocation identity, cgroup path, host boot_id, main process identity and durable SEM execution tuple are recorded. PID alone is never an identity.

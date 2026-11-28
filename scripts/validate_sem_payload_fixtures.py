@@ -47,6 +47,39 @@ for item in data["runner_messages"]:
     empty_payload["payload"] = {}
     expect_invalid(runner_validator, empty_payload, label + " missing required payload fields")
 
+    if item["message_type"] in {
+        "execution.delivery_received",
+        "harness.starting",
+        "harness.started",
+        "harness.start_failed",
+        "harness.process_exited",
+        "execution.release_applied",
+        "runner.admission.changed",
+    }:
+        missing_journal = dict(item)
+        missing_journal.pop("journal_id", None)
+        expect_invalid(runner_validator, missing_journal, label + " missing durable journal_id")
+        missing_sequence = dict(item)
+        missing_sequence.pop("event_sequence", None)
+        expect_invalid(runner_validator, missing_sequence, label + " missing durable event_sequence")
+
+    if item["message_type"] == "protocol.ack":
+        ack_missing_journal = json.loads(json.dumps(item))
+        ack_missing_journal["payload"].pop("acknowledged_journal_id", None)
+        expect_invalid(runner_validator, ack_missing_journal, label + " event ACK missing journal_id")
+        ack_missing_sequence = json.loads(json.dumps(item))
+        ack_missing_sequence["payload"].pop("acknowledged_event_sequence", None)
+        expect_invalid(runner_validator, ack_missing_sequence, label + " event ACK missing event_sequence")
+        ack_missing_both = json.loads(json.dumps(item))
+        ack_missing_both["payload"].pop("acknowledged_journal_id", None)
+        ack_missing_both["payload"].pop("acknowledged_event_sequence", None)
+        expect_invalid(runner_validator, ack_missing_both, label + " durably_recorded ACK missing both cursor fields")
+        non_durable_without_cursor = json.loads(json.dumps(item))
+        non_durable_without_cursor["payload"]["disposition"] = "accepted"
+        non_durable_without_cursor["payload"].pop("acknowledged_journal_id", None)
+        non_durable_without_cursor["payload"].pop("acknowledged_event_sequence", None)
+        expect_valid(runner_validator, non_durable_without_cursor, label + " non-durable ACK without journal cursor")
+
 for item in data["platform_requests"]:
     label = f"Platform request {item['message_type']}"
     expect_valid(platform_validator, item, label)
@@ -60,6 +93,64 @@ for item in data["platform_requests"]:
     empty_payload["payload"] = {}
     expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
 
+# D04-H91/H94..H98: tagged expected_binding request invariants.
+bound_release = next(
+    item for item in data["platform_requests"]
+    if item["message_type"] == "execution.release_requested"
+    and item["payload"]["expected_binding"]["state"] == "bound"
+)
+unbound_release = next(
+    item for item in data["platform_requests"]
+    if item["message_type"] == "execution.release_requested"
+    and item["payload"]["expected_binding"]["state"] == "unbound"
+)
+legacy_bound = json.loads(json.dumps(bound_release))
+del legacy_bound["payload"]["expected_binding"]
+legacy_bound["payload"]["expected_binding_epoch"] = 1
+expect_invalid(platform_validator, legacy_bound, "legacy untagged expected_binding_epoch field on release")
+unbound_with_epoch = json.loads(json.dumps(unbound_release))
+unbound_with_epoch["payload"]["expected_binding"]["binding_epoch"] = 1
+expect_invalid(platform_validator, unbound_with_epoch, "unbound expected_binding carrying binding_epoch")
+unbound_legacy = json.loads(json.dumps(unbound_release))
+del unbound_legacy["payload"]["expected_binding"]
+unbound_legacy["payload"]["expected_binding_epoch"] = 1
+expect_invalid(platform_validator, unbound_legacy, "unbound release with legacy expected_binding_epoch alias")
+bound_without_epoch = json.loads(json.dumps(bound_release))
+bound_without_epoch["payload"]["expected_binding"] = {"state": "bound"}
+expect_invalid(platform_validator, bound_without_epoch, "bound expected_binding without binding_epoch")
+bound_zero_epoch = json.loads(json.dumps(bound_release))
+bound_zero_epoch["payload"]["expected_binding"] = {"state": "bound", "binding_epoch": 0}
+expect_invalid(platform_validator, bound_zero_epoch, "bound expected_binding with binding_epoch 0")
+unbound_with_runner = json.loads(json.dumps(unbound_release))
+unbound_with_runner["payload"]["runner_id"] = "55555555-5555-4555-8555-555555555555"
+expect_invalid(platform_validator, unbound_with_runner, "unbound release fabricating a Runner identity")
+
+# Release acceptance response must expose the release_disposition outcome.
+release_acceptance_schema = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    **platform_schema["$defs"]["ReleaseAcceptanceEnvelope"],
+}
+release_acceptance_validator = Draft202012Validator(release_acceptance_schema, format_checker=FORMAT)
+valid_acceptance = {
+    "message_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccf",
+    "request_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddf",
+    "execution_id": "22222222-2222-4222-8222-222222222222",
+    "release_id": "88888888-8888-4888-8888-888888888889",
+    "acceptance": "accepted",
+    "release_disposition": "unbound_release_fenced",
+    "accepted_at": "2026-11-25T12:00:01Z",
+}
+expect_valid(release_acceptance_validator, valid_acceptance, "release acceptance with unbound_release_fenced disposition")
+acceptance_without_disposition = dict(valid_acceptance)
+acceptance_without_disposition.pop("release_disposition")
+expect_invalid(release_acceptance_validator, acceptance_without_disposition, "release acceptance missing release_disposition")
+acceptance_unknown_disposition = dict(valid_acceptance)
+acceptance_unknown_disposition["release_disposition"] = "released"
+expect_invalid(release_acceptance_validator, acceptance_unknown_disposition, "release acceptance with unknown disposition")
+acceptance_with_epoch = dict(valid_acceptance)
+acceptance_with_epoch["binding_epoch"] = 1
+expect_invalid(release_acceptance_validator, acceptance_with_epoch, "unbound-release acceptance fabricating binding_epoch")
+
 event_types = set(platform_schema["$defs"]["EventBase"]["properties"]["event_type"]["enum"])
 fixture_event_types = {item["event_type"] for item in data["sem_events"]}
 assert event_types == fixture_event_types, f"SEM event fixture coverage mismatch: missing={event_types-fixture_event_types}, extra={fixture_event_types-event_types}"
@@ -71,6 +162,12 @@ for item in data.get("event_acknowledgements", []):
     legacy = dict(item)
     legacy["event_sequence"] = legacy.pop("execution_event_sequence")
     expect_invalid(ack_validator, legacy, "ACK legacy ambiguous event_sequence field")
+    transport_alias = dict(item)
+    transport_alias["message_sequence"] = transport_alias["execution_event_sequence"]
+    expect_invalid(ack_validator, transport_alias, "ACK echoing WSS connection-scoped message_sequence")
+    journal_alias = dict(item)
+    journal_alias["journal_id"] = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    expect_invalid(ack_validator, journal_alias, "ACK echoing Runner journal_id")
     extra = dict(item)
     extra["unexpected"] = True
     expect_invalid(ack_validator, extra, "ACK unknown field")
@@ -87,6 +184,37 @@ for item in data["sem_events"]:
     empty_payload = json.loads(json.dumps(item))
     empty_payload["payload"] = {}
     expect_invalid(platform_validator, empty_payload, label + " missing required payload fields")
+
+# D04-H94/H99/H104: the sixth event must never carry Runner, binding,
+# stop-fence or process-exit identity.
+unbound_event = next(
+    item for item in data["sem_events"]
+    if item["event_type"] == "execution.unbound_release_applied"
+)
+unbound_missing_fence = json.loads(json.dumps(unbound_event))
+del unbound_missing_fence["payload"]["dispatch_fence_id"]
+expect_invalid(platform_validator, unbound_missing_fence, "unbound release event without dispatch_fence_id")
+unbound_wrong_disposition = json.loads(json.dumps(unbound_event))
+unbound_wrong_disposition["payload"]["disposition"] = "released"
+expect_invalid(platform_validator, unbound_wrong_disposition, "unbound release event with non-tombstone disposition")
+for leaked_field, leaked_value in (
+    ("binding_epoch", 1),
+    ("runner_id", "55555555-5555-4555-8555-555555555555"),
+    ("stop_fence_id", "dddddddd-dddd-4ddd-8ddd-dddddddddddd"),
+    ("process_exit_evidence_id", "cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
+    ("launch_id", "99999999-9999-4999-8999-999999999999"),
+    ("containment_id", "sem-exec-222"),
+    ("boot_id", "boot-02"),
+):
+    unbound_leak = json.loads(json.dumps(unbound_event))
+    unbound_leak["payload"][leaked_field] = leaked_value
+    expect_invalid(platform_validator, unbound_leak, f"unbound release event carrying {leaked_field}")
+
+# Direction confusion: WSS frames are not SEM callback events and vice versa.
+for runner_item in data["runner_messages"]:
+    expect_invalid(platform_validator, runner_item, f"direction: Runner WSS frame {runner_item['message_type']} on SEM callback schema")
+for sem_item in data["sem_events"]:
+    expect_invalid(runner_validator, sem_item, f"direction: SEM event {sem_item['event_type']} on Runner WSS schema")
 
 # Cross-field process/release evidence invariants.
 process_event = next(item for item in data["sem_events"] if item["event_type"] == "harness.process_observed")
@@ -114,6 +242,27 @@ release_missing = json.loads(json.dumps(release_event))
 release_missing["payload"]["release_state"] = "process_exited"
 expect_invalid(platform_validator, release_missing, "process_exited release without evidence reference")
 
+release_requested_without_fence = json.loads(json.dumps(release_event))
+release_requested_without_fence["payload"]["release_state"] = "requested"
+release_requested_without_fence["payload"].pop("stop_fence_id", None)
+expect_valid(platform_validator, release_requested_without_fence, "requested release before stop fence exists")
+
+release_stale_without_fence = json.loads(json.dumps(release_event))
+release_stale_without_fence["payload"]["release_state"] = "stale_rejected"
+release_stale_without_fence["payload"].pop("stop_fence_id", None)
+expect_valid(platform_validator, release_stale_without_fence, "stale release rejected before stop fence exists")
+
+release_uncertain_without_fence = json.loads(json.dumps(release_event))
+release_uncertain_without_fence["payload"]["release_state"] = "release_uncertain"
+release_uncertain_without_fence["payload"].pop("stop_fence_id", None)
+expect_valid(platform_validator, release_uncertain_without_fence, "release uncertain before stop fence is durably known")
+
+release_fenced_without_id = json.loads(json.dumps(release_event))
+release_fenced_without_id["payload"]["release_state"] = "stop_fenced"
+release_fenced_without_id["payload"].pop("stop_fence_id", None)
+expect_invalid(platform_validator, release_fenced_without_id, "stop_fenced release without stop_fence_id")
+
+
 # Cross-protocol process-exit and uncertainty invariants.
 runner_exit = next(item for item in data["runner_messages"] if item["message_type"] == "harness.process_exited")
 assert runner_exit["payload"]["exit_status"]["kind"] in {"code", "signal", "unknown"}
@@ -126,6 +275,32 @@ expect_invalid(runner_validator, runner_unknown_with_code, "Runner unknown exit 
 runner_unknown_with_signal = json.loads(json.dumps(runner_exit))
 runner_unknown_with_signal["payload"]["exit_status"] = {"kind": "unknown", "signal": 9}
 expect_invalid(runner_validator, runner_unknown_with_signal, "Runner unknown exit status with numeric signal")
+
+runner_release = next(item for item in data["runner_messages"] if item["message_type"] == "execution.release_applied")
+for release_disposition in ("process_stopped", "already_exited"):
+    release_without_evidence = json.loads(json.dumps(runner_release))
+    release_without_evidence["payload"]["disposition"] = release_disposition
+    expect_invalid(runner_validator, release_without_evidence, f"Runner {release_disposition} without process-exit evidence")
+    release_with_evidence = json.loads(json.dumps(runner_release))
+    release_with_evidence["payload"]["disposition"] = release_disposition
+    release_with_evidence["payload"]["process_exit_evidence_id"] = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    expect_valid(runner_validator, release_with_evidence, f"Runner {release_disposition} with process-exit evidence")
+
+for release_disposition in ("stop_fenced", "stale_rejected", "local_uncertain"):
+    release_with_false_evidence = json.loads(json.dumps(runner_release))
+    release_with_false_evidence["payload"]["disposition"] = release_disposition
+    release_with_false_evidence["payload"]["process_exit_evidence_id"] = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    expect_invalid(runner_validator, release_with_false_evidence, f"Runner {release_disposition} carrying positive process-exit evidence")
+
+runner_missing_digest = json.loads(json.dumps(runner_exit))
+del runner_missing_digest["payload"]["evidence_digest"]
+expect_invalid(runner_validator, runner_missing_digest, "Runner process exit without evidence digest")
+runner_bad_digest = json.loads(json.dumps(runner_exit))
+runner_bad_digest["payload"]["evidence_digest"] = "not-a-sha256"
+expect_invalid(runner_validator, runner_bad_digest, "Runner process exit with malformed evidence digest")
+runner_bad_evidence_version = json.loads(json.dumps(runner_exit))
+runner_bad_evidence_version["payload"]["evidence_schema_version"] = 2
+expect_invalid(runner_validator, runner_bad_evidence_version, "Runner process exit with unsupported evidence schema version")
 
 unknown_event = next(
     item for item in data["sem_events"]
