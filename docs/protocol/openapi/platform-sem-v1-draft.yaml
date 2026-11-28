@@ -125,11 +125,27 @@ paths:
     post:
       tags: [Executions]
       operationId: requestExecutionRelease
-      summary: Persist a binding-fenced release instruction
+      summary: Persist a binding-fenced release instruction (tagged expected_binding)
       description: >-
-        AI-PM has already made the business decision to release. SEM validates
-        expected_binding_epoch and persists the release intent before forwarding.
-        A stale epoch must never stop a newer binding.
+        AI-PM has already made the business decision to release. The request
+        carries a tagged expected_binding condition: {state: unbound} for an
+        execution that AI-PM believes has no Runner binding, or {state: bound,
+        binding_epoch} for a known binding. SEM linearizes the release against
+        its single per-execution dispatch/release sequencer. Outcomes: (A)
+        unbound release wins: SEM persists a permanent released_unbound
+        dispatch-fence tombstone, returns 202 with
+        release_disposition=unbound_release_fenced and emits exactly one
+        execution.unbound_release_applied event; every later dispatch or bind
+        attempt for this execution_id fails closed. (B) Dispatch wins against
+        expected_binding=unbound: authenticated 409 BINDING_ALREADY_ESTABLISHED
+        carrying the actual binding_epoch; AI-PM must reconcile and submit a
+        normal bound release; no unbound-release event is emitted. (C) Ambiguous
+        result: an uncertain-class signed error retaining the execution identity
+        and reservation; an exact retry of the same release_id/body returns the
+        same terminal disposition. For bound releases a stale epoch is rejected
+        (412) and must never stop a newer binding. Duplicate release_id with an
+        identical canonical body is idempotent; a changed
+        expected_binding/stop_policy is 409 IDEMPOTENCY_CONFLICT.
       parameters:
         - name: execution_id
           in: path
@@ -352,11 +368,23 @@ components:
       $ref: '../json-schema/platform-sem-v1.schema.yaml#/$defs/ExecutionReleaseRequestedEnvelope'
     ExecutionReleaseRequest:
       type: object
-      required: [execution_id, release_id, expected_binding_epoch, stop_policy]
+      required: [execution_id, release_id, expected_binding, stop_policy]
       properties:
         execution_id: { type: string, format: uuid }
         release_id: { type: string, format: uuid }
-        expected_binding_epoch: { type: integer, minimum: 1 }
+        expected_binding:
+          oneOf:
+            - type: object
+              required: [state]
+              properties:
+                state: { const: unbound }
+              additionalProperties: false
+            - type: object
+              required: [state, binding_epoch]
+              properties:
+                state: { const: bound }
+                binding_epoch: { type: integer, minimum: 1 }
+              additionalProperties: false
         stop_policy:
           type: object
           required: [mode, grace_period_seconds]
@@ -367,13 +395,14 @@ components:
       additionalProperties: false
     ReleaseAcceptanceEnvelope:
       type: object
-      required: [message_id, request_id, execution_id, release_id, acceptance, accepted_at]
+      required: [message_id, request_id, execution_id, release_id, acceptance, release_disposition, accepted_at]
       properties:
         message_id: { type: string, format: uuid }
         request_id: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' }
         execution_id: { type: string, format: uuid }
         release_id: { type: string, format: uuid }
         acceptance: { enum: [accepted, duplicate] }
+        release_disposition: { enum: [bound_release_accepted, unbound_release_fenced] }
         accepted_at: { type: string, format: date-time }
       additionalProperties: false
     SemInfrastructureEventEnvelope:
@@ -383,9 +412,9 @@ components:
       required: [execution_id, infrastructure_state, observed_at, version]
       properties:
         execution_id: { type: string, format: uuid }
-        infrastructure_state: { enum: [accepted, queued, reserved, bound, delivering, delivery_received, starting, running, release_requested, stopping, released, delivery_failed, start_failed, infrastructure_uncertain, cleanup_failed] }
-        binding_epoch: { type: integer, minimum: 1 }
-        runner_id: { type: string, format: uuid }
+        infrastructure_state: { enum: [accepted, queued, reserved, bound, delivering, delivery_received, starting, running, release_requested, stopping, released, released_unbound, delivery_failed, start_failed, infrastructure_uncertain, cleanup_failed] }
+        binding_epoch: { type: integer, minimum: 1, description: Omitted when infrastructure_state is released_unbound; no binding epoch exists for a fenced unbound execution. }
+        runner_id: { type: string, format: uuid, description: Omitted when infrastructure_state is released_unbound. }
         delivery_id: { type: string, format: uuid }
         observed_at: { type: string, format: date-time }
         version: { type: integer, minimum: 1 }
@@ -423,5 +452,6 @@ components:
             detail: { type: string, maxLength: 512 }
             execution_id: { type: string, format: uuid }
             expected_sequence: { type: integer, minimum: 1 }
+            binding_epoch: { type: integer, minimum: 1, description: Actual current binding_epoch on 409 BINDING_ALREADY_ESTABLISHED. }
           additionalProperties: false
       additionalProperties: false

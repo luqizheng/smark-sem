@@ -176,6 +176,7 @@ SEM state describes its own infrastructure work only.
 | `release_requested` | AI-PM release instruction durably accepted | SEM Inbox and release intent committed |
 | `stopping` | Runner accepted stop fence / termination command | Runner durable stop fence ACK; not yet process exit |
 | `released` | Process exit/absence and cleanup requirements positively satisfied | Exact process exit evidence + cleanup completion recorded |
+| `released_unbound` | P0-07: an `expected_binding=unbound` release won the per-execution dispatch/release sequencer before any Runner binding existed; dispatch is permanently fenced for this execution_id | Immutable dispatch-fence/tombstone record (`dispatch_fence_id`) committed with the release intent; emits exactly one `execution.unbound_release_applied`; carries no Runner, binding_epoch, stop_fence_id or process-exit evidence |
 | `delivery_failed` | Delivery definitively rejected before Runner durable receipt | Explicit terminal protocol rejection; not timeout |
 | `start_failed` | Supervisor proves no process was created for this start intent | Durable Supervisor evidence and reconciliation |
 | `infrastructure_uncertain` | Outcome cannot be established safely | Ambiguous send, lost Runner, journal gap, or conflicting evidence |
@@ -262,6 +263,7 @@ The tables in this section define the allowed state edges. They are normative de
 | delivery_received | start_failed | Runner no-create proof | Launch broker proves no process was created for launch ID and no in-flight create exists | Missing PID/journal record is insufficient |
 | starting | start_failed | Runner no-create proof | Same as above, including resolved in-flight broker operation and durable stop fence if release raced | If ambiguous, remain uncertain |
 | Any nonterminal state except released | release_requested | AI-PM release command | Authenticated Platform request; expected execution and binding fence; release Inbox and intent committed | Same release ID returns original; stale epoch rejected or reconcile-only |
+| accepted / queued / reserved | released_unbound | AI-PM `expected_binding=unbound` release wins the dispatch/release sequencer | Single per-execution sequencer transaction: release intent + immutable dispatch-fence tombstone committed atomically before 202; exactly one `execution.unbound_release_applied` emitted; reservation released only per capacity policy | Duplicate release_id + identical body returns the original tombstone disposition; dispatch-wins against unbound release returns 409 `BINDING_ALREADY_ESTABLISHED` with the actual epoch; a `released_unbound` tombstone is terminal for the execution_id — no later assignment, requeue, rebind or epoch may resurrect it; a new AI-PM attempt uses a new execution_id |
 | release_requested | stopping | Runner stop-fence ACK | ACK proves later starts fenced and every earlier/in-flight start accounted for; it does not prove exit | Duplicate ACK no-op; retain reservation |
 | release_requested | released | SEM + Runner evidence | No process was ever created and launch broker confirms no in-flight create; cleanup requirements satisfied | Requires positive no-create proof; otherwise remain pending/uncertain |
 | stopping | released | Runner exit + cleanup evidence | Exact containment positively empty/cannot accept descendants; cleanup requirements complete | Duplicate exit/cleanup evidence no-op |
@@ -276,6 +278,7 @@ The tables in this section define the allowed state edges. They are normative de
 Additional SEM invariants:
 
 - released, delivery_failed and start_failed are terminal for the corresponding binding/delivery identity. A later business attempt uses a new execution identity; a transport retry preserves the old identity.
+- released_unbound is terminal for the entire execution_id (P0-07 dispatch fence). Dispatch and release linearize on one per-execution sequencer; SEM never judges dispatch permission in two services or two separate transactions.
 - A release command can be accepted from any nonterminal SEM state, but it cannot skip the Runner launch-broker resolution or process-exit evidence needed for safe release.
 - infrastructure_uncertain is a reconciliation state, not permission to allocate a replacement Runner. The previous known state and all outstanding reservations remain queryable.
 - A newer binding epoch is not created while the old process may still exist, unless D-03 provides independent, verifiable isolation/fencing evidence that explicitly permits it.

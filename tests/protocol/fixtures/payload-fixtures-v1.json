@@ -478,10 +478,26 @@
       "payload": {
         "execution_id": "11111111-1111-4111-8111-111111111111",
         "release_id": "88888888-8888-4888-8888-888888888888",
-        "expected_binding_epoch": 1,
+        "expected_binding": { "state": "bound", "binding_epoch": 1 },
         "stop_policy": {
           "mode": "graceful_then_force",
           "grace_period_seconds": 30
+        }
+      }
+    },
+    {
+      "message_id": "cccccccc-cccc-4ccc-8ccc-ccccccccccce",
+      "request_id": "dddddddd-dddd-4ddd-8ddd-ddddddddddde",
+      "schema_version": 1,
+      "message_type": "execution.release_requested",
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "payload": {
+        "execution_id": "22222222-2222-4222-8222-222222222222",
+        "release_id": "88888888-8888-4888-8888-888888888889",
+        "expected_binding": { "state": "unbound" },
+        "stop_policy": {
+          "mode": "force",
+          "grace_period_seconds": 0
         }
       }
     }
@@ -657,6 +673,20 @@
           "cgroup_populated": 0,
           "systemd_invocation_id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
         }
+      }
+    },
+    {
+      "event_id": "99999999-9999-4999-8999-999999999995",
+      "event_type": "execution.unbound_release_applied",
+      "schema_version": 1,
+      "occurred_at": "2026-11-25T12:00:00Z",
+      "execution_id": "22222222-2222-4222-8222-222222222222",
+      "execution_event_sequence": 8,
+      "payload": {
+        "release_id": "88888888-8888-4888-8888-888888888889",
+        "dispatch_fence_id": "99999999-9999-4999-8999-999999999996",
+        "disposition": "released_unbound",
+        "applied_at": "2026-11-25T12:00:00Z"
       }
     }
   ],

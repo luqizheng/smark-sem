@@ -39,6 +39,26 @@ Use a disposable Linux VM or dedicated test host with:
 
 A container nested inside an ordinary CI container is not an acceptable substitute for the host profile unless it demonstrably exposes the same systemd manager, cgroup v2 ownership and failure semantics. A fake systemd implementation is useful for unit tests only, never for P0 closure.
 
+### 2.4 systemd ≥ 250 behavior-consistency checklist (design assumption vs real behavior)
+
+Each row is a D-05/addendum design assumption about systemd ≥ 250 behavior. Every row must be verified by an executable observation on the minimum supported version (and each supported distro profile) before ratification. **All rows are NOT RUN as of 2026-11-28**: no qualified Linux systemd ≥ 250 host was used in this documentation round, and no simulated result may substitute for these checks.
+
+| # | Design assumption | What the real-host check must demonstrate | Status |
+|---|---|---|---|
+| SD-01 | `ExitType=cgroup` (systemd ≥ 250) keeps the unit active until every descendant in the cgroup exits | Unit transitions to inactive only after the last descendant exits; a lingering grandchild keeps SubState non-terminal | NOT RUN |
+| SD-02 | `RemainAfterExit=yes` retains a successfully exited unit in `active/exited`; `CollectMode=inactive` prevents GC of inactive units from interfering with terminal evidence | Terminal unit and its InvocationID/properties remain queryable through the evidence window for success, failure and StopUnit-driven termination | NOT RUN |
+| SD-03 | Transient-unit GC can erase a unit that is not retained | Reproduce the GC window and prove the retention strategy survives it (D05-68/D05-LNX-13) | NOT RUN |
+| SD-04 | A non-replacing StartTransientUnit job mode never replaces or merges a conflicting unit/job | Second start against an existing unit name fails instead of replacing; no silent adoption | NOT RUN |
+| SD-05 | `CancelJob` only cancels a `waiting` job and has no effect once the job is `running` | Waiting-job cancel produces JobRemoved(cancelled) with no invocation; running-job cancel is ineffective and the invocation survives | NOT RUN |
+| SD-06 | JobNew/JobRemoved signal delivery versus the StartTransientUnit method reply has no ordering guarantee | Signals may arrive before/after the reply; broker correlation works in both orders (D05-LNX-03) | NOT RUN |
+| SD-07 | Job objects disappear from ListJobs/GetJob after completion; job IDs are runtime-local and meaningless across reboot | Completed jobs are not queryable; a prior-boot job ID never correlates (D05-78) | NOT RUN |
+| SD-08 | InvocationID changes on every unit restart and is stable while the invocation runs | Bracketed observation detects a changed InvocationID as a different invocation (D05-86) | NOT RUN |
+| SD-09 | `cgroup.events` `populated` reaches 0 only after all processes leave; there is a finite delay between process exit and populated=0 | Bracketed double-read semantics hold; a mid-bracket change is detectable (D05-87) | NOT RUN |
+| SD-10 | `KillMode=control-group` SIGTERM→SIGKILL escalation terminates all descendants, including ones ignoring SIGTERM | Grandchild that ignores SIGTERM is killed within the configured timeout; populated reaches 0 | NOT RUN |
+| SD-11 | Harness cannot escape its cgroup without delegation; no cgroup delegation implies no self-migration | Migration/escape attempts fail as unprivileged; denial is observable (D05-LNX-09) | NOT RUN |
+| SD-12 | A stop-job result alone is not exit evidence; ActiveState/SubState/Result plus populated=0 plus stable InvocationID are required | The addendum §5.2 bracket passes and each weakened variant (missing member) fails | NOT RUN |
+| SD-13 | `systemd 250` is truly the minimum for `ExitType=cgroup`; distro builds differ | Version probing: feature present and behaving on the minimum declared build of every supported distro profile | NOT RUN |
+
 ### 2.2 CI topology
 
 - Fast protocol/schema/crypto tests may run on ordinary GitHub-hosted CI.
@@ -220,3 +240,36 @@ A case may be covered by more than one test. A case may not be silently marked c
 ## 9. Readiness
 
 This plan is the required test design for D-03/D-05 Linux process lifecycle claims. It is not evidence that tests have been implemented or passed. D-05 remains **CHANGES REQUIRED — NOT READY FOR RATIFICATION OR DEVELOPMENT** until the executable harness, supported host profile and failure-injection artifacts satisfy the gates above.
+
+## 10. Test classification and execution status (2026-11-28)
+
+Every D-05 Linux-lifecycle obligation is classified into exactly one primary category. Real-host, fault-injection and manual categories are **NOT RUN** in this documentation round; simulated or schema-level results must never be presented as their substitutes.
+
+Categories:
+- **A — automated executable tests without a real systemd host** (repo CI, schema/fixture/validator, pure unit tests over the state machines);
+- **B — integration tests requiring a real systemd ≥ 250 host** (§2.1 profile);
+- **C — deterministic fault-injection tests** (§4 boundaries; may run on the §2.1 host with the §2.2 injection seam);
+- **D — manual operations and evidence acceptance** (operator disposition, attestation and artifact audit).
+
+| Suite / obligation | Category | Host requirement | Status | Evidence |
+|---|---|---|---|---|
+| Platform/Runner JSON Schema, OpenAPI, payload fixtures, crypto/JCS vectors, contract coverage checks | A | none | **RUN — CI green** (validate-contracts workflow on this branch) | CI run artifacts |
+| §6 D05-01–D05-102 machine-readable mapping to suites/layers/hosts | A | none | **NOT BUILT** — mapping file is an open deliverable; no case may claim coverage without it | — |
+| Runner journal/dedupe/cursor unit behavior with a fake transport (§5.5 replay identity, ACK gating logic) | A (partial; C for real fsync boundaries) | none for unit layer | NOT RUN | — |
+| §2.4 SD-01..SD-13 systemd behavior-consistency checks | B | real systemd ≥ 250 host | **NOT RUN** | §2.4 table |
+| §5.1 launch idempotency & ambiguous D-Bus outcomes (adopt/adopt-reject branches) | B | real host + D-Bus | **NOT RUN** | — |
+| §5.2 start/release race and linearization matrix | C | real host + injection seam | **NOT RUN** | — |
+| §5.3 containment & hostile-descendant tests | B/C | real host; C for descendant-injection runs | **NOT RUN** | — |
+| §5.4 positive exit proof & Supervisor restart | C | real host + kill boundaries | **NOT RUN** | — |
+| §5.5 evidence digest/replay/durable ACK (live WSS + journal) | B/C | real host for journal/fsync layer | **NOT RUN** | — |
+| §5.6 journal durability & storage failure (fsync fail, disk full, corruption) | C | real host or equivalent filesystem fault injection | **NOT RUN** | — |
+| D05-LNX-01..D05-LNX-16 (addendum §6) | C | real host + injection seam | **NOT RUN** | — |
+| §5.7 D-03 permanent-host-loss manual disposition (authorization, attestation, no-capacity-reuse, idempotent resolution) | D | operator + audited environment | **NOT RUN** | — |
+| Ratification gates (§7) artifact audit | D | reviewer + raw artifacts | **NOT RUN** | — |
+
+Rules reinforced by this classification:
+
+1. Only category-A results may be cited from this documentation round, and only for contract artifacts (CI `validate-contracts` green).
+2. Category B/C/D results do not exist. Any statement of P0-02/P0-03/P0-04 closure must cite category B/C evidence that does not yet exist; until then those P0s remain open.
+3. The mapping deliverable (§6) must exist before any B/C/D run can be credited to a D05 acceptance case.
+4. Re-running this classification after real-host executions is mandatory; the status column is the single NOT RUN ledger.

@@ -95,13 +95,30 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 
 ### 2.3 Executable payload-schema fixture coverage
 
-[Payload fixtures](../../tests/protocol/fixtures/payload-fixtures-v1.json) and [their validator](../../scripts/validate_sem_payload_fixtures.py) cover every current strict payload branch. The suite now contains 29 valid examples (20 Runner WSS messages, 2 Platform requests and 7 SEM infrastructure events). For each example it asserts rejection of an unknown top-level field, an unknown payload field and an empty payload missing required fields: 87 baseline negative mutations. Total baseline coverage: **116 positive/negative schema fixture assertions**, plus dedicated ACK and cross-field exit/uncertainty assertions in the validator. These are distinct from the scenario-level acceptance requirements below.
+[Payload fixtures](../../tests/protocol/fixtures/payload-fixtures-v1.json) and [their validator](../../scripts/validate_sem_payload_fixtures.py) cover every current strict payload branch. The suite now contains 31 valid examples (20 Runner WSS messages covering 19 message types, 3 Platform requests — execution request, bound release and unbound release — and 8 SEM infrastructure events covering all six event types plus exited and unknown-exit process observations). For each example it asserts rejection of an unknown top-level field, an unknown payload field and an empty payload missing required fields: 93 baseline negative mutations. Dedicated validator cases add tagged-release, sixth-event, release-acceptance, ACK-alias and direction-confusion assertions (see §2.5). These are distinct from the scenario-level acceptance requirements below.
 
 | Fixture group | Positive examples | Negative mutations | Coverage |
 |---|---:|---:|---|
-| Runner WSS application messages | 20 | 60 | Every post-handshake message type, including signal-terminated process exit |
-| Platform HTTP requests | 2 | 6 | Execution request and release request |
-| SEM infrastructure events | 7 | 21 | All five event types plus exited and unknown-exit process observations |
+| Runner WSS application messages | 20 (19 types) | 60 + journal/ACK specials | Every post-handshake message type, including signal-terminated process exit |
+| Platform HTTP requests | 3 | 9 + tagged-release specials | Execution request, bound release, unbound release |
+| SEM infrastructure events | 8 | 24 + tombstone-leak specials | All six event types plus exited and unknown-exit process observations |
+
+### 2.5 Tagged release, sixth event, ACK-alias and direction-confusion validator cases
+
+Enforced by [validate_sem_payload_fixtures.py](../../scripts/validate_sem_payload_fixtures.py) and [validate_sem_contracts.py](../../scripts/validate_sem_contracts.py) on every CI run:
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| D04-F01 | Release request uses legacy untagged `expected_binding_epoch` | Schema rejects; tagged `expected_binding` is the only accepted form |
+| D04-F02 | `expected_binding={state:unbound}` carries `binding_epoch` | Schema rejects; strict oneOf forbids the combination |
+| D04-F03 | `expected_binding={state:bound}` lacks `binding_epoch` or uses epoch 0 | Schema rejects |
+| D04-F04 | Unbound release request carries a Runner identity field | Schema rejects; no Runner identity may be fabricated |
+| D04-F05 | `execution.unbound_release_applied` payload carries binding_epoch, runner_id, boot_id, stop_fence_id, process_exit_evidence_id, launch_id or containment_id | Schema rejects; the tombstone proves dispatch fencing only |
+| D04-F06 | Sixth event missing `dispatch_fence_id` or with a disposition other than `released_unbound` | Schema rejects |
+| D04-F07 | Release acceptance response omits `release_disposition` or uses an unknown value | Schema rejects; outcome discriminator is mandatory |
+| D04-F08 | ACK echoes WSS `message_sequence` or Runner `journal_id` | Schema rejects; the ACK echoes `execution_event_sequence` only |
+| D04-F09 | Runner WSS frame validated against the SEM callback schema (any message type) | Schema rejects; wrong event direction |
+| D04-F10 | SEM infrastructure event validated against the Runner WSS schema (any event type) | Schema rejects; wrong event direction |
 
 ## 3. Runner↔SEM WSS contract cases
 
@@ -163,6 +180,11 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 | D04-H37 | execution_event_sequence has a gap for execution_id | Do not advance cursor; request replay/reconciliation |
 | D04-H38 | AI-PM generic /api/v1/events endpoint receives SEM infrastructure event | Reject or remain outside SEM contract; it is not the SEM Inbox |
 | D04-H39 | SEM callback ACK is returned before AI-PM Inbox+observation transaction commits | Test fails; ACK must follow durable commit |
+| D04-H48 | Any Runner WSS frame is submitted to the SEM→AI-PM callback schema (or any SEM event to the Runner WSS schema) | Direction-confusion rejection in both directions, enforced per fixture by the payload validator (D04-F09/F10); the two frame families share no schema surface |
+| D04-H49 | ACK or event conflates the three sequence namespaces: Runner journal `event_sequence` (`runner_id+journal_id`), WSS connection-scoped `message_sequence`, AI-PM per-execution `execution_event_sequence` | Rejected; each namespace stays in its own schema. Positive and negative fixtures exist for all three; ACK echoing `message_sequence` or `journal_id` is a negative case (D04-F08) |
+| D04-H50 | Duplicate `event_id` reaches the callback with identical canonical body vs changed body | Identical body → one durable application + duplicate ACK; changed body → 409 IDEMPOTENCY_CONFLICT; both covered by fixtures and AI-PM INBOX-02/03/06 |
+| D04-H51 | Duplicate `execution_event_sequence` within one execution under a different event_id | 409 EVENT_SEQUENCE_CONFLICT; unique `(execution_id, execution_event_sequence)` index backstops; AI-PM INBOX-05/27 cover it concurrently |
+| D04-H107 | Event implies an illegal cross-event state transition (e.g. `execution.unbound_release_applied` after any binding, `execution.binding_established` after a `released_unbound` tombstone, a stale-epoch event overwriting a newer binding) | Semantic validation rejects or quarantines; JSON Schema validity alone is not acceptance; AI-PM projection cases INBOX-52/53/54, BIND-03..07/13, UNBOUND-03/04 are normative for this |
 
 ## 4. Cross-protocol consistency cases
 
@@ -186,6 +208,11 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 - Ensure every HTTP operation has request, success, authentication, conflict and retryable failure response definitions.
 - Check that no schema introduces AI-PM Task/Requirement/Approval state into SEM-owned fields.
 - Check all durable Runner events carry journal_id + event_sequence and that transport message_sequence remains connection-scoped.
+- Enforce the tagged `expected_binding` release condition: strict unbound/bound oneOf, no legacy `expected_binding_epoch` alias on either side, `release_disposition` required on release acceptance, `binding_epoch` available on `BINDING_ALREADY_ESTABLISHED` errors, and `released_unbound` present in the execution snapshot states.
+- Enforce the sixth event `execution.unbound_release_applied`: one strict branch, tombstone payload forbids every Runner/binding/stop-fence/process-exit field, fixture and negative coverage present.
+- Enforce three-sequence namespace separation: WSS `message_sequence`, Runner journal `journal_id + event_sequence` and AI-PM `execution_event_sequence` must never share a schema surface; ACK echoes `execution_event_sequence` only.
+- Enforce direction separation: every Runner WSS frame must fail the SEM callback schema and every SEM event must fail the Runner WSS schema (D04-F09/F10).
+- Cross-check the OpenAPI release path, shared schema `$ref`s, tagged request/acceptance/error shapes and snapshot tombstone state against the JSON Schema single source of truth.
 - Run contract compatibility checks for additive optional fields, required-field changes and major-version negotiation.
 - Run cross-repository contract fixtures against AI-PM Outbox/Inbox adapters before implementation is considered ready.
 
@@ -193,7 +220,7 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 
 1. HTTP request authentication/signature algorithm, canonicalization, timestamp/nonce replay window, key ID and rotation.
 2. Exact endpoint ownership and route prefix alignment with the AI-PM server; callback URL registration and delivery authentication.
-3. Complete event payload schemas for binding, delivery status, process observation, release status and uncertainty.
+3. Complete event payload schemas for binding, delivery status, process observation, release status, uncertainty and the unbound-release tombstone: **schema branches exist as of 2026-11-28**; runtime event production and bilateral live callback interop remain open.
 4. WSS challenge transcript candidate (Ed25519 + JCS domain-separated bytes) requires ratification, signature test vectors, challenge TTL and key-rotation overlap.
 5. Full payload definitions for every WSS message, including replay snapshot, health probe/report, admission changes and release-applied evidence.
 6. Exact event-journal ACK/cursor request and response, retention, compaction and recovery behavior.
@@ -222,7 +249,7 @@ The deterministic TEST-ONLY vectors live in [crypto-vectors-v1.json](../../tests
 
 ## 4.2 AI-PM Inbox transaction and concurrency acceptance cases
 
-These cases complement the wire/schema cases above. They are normative test requirements for the bilateral callback adapter, not evidence that the adapter or database migration exists. The detailed transaction algorithm and SQL candidate are in the AI-PM PR #9 document [SEM Callback Inbox — Exact DDL and Concurrency Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/sem-callback-inbox-ddl-and-concurrency-design.md).
+These cases complement the wire/schema cases above. They are normative test requirements for the bilateral callback adapter, not evidence that the adapter or database migration exists. The detailed transaction algorithm, canonical single-table execution projection, and SQL candidate are in the AI-PM PR #9 document [SEM Callback Inbox — Exact DDL and Concurrency Design](https://github.com/luqizheng/ai-pm/blob/docs/sem-02e-architecture-convergence/docs/architecture/server-execution-management/sem-callback-inbox-ddl-and-concurrency-design.md). That document now carries INBOX-01..INBOX-49 base Inbox cases, INBOX-50..INBOX-57 for the sixth event and projection races, BIND-01..BIND-14 binding-projection cases and UNBOUND-01..UNBOUND-10 unbound-release cases. An executable standalone acceptance harness (ephemeral database; no production migration) has run the core real-PostgreSQL scenarios and its results are recorded there; the production migration and callback route remain unimplemented.
 
 | ID | Scenario | Expected result |
 |---|---|---|
@@ -251,7 +278,7 @@ These cases complement the wire/schema cases above. They are normative test requ
 | D04-BI-23 | Non-SEM generic ingestion after migration | Existing project/source/idempotency semantics remain unchanged |
 | D04-BI-24 | Duplicate JSON member names or invalid JCS input | Reject before persistence or cursor movement |
 
-**Execution status:** specification only. Every case still requires a real PostgreSQL two-connection test where applicable, exact row-count/value assertions across Inbox + Run event + cursor, and bilateral CI execution. No test is marked passed by the presence of this matrix.
+**Execution status:** specification plus a standalone real-PostgreSQL acceptance harness on the AI-PM PR #9 branch (ephemeral database, two-connection concurrency, no production migration). The harness validates the candidate DDL and transaction algorithm; it is not the production adapter, not the ai-pm migrations, and not bilateral live HTTP integration. Cases without a harness result remain specification-only requirements. No test is marked passed by the presence of this matrix alone.
 
 
 ### 2.4 Signed-response and conditional-GET acceptance cases (Draft addendum)
@@ -356,4 +383,4 @@ These cases define response-authentication classes only. They do not close D-04 
 | D04-H99 | duplicate execution.unbound_release_applied callback | AI-PM exact duplicate ACK; no projection rewrite |
 | D04-H100 | new AI-PM attempt uses a new execution_id after old released_unbound | New execution is independent; old tombstone remains scoped to old execution_id |
 
-**Case-ID integrity note (2026-11-25):** The matrix contained a duplicated D04-H41..H46 block: the earlier IDs belong to HTTP cryptographic vectors, while the later six rows cover infrastructure identity/evidence validation. The latter rows are now uniquely numbered D04-H101..H106. D04-H89..H100 are the release-fence and unbound-release additions. All 102 H-case identifiers are now unique; H48..H51 are currently unassigned (WSS cases use the separate D04-W namespace). Do not describe the H identifiers as contiguous.
+**Case-ID integrity note (updated 2026-11-28):** The matrix contained a duplicated D04-H41..H46 block: the earlier IDs belong to HTTP cryptographic vectors, while the later six rows cover infrastructure identity/evidence validation. The latter rows are now uniquely numbered D04-H101..H106. D04-H89..H100 are the release-fence and unbound-release additions. D04-H48..H51 are now assigned to direction-confusion, three-sequence-namespace, duplicate-event-id and duplicate-sequence cases; D04-H107 covers illegal cross-event state transitions. All H-case identifiers are unique. Do not describe the H identifiers as contiguous.
